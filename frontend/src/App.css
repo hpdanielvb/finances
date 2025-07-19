@@ -74,9 +74,8 @@ button {
 /* Focus states */
 input:focus {
   outline: none;
-  ring: 2px;
-  ring-blue-500;
   border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
 
 /* Custom scrollbar */
