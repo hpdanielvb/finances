@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """
-OrçaZenFinanceiro Backend API Testing Suite
-Tests all backend endpoints with Brazilian test data
+OrçaZenFinanceiro Backend API Testing Suite - COMPLETE ENHANCED VERSION
+Tests all backend endpoints with Brazilian test data including:
+- Enhanced JWT Authentication with Session Persistence
+- Advanced Account Management with Credit Card Support
+- Advanced Transaction Management with Recurrence
+- Transfer Between Accounts System
+- Budget Management System
+- File Upload System
+- Enhanced Dashboard API with Analytics
+- Advanced Reports and Analytics API
+- Comprehensive Brazilian Categories System
 """
 
 import requests
 import json
 from datetime import datetime, timedelta
 import uuid
+import base64
+import io
 
 # Configuration
 BACKEND_URL = "https://c432aa88-8ae0-42ae-9224-4ead0f8df479.preview.emergentagent.com/api"
@@ -16,7 +27,8 @@ BACKEND_URL = "https://c432aa88-8ae0-42ae-9224-4ead0f8df479.preview.emergentagen
 TEST_USER_DATA = {
     "name": "Maria Silva Santos",
     "email": "maria.silva@email.com.br",
-    "password": "MinhaSenh@123"
+    "password": "MinhaSenh@123",
+    "confirm_password": "MinhaSenh@123"
 }
 
 TEST_USER_LOGIN = {
@@ -28,7 +40,11 @@ TEST_USER_LOGIN = {
 auth_token = None
 user_id = None
 account_id = None
+credit_card_account_id = None
 category_id = None
+expense_category_id = None
+transaction_id = None
+budget_id = None
 
 def print_test_result(test_name, success, details=""):
     """Print formatted test results"""
