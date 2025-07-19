@@ -198,7 +198,15 @@ const Dashboard = () => {
   const [summary, setSummary] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [transactionType, setTransactionType] = useState('');
+  
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
