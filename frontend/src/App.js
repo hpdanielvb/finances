@@ -232,6 +232,42 @@ const Dashboard = () => {
     loadDashboard();
   }, []);
 
+  // Handle account creation
+  const handleCreateAccount = async (accountData) => {
+    try {
+      await axios.post(`${API}/accounts`, accountData);
+      await loadDashboard(); // Refresh data
+      setShowAccountModal(false);
+      alert('Conta criada com sucesso!');
+    } catch (error) {
+      alert('Erro ao criar conta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  // Handle transaction creation
+  const handleCreateTransaction = async (transactionData) => {
+    try {
+      await axios.post(`${API}/transactions`, transactionData);
+      await loadDashboard(); // Refresh data
+      setShowTransactionModal(false);
+      alert('Transação adicionada com sucesso!');
+    } catch (error) {
+      alert('Erro ao criar transação: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  // Modal handlers
+  const openNewAccountModal = () => setShowAccountModal(true);
+  const openIncomeModal = () => {
+    setTransactionType('Receita');
+    setShowTransactionModal(true);
+  };
+  const openExpenseModal = () => {
+    setTransactionType('Despesa');
+    setShowTransactionModal(true);
+  };
+  const openReportsModal = () => setShowReportsModal(true);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
