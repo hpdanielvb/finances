@@ -137,15 +137,18 @@ backend:
 
   - task: "Account Management CRUD API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented POST /api/accounts and GET /api/accounts with proper user authentication and account model validation."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - Account management CRUD APIs working correctly. Account creation works with proper validation, initial_balance equals current_balance, account listing returns user's accounts only, created accounts appear in listings. Tested with Brazilian bank data (Banco do Brasil)."
 
   - task: "Transaction Management CRUD API"
     implemented: true
