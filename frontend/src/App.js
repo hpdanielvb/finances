@@ -211,15 +211,17 @@ const Dashboard = () => {
 
   const loadDashboard = async () => {
     try {
-      const [summaryRes, accountsRes, transactionsRes] = await Promise.all([
+      const [summaryRes, accountsRes, transactionsRes, categoriesRes] = await Promise.all([
         axios.get(`${API}/dashboard/summary`),
         axios.get(`${API}/accounts`),
-        axios.get(`${API}/transactions`)
+        axios.get(`${API}/transactions`),
+        axios.get(`${API}/categories`)
       ]);
       
       setSummary(summaryRes.data);
       setAccounts(accountsRes.data);
       setTransactions(transactionsRes.data.slice(0, 5)); // Latest 5 transactions
+      setCategories(categoriesRes.data);
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
     }
