@@ -388,21 +388,62 @@ const Dashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+              <button 
+                onClick={openNewAccountModal}
+                className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 Nova Conta
               </button>
-              <button className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors">
+              <button 
+                onClick={openIncomeModal}
+                className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              >
                 Adicionar Receita
               </button>
-              <button className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors">
+              <button 
+                onClick={openExpenseModal}
+                className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors"
+              >
                 Adicionar Despesa
               </button>
-              <button className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+              <button 
+                onClick={openReportsModal}
+                className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+              >
                 Ver Relatórios
               </button>
             </div>
           </div>
         </div>
+
+        {/* Account Modal */}
+        {showAccountModal && (
+          <AccountModal
+            onClose={() => setShowAccountModal(false)}
+            onCreate={handleCreateAccount}
+          />
+        )}
+
+        {/* Transaction Modal */}
+        {showTransactionModal && (
+          <TransactionModal
+            type={transactionType}
+            accounts={accounts}
+            categories={categories}
+            onClose={() => setShowTransactionModal(false)}
+            onCreate={handleCreateTransaction}
+          />
+        )}
+
+        {/* Reports Modal */}
+        {showReportsModal && (
+          <ReportsModal
+            summary={summary}
+            transactions={transactions}
+            accounts={accounts}
+            onClose={() => setShowReportsModal(false)}
+          />
+        )}
       </div>
     </div>
   );
