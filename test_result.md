@@ -152,15 +152,18 @@ backend:
 
   - task: "Transaction Management CRUD API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented POST /api/transactions and GET /api/transactions with automatic account balance updates when transactions are created."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - Transaction management APIs working perfectly. Transaction creation works for both income (Receita) and expense (Despesa) types. Automatic balance updates are working correctly: income transactions increase account balance, expense transactions decrease balance. Transaction listing returns transactions sorted by date (most recent first). Tested with Brazilian transaction data."
 
   - task: "Dashboard Summary API"
     implemented: true
