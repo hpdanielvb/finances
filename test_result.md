@@ -167,15 +167,18 @@ backend:
 
   - task: "Dashboard Summary API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Created GET /api/dashboard/summary endpoint that calculates total balance, monthly income/expenses and provides account summaries."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - Dashboard summary API working excellently. All required fields present (total_balance, monthly_income, monthly_expenses, monthly_net, accounts). Calculations are accurate: monthly_net = monthly_income - monthly_expenses, total_balance matches sum of account balances. Account summaries include all required fields (id, name, balance, color). Monthly calculations correctly filter current month transactions."
 
   - task: "Categories API and Default Brazilian Categories"
     implemented: true
