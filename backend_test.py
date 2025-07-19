@@ -54,14 +54,25 @@ def print_test_result(test_name, success, details=""):
         print(f"   Detalhes: {details}")
 
 def test_user_registration():
-    """Test user registration endpoint"""
+    """Test enhanced user registration endpoint with password confirmation"""
     global auth_token, user_id
     
     print("\n" + "="*60)
-    print("TESTANDO REGISTRO DE USUÁRIO")
+    print("TESTANDO REGISTRO DE USUÁRIO APRIMORADO")
     print("="*60)
     
     try:
+        # Test password confirmation validation
+        invalid_data = TEST_USER_DATA.copy()
+        invalid_data["confirm_password"] = "senhadiferente"
+        
+        invalid_response = requests.post(f"{BACKEND_URL}/auth/register", json=invalid_data)
+        if invalid_response.status_code == 400:
+            print_test_result("Validação de confirmação de senha", True, "Rejeitou senhas diferentes")
+        else:
+            print_test_result("Validação de confirmação de senha", False, "Não rejeitou senhas diferentes")
+        
+        # Test valid registration
         response = requests.post(f"{BACKEND_URL}/auth/register", json=TEST_USER_DATA)
         
         if response.status_code == 200:
@@ -69,9 +80,16 @@ def test_user_registration():
             auth_token = data.get("access_token")
             user_info = data.get("user", {})
             user_id = user_info.get("id")
+            expires_in = data.get("expires_in")
             
             print_test_result("Registro de usuário", True, 
                             f"Token recebido, usuário: {user_info.get('name')}")
+            
+            # Verify 30-day token expiry
+            if expires_in == 30 * 24 * 3600:  # 30 days in seconds
+                print_test_result("Token de 30 dias", True, f"Expiração configurada para 30 dias")
+            else:
+                print_test_result("Token de 30 dias", False, f"Expiração: {expires_in} segundos")
             
             # Verify token structure
             if auth_token and user_id:
