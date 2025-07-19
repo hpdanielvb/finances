@@ -252,11 +252,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "JWT Authentication System"
-    - "User Registration and Login API"
-    - "Account Management CRUD API"
-    - "Transaction Management CRUD API"
-    - "Dashboard Summary API"
     - "Authentication Context and State Management"
     - "Dashboard with Brazilian Financial Formatting"
   stuck_tasks: []
