@@ -122,15 +122,18 @@ backend:
 
   - task: "User Registration and Login API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Created /api/auth/register and /api/auth/login endpoints with proper validation and error handling. Auto-creates default categories on registration."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - User registration and login APIs working perfectly. Registration creates user with JWT token, login validates credentials correctly, wrong passwords are rejected. Default Brazilian categories are automatically created on registration (12 categories including Salário, Alimentação, Transporte, Moradia)."
 
   - task: "Account Management CRUD API"
     implemented: true
