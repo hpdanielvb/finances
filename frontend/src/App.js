@@ -468,6 +468,347 @@ function App() {
   );
 }
 
+// Account Modal Component
+const AccountModal = ({ onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'Conta Corrente',
+    institution: '',
+    initial_balance: 0,
+    color_hex: '#4F46E5'
+  });
+
+  const accountTypes = [
+    'Conta Corrente', 'Poupança', 'Cartão de Crédito', 
+    'Investimento', 'Dinheiro em Espécie', 'Outros'
+  ];
+
+  const institutions = [
+    'Itaú', 'Bradesco', 'Banco do Brasil', 'Caixa Econômica Federal',
+    'Santander', 'NuBank', 'C6 Bank', 'Inter', 'PicPay', 'Sicoob',
+    'Sicredi', 'Banco Safra', 'XP Investimentos', 'BTG Pactual', 'Outro'
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onCreate(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-semibold mb-4">Nova Conta</h3>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Conta</label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              placeholder="Ex: Conta Corrente Principal"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Conta</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.type}
+              onChange={(e) => setFormData({...formData, type: e.target.value})}
+            >
+              {accountTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Instituição Financeira</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.institution}
+              onChange={(e) => setFormData({...formData, institution: e.target.value})}
+            >
+              <option value="">Selecione uma instituição</option>
+              {institutions.map(institution => (
+                <option key={institution} value={institution}>{institution}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Saldo Inicial</label>
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.initial_balance}
+              onChange={(e) => setFormData({...formData, initial_balance: parseFloat(e.target.value) || 0})}
+              placeholder="0,00"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cor da Conta</label>
+            <input
+              type="color"
+              className="w-full h-10 border border-gray-300 rounded-lg"
+              value={formData.color_hex}
+              onChange={(e) => setFormData({...formData, color_hex: e.target.value})}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Criar Conta
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Transaction Modal Component
+const TransactionModal = ({ type, accounts, categories, onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    description: '',
+    value: 0,
+    type: type,
+    transaction_date: new Date().toISOString().split('T')[0],
+    account_id: '',
+    category_id: '',
+    observation: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const transactionData = {
+      ...formData,
+      transaction_date: new Date(formData.transaction_date).toISOString(),
+      value: parseFloat(formData.value)
+    };
+    onCreate(transactionData);
+  };
+
+  const relevantCategories = categories.filter(cat => cat.type === type);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-semibold mb-4">
+          Adicionar {type === 'Receita' ? 'Receita' : 'Despesa'}
+        </h3>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder={type === 'Receita' ? 'Ex: Salário' : 'Ex: Supermercado'}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.value}
+              onChange={(e) => setFormData({...formData, value: e.target.value})}
+              placeholder="0,00"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
+            <input
+              type="date"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.transaction_date}
+              onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Conta</label>
+            <select
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.account_id}
+              onChange={(e) => setFormData({...formData, account_id: e.target.value})}
+            >
+              <option value="">Selecione uma conta</option>
+              {accounts.map(account => (
+                <option key={account.id} value={account.id}>{account.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              value={formData.category_id}
+              onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+            >
+              <option value="">Selecione uma categoria</option>
+              {relevantCategories.map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Observação (opcional)</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              rows="2"
+              value={formData.observation}
+              onChange={(e) => setFormData({...formData, observation: e.target.value})}
+              placeholder="Observações adicionais..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className={`px-4 py-2 text-white rounded-lg ${
+                type === 'Receita' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              Adicionar {type}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Reports Modal Component
+const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">Relatórios Financeiros</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Summary Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Saldo Total</h4>
+            <p className="text-2xl font-bold text-blue-900">
+              {formatCurrency(summary?.total_balance || 0)}
+            </p>
+          </div>
+          
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-2">Receitas do Mês</h4>
+            <p className="text-2xl font-bold text-green-900">
+              {formatCurrency(summary?.monthly_income || 0)}
+            </p>
+          </div>
+          
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-medium text-red-800 mb-2">Despesas do Mês</h4>
+            <p className="text-2xl font-bold text-red-900">
+              {formatCurrency(summary?.monthly_expenses || 0)}
+            </p>
+          </div>
+        </div>
+
+        {/* Accounts Section */}
+        <div className="mb-8">
+          <h4 className="text-lg font-semibold mb-4">Resumo por Conta</h4>
+          <div className="space-y-3">
+            {accounts.map(account => (
+              <div key={account.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-3"
+                    style={{ backgroundColor: account.color_hex }}
+                  ></div>
+                  <div>
+                    <p className="font-medium">{account.name}</p>
+                    <p className="text-sm text-gray-500">{account.type} - {account.institution}</p>
+                  </div>
+                </div>
+                <p className="font-bold text-lg">{formatCurrency(account.current_balance)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Transactions */}
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Transações Recentes</h4>
+          <div className="space-y-2">
+            {transactions.map(transaction => (
+              <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">{transaction.description}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(transaction.transaction_date)} • {transaction.type}
+                  </p>
+                </div>
+                <p className={`font-bold ${
+                  transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {transaction.type === 'Receita' ? '+' : '-'}{formatCurrency(transaction.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
