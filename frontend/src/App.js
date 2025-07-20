@@ -780,7 +780,7 @@ const Dashboard = () => {
                   ) : (
                     <div className="space-y-4">
                       {transactions.slice(0, 5).map((transaction) => (
-                        <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors">
+                        <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors group">
                           <div className="flex items-center">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
                               transaction.type === 'Receita' ? 'bg-green-100' : 'bg-red-100'
@@ -795,11 +795,33 @@ const Dashboard = () => {
                               <p className="text-sm text-gray-500">{formatDate(transaction.transaction_date)}</p>
                             </div>
                           </div>
-                          <p className={`font-bold ${
-                            transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {transaction.type === 'Receita' ? '+' : '-'}{formatCurrency(transaction.value)}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <p className={`font-bold ${
+                              transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {transaction.type === 'Receita' ? '+' : '-'}{formatCurrency(transaction.value)}
+                            </p>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => {
+                                  setEditingItem(transaction);
+                                  setTransactionType(transaction.type);
+                                  setShowTransactionModal(true);
+                                }}
+                                className="p-1 text-blue-600 hover:text-blue-800"
+                                title="Editar transação"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                className="p-1 text-red-600 hover:text-red-800"
+                                title="Excluir transação"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
