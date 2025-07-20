@@ -1576,20 +1576,23 @@ def run_categories_debug_test():
         print("❌ Falha no login - não é possível executar o teste")
         return False
     
-    # Run the categories debug test
-    result = test_categories_creation_debug()
+    # Run the detailed categories debug test
+    result1 = test_categories_creation_detailed_debug()
+    
+    # Also run the original debug test for comparison
+    result2 = test_categories_creation_debug()
     
     print("\n" + "="*80)
     print("RESULTADO DO DEBUG DE CATEGORIAS")
     print("="*80)
     
-    if result:
+    if result1 and result2:
         print("🎉 CATEGORIAS FUNCIONANDO CORRETAMENTE!")
     else:
         print("❌ PROBLEMAS IDENTIFICADOS NA CRIAÇÃO DE CATEGORIAS!")
         print("   Verifique os detalhes acima para identificar as causas.")
     
-    return result
+    return result1 and result2
 
 if __name__ == "__main__":
     # Run the categories creation debug test as requested
