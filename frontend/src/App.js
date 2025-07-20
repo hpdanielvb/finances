@@ -1242,7 +1242,7 @@ const Dashboard = () => {
             setShowContributeModal(false);
             setEditingItem(null);
           }}
-          onContribute={handleContributeGoal}
+          onContribute={handleContributeToGoal}
         />
       )}
 
