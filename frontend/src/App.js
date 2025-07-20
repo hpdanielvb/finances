@@ -1102,17 +1102,276 @@ const Dashboard = () => {
   );
 };
 
-// Additional Views Components (simplified for brevity)
-const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdit }) => {
+// Enhanced Views Components
+const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdit, onDelete }) => {
+  const [filteredTransactions, setFilteredTransactions] = useState(transactions);
+  const [filters, setFilters] = useState({
+    search: '',
+    type: '',
+    account: '',
+    category: '',
+    dateStart: '',
+    dateEnd: '',
+    status: ''
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  // Filter transactions
+  useEffect(() => {
+    let filtered = [...transactions];
+    
+    if (filters.search) {
+      filtered = filtered.filter(t => 
+        t.description.toLowerCase().includes(filters.search.toLowerCase()) ||
+        t.value.toString().includes(filters.search)
+      );
+    }
+    
+    if (filters.type) {
+      filtered = filtered.filter(t => t.type === filters.type);
+    }
+    
+    if (filters.account) {
+      filtered = filtered.filter(t => t.account_id === filters.account);
+    }
+    
+    if (filters.category) {
+      filtered = filtered.filter(t => t.category_id === filters.category);
+    }
+    
+    if (filters.status) {
+      filtered = filtered.filter(t => t.status === filters.status);
+    }
+    
+    if (filters.dateStart) {
+      filtered = filtered.filter(t => new Date(t.transaction_date) >= new Date(filters.dateStart));
+    }
+    
+    if (filters.dateEnd) {
+      filtered = filtered.filter(t => new Date(t.transaction_date) <= new Date(filters.dateEnd));
+    }
+    
+    setFilteredTransactions(filtered);
+    setCurrentPage(1);
+  }, [transactions, filters]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      type: '',
+      account: '',
+      category: '',
+      dateStart: '',
+      dateEnd: '',
+      status: ''
+    });
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Todas as Transações</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Gerenciar Transações</h2>
+          <div className="text-sm text-gray-500">
+            {filteredTransactions.length} de {transactions.length} transações
+          </div>
+        </div>
+
+        {/* Advanced Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <input
+            type="text"
+            placeholder="Buscar descrição ou valor..."
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.search}
+            onChange={(e) => setFilters({...filters, search: e.target.value})}
+          />
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.type}
+            onChange={(e) => setFilters({...filters, type: e.target.value})}
+          >
+            <option value="">Todos os tipos</option>
+            <option value="Receita">Receitas</option>
+            <option value="Despesa">Despesas</option>
+          </select>
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.account}
+            onChange={(e) => setFilters({...filters, account: e.target.value})}
+          >
+            <option value="">Todas as contas</option>
+            {accounts.map(account => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.status}
+            onChange={(e) => setFilters({...filters, status: e.target.value})}
+          >
+            <option value="">Todos os status</option>
+            <option value="Pago">Pago</option>
+            <option value="Pendente">Pendente</option>
+          </select>
+
+          <input
+            type="date"
+            placeholder="Data inicial"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.dateStart}
+            onChange={(e) => setFilters({...filters, dateStart: e.target.value})}
+          />
+
+          <input
+            type="date"
+            placeholder="Data final"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.dateEnd}
+            onChange={(e) => setFilters({...filters, dateEnd: e.target.value})}
+          />
+
+          <button
+            onClick={resetFilters}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+          >
+            <Filter size={16} />
+            Limpar
+          </button>
+        </div>
       </div>
-      <div className="p-6">
-        {/* Transaction filters and list would go here */}
-        <p className="text-gray-500">Lista completa de transações em desenvolvimento...</p>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conta</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedTransactions.map((transaction) => {
+              const account = accounts.find(a => a.id === transaction.account_id);
+              const category = categories.find(c => c.id === transaction.category_id);
+              
+              return (
+                <tr key={transaction.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDate(transaction.transaction_date)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{transaction.description}</div>
+                      {transaction.observation && (
+                        <div className="text-sm text-gray-500">{transaction.observation}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {category?.name || 'Sem categoria'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center">
+                      {account && (
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: account.color_hex }}
+                        ></div>
+                      )}
+                      {account?.name || 'Conta removida'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      transaction.type === 'Receita' ? 
+                        'bg-green-100 text-green-800' : 
+                        'bg-red-100 text-red-800'
+                    }`}>
+                      {transaction.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <span className={`text-sm font-bold ${
+                      transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'Receita' ? '+' : '-'}{formatCurrency(transaction.value)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      transaction.status === 'Pago' ? 
+                        'bg-blue-100 text-blue-800' : 
+                        'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {transaction.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex justify-center space-x-2">
+                      <button
+                        onClick={() => onEdit(transaction)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Editar"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(transaction.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            Página {currentPage} de {totalPages}
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
