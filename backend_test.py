@@ -884,6 +884,172 @@ def test_goals_system():
         print_test_result("Sistema de Metas", False, f"Exceção: {str(e)}")
         return False
 
+def test_transaction_balance_logic_fix():
+    """
+    CRITICAL TEST: Test the corrected Transaction Balance Logic to verify the bug fix.
+    
+    Test Scenario:
+    1. Get user account and note initial balance
+    2. Create PENDING transaction (Despesa, R$ 100.00, status: "Pendente") → balance should NOT change
+    3. Verify balance remains unchanged 
+    4. Confirm the pending transaction → balance should decrease by R$ 100.00
+    5. Create PAID transaction (Despesa, R$ 50.00, status: "Pago") → balance should decrease immediately by R$ 50.00
+    
+    Expected Results:
+    - Step 2: Balance unchanged (no double deduction)
+    - Step 4: Balance decreases by R$ 100.00 (single deduction on confirmation)  
+    - Step 5: Balance decreases immediately by R$ 50.00 (single deduction)
+    """
+    print("\n" + "="*80)
+    print("🔥 TESTE CRÍTICO: LÓGICA DE SALDO DE TRANSAÇÕES CORRIGIDA")
+    print("="*80)
+    print("Testando correção do bug de dupla dedução em transações pendentes")
+    
+    if not auth_token or not account_id:
+        print_test_result("Teste de Lógica de Saldo", False, "Token ou conta não disponível")
+        return False
+    
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    
+    try:
+        # Step 1: Get initial account balance
+        accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if accounts_response.status_code != 200:
+            print_test_result("Obter saldo inicial", False, "Não foi possível obter saldo inicial")
+            return False
+        
+        accounts = accounts_response.json()
+        initial_account = next((acc for acc in accounts if acc.get("id") == account_id), None)
+        if not initial_account:
+            print_test_result("Obter saldo inicial", False, "Conta não encontrada")
+            return False
+        
+        initial_balance = initial_account.get("current_balance")
+        print(f"   ✅ Saldo inicial da conta: R$ {initial_balance:.2f}")
+        
+        # Step 2: Create PENDING transaction (Despesa, R$ 100.00, status: "Pendente")
+        pending_transaction = {
+            "description": "Despesa Pendente - Teste Bug Fix",
+            "value": 100.00,
+            "type": "Despesa",
+            "transaction_date": datetime.now().isoformat(),
+            "account_id": account_id,
+            "status": "Pendente"  # This is the key - PENDING status
+        }
+        
+        pending_response = requests.post(f"{BACKEND_URL}/transactions", json=pending_transaction, headers=headers)
+        
+        if pending_response.status_code != 200:
+            print_test_result("Criar transação pendente", False, 
+                            f"Status: {pending_response.status_code}, Erro: {pending_response.text}")
+            return False
+        
+        pending_trans = pending_response.json()
+        pending_transaction_id = pending_trans.get("id")
+        print_test_result("Criar transação pendente", True, 
+                        f"Transação pendente criada: R$ {pending_trans.get('value'):.2f}")
+        
+        # Step 3: Verify balance remains unchanged after creating pending transaction
+        after_pending_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if after_pending_response.status_code != 200:
+            print_test_result("Verificar saldo após pendente", False, "Erro ao obter saldo")
+            return False
+        
+        after_pending_accounts = after_pending_response.json()
+        after_pending_account = next((acc for acc in after_pending_accounts if acc.get("id") == account_id), None)
+        balance_after_pending = after_pending_account.get("current_balance")
+        
+        # CRITICAL TEST: Balance should NOT change for pending transactions
+        if abs(balance_after_pending - initial_balance) < 0.01:
+            print_test_result("✅ CORREÇÃO DO BUG: Saldo não alterado para transação pendente", True, 
+                            f"Saldo permaneceu: R$ {balance_after_pending:.2f} (correto!)")
+        else:
+            print_test_result("❌ BUG AINDA PRESENTE: Saldo alterado para transação pendente", False, 
+                            f"Saldo inicial: R$ {initial_balance:.2f}, Após pendente: R$ {balance_after_pending:.2f}")
+            return False
+        
+        # Step 4: Confirm the pending transaction → balance should decrease by R$ 100.00
+        confirm_response = requests.patch(f"{BACKEND_URL}/transactions/{pending_transaction_id}/confirm-payment", 
+                                        headers=headers)
+        
+        if confirm_response.status_code != 200:
+            print_test_result("Confirmar transação pendente", False, 
+                            f"Status: {confirm_response.status_code}, Erro: {confirm_response.text}")
+            return False
+        
+        print_test_result("Confirmar transação pendente", True, "Transação confirmada com sucesso")
+        
+        # Verify balance decreases by R$ 100.00 after confirmation
+        after_confirm_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        after_confirm_accounts = after_confirm_response.json()
+        after_confirm_account = next((acc for acc in after_confirm_accounts if acc.get("id") == account_id), None)
+        balance_after_confirm = after_confirm_account.get("current_balance")
+        
+        expected_balance_after_confirm = initial_balance - 100.00
+        if abs(balance_after_confirm - expected_balance_after_confirm) < 0.01:
+            print_test_result("✅ CORREÇÃO DO BUG: Saldo deduzido apenas na confirmação", True, 
+                            f"Saldo após confirmação: R$ {balance_after_confirm:.2f} (dedução única de R$ 100.00)")
+        else:
+            print_test_result("❌ BUG: Dedução incorreta na confirmação", False, 
+                            f"Esperado: R$ {expected_balance_after_confirm:.2f}, Atual: R$ {balance_after_confirm:.2f}")
+            return False
+        
+        # Step 5: Create PAID transaction (Despesa, R$ 50.00, status: "Pago") → should decrease immediately
+        paid_transaction = {
+            "description": "Despesa Paga - Teste Bug Fix",
+            "value": 50.00,
+            "type": "Despesa",
+            "transaction_date": datetime.now().isoformat(),
+            "account_id": account_id,
+            "status": "Pago"  # PAID status - should update balance immediately
+        }
+        
+        paid_response = requests.post(f"{BACKEND_URL}/transactions", json=paid_transaction, headers=headers)
+        
+        if paid_response.status_code != 200:
+            print_test_result("Criar transação paga", False, 
+                            f"Status: {paid_response.status_code}, Erro: {paid_response.text}")
+            return False
+        
+        paid_trans = paid_response.json()
+        print_test_result("Criar transação paga", True, 
+                        f"Transação paga criada: R$ {paid_trans.get('value'):.2f}")
+        
+        # Verify balance decreases immediately by R$ 50.00 for paid transaction
+        after_paid_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        after_paid_accounts = after_paid_response.json()
+        after_paid_account = next((acc for acc in after_paid_accounts if acc.get("id") == account_id), None)
+        final_balance = after_paid_account.get("current_balance")
+        
+        expected_final_balance = balance_after_confirm - 50.00
+        if abs(final_balance - expected_final_balance) < 0.01:
+            print_test_result("✅ CORREÇÃO DO BUG: Transação paga deduzida imediatamente", True, 
+                            f"Saldo final: R$ {final_balance:.2f} (dedução imediata de R$ 50.00)")
+        else:
+            print_test_result("❌ BUG: Dedução incorreta para transação paga", False, 
+                            f"Esperado: R$ {expected_final_balance:.2f}, Atual: R$ {final_balance:.2f}")
+            return False
+        
+        # Summary of the complete test
+        print("\n" + "="*60)
+        print("📊 RESUMO DO TESTE DE CORREÇÃO DO BUG")
+        print("="*60)
+        print(f"Saldo Inicial:                    R$ {initial_balance:.2f}")
+        print(f"Após Transação Pendente:          R$ {balance_after_pending:.2f} (sem alteração ✅)")
+        print(f"Após Confirmação da Pendente:     R$ {balance_after_confirm:.2f} (dedução única ✅)")
+        print(f"Após Transação Paga:              R$ {final_balance:.2f} (dedução imediata ✅)")
+        print("="*60)
+        print("🎉 BUG CORRIGIDO COM SUCESSO!")
+        print("   - Transações pendentes NÃO alteram saldo")
+        print("   - Confirmação de pendentes deduz apenas uma vez")
+        print("   - Transações pagas deduzem imediatamente")
+        
+        return True
+        
+    except Exception as e:
+        print_test_result("Teste de Lógica de Saldo", False, f"Exceção: {str(e)}")
+        return False
+
 def run_all_tests():
     """Run all backend tests in sequence"""
     print("🇧🇷 INICIANDO TESTES DO BACKEND ORÇAZENFINANCEIRO")
@@ -923,6 +1089,40 @@ def run_all_tests():
         print("⚠️  ALGUNS TESTES FALHARAM. Verifique os detalhes acima.")
     
     return test_results
+
+def run_critical_balance_test():
+    """Run only the critical balance logic test"""
+    print("🔥 EXECUTANDO TESTE CRÍTICO DE CORREÇÃO DO BUG DE SALDO")
+    print("=" * 80)
+    print(f"URL do Backend: {BACKEND_URL}")
+    print("=" * 80)
+    
+    # Setup required for the test
+    if not test_user_login():
+        print("❌ Falha no login - não é possível executar o teste")
+        return False
+    
+    if not test_categories():
+        print("❌ Falha ao carregar categorias - não é possível executar o teste")
+        return False
+        
+    if not test_account_management():
+        print("❌ Falha na gestão de contas - não é possível executar o teste")
+        return False
+    
+    # Run the critical test
+    result = test_transaction_balance_logic_fix()
+    
+    print("\n" + "="*80)
+    print("RESULTADO DO TESTE CRÍTICO")
+    print("="*80)
+    
+    if result:
+        print("🎉 TESTE CRÍTICO PASSOU! Bug de saldo de transações foi corrigido.")
+    else:
+        print("❌ TESTE CRÍTICO FALHOU! Bug de saldo ainda presente.")
+    
+    return result
 
 if __name__ == "__main__":
     run_all_tests()
