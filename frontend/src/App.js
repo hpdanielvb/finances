@@ -695,6 +695,89 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Advanced Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Balance Evolution Chart */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Evolução do Saldo (12 meses)</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={generateBalanceEvolutionData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                    <Tooltip formatter={(value) => [formatCurrency(value), 'Saldo']} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="balance" 
+                      stroke="#3B82F6" 
+                      strokeWidth={3}
+                      dot={{ r: 6 }}
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Income vs Expenses Chart */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Receitas vs Despesas (12 meses)</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={generateIncomeVsExpensesData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                    <Tooltip formatter={(value, name) => [formatCurrency(value), name]} />
+                    <Bar dataKey="income" fill="#10B981" name="Receitas" />
+                    <Bar dataKey="expenses" fill="#EF4444" name="Despesas" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Próximas Contas Section */}
+            {summary?.pending_transactions && summary.pending_transactions.length > 0 && (
+              <div className="bg-white rounded-xl shadow-lg mb-8">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-orange-500" />
+                    Próximas Contas a Pagar/Receber (15 dias)
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {summary.pending_transactions.map((transaction) => (
+                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center">
+                          <div className={`w-3 h-3 rounded-full mr-3 ${
+                            transaction.type === 'Receita' ? 'bg-green-500' : 'bg-red-500'
+                          }`}></div>
+                          <div>
+                            <p className="font-medium text-gray-900">{transaction.description}</p>
+                            <p className="text-sm text-gray-500">
+                              {formatDate(transaction.transaction_date)} • {transaction.type}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className={`font-bold ${
+                            transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(transaction.value)}
+                          </p>
+                          <button
+                            onClick={() => handleMarkTransactionPaid(transaction.id)}
+                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Marcar como {transaction.type === 'Receita' ? 'Recebida' : 'Paga'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               {/* Accounts */}
               <div className="bg-white rounded-xl shadow-lg">
