@@ -962,6 +962,97 @@ const Dashboard = () => {
           <>
             {/* Enhanced Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* SALDO TOTAL CONSOLIDADO - GRANDE DESTAQUE */}
+          <div className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl p-8 text-white shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-medium opacity-90">Saldo Total Consolidado</h3>
+                <p className="text-4xl font-bold">{formatCurrency(summary?.total_balance || 0)}</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                <DollarSign size={32} />
+              </div>
+            </div>
+            <div className="text-sm opacity-75">
+              Soma de todas as contas ativas • Atualizado em tempo real
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              {(summary?.total_balance || 0) >= 0 ? (
+                <>
+                  <TrendingUp className="w-4 h-4 mr-1 text-green-300" />
+                  <span className="text-green-300">Saldo Positivo</span>
+                </>
+              ) : (
+                <>
+                  <TrendingDown className="w-4 h-4 mr-1 text-red-300" />
+                  <span className="text-red-300">Atenção: Saldo Negativo</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* PROGRESSO DA META MENSAL */}
+          <div className="md:col-span-2 lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Progresso da Meta Mensal</h3>
+              <Target className="text-blue-600" size={24} />
+            </div>
+            
+            <div className="space-y-4">
+              {/* Meta de Economia */}
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Meta de Economia</span>
+                  <span className="font-medium text-gray-800">
+                    {formatCurrency(summary?.monthly_savings_goal || 1000)} / {formatCurrency(5000)}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min(((summary?.monthly_savings_goal || 1000) / 5000) * 100, 100)}%` 
+                    }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {(((summary?.monthly_savings_goal || 1000) / 5000) * 100).toFixed(1)}% da meta alcançada
+                </p>
+              </div>
+
+              {/* Meta de Gastos */}
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Limite de Gastos</span>
+                  <span className="font-medium text-gray-800">
+                    {formatCurrency(summary?.monthly_expenses || 0)} / {formatCurrency(3000)}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-300 ${
+                      (summary?.monthly_expenses || 0) > 3000 
+                        ? 'bg-gradient-to-r from-red-400 to-red-600' 
+                        : 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(((summary?.monthly_expenses || 0) / 3000) * 100, 100)}%` 
+                    }}
+                  ></div>
+                </div>
+                <p className={`text-xs mt-1 ${
+                  (summary?.monthly_expenses || 0) > 3000 ? 'text-red-600' : 'text-gray-500'
+                }`}>
+                  {(((summary?.monthly_expenses || 0) / 3000) * 100).toFixed(1)}% do limite utilizado
+                  {(summary?.monthly_expenses || 0) > 3000 && ' - LIMITE EXCEDIDO!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards de Resumo Mensal Aprimorados */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
