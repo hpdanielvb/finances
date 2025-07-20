@@ -843,19 +843,80 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm text-gray-600">Bem-vindo,</p>
-                <p className="font-medium text-gray-900">{user.name}</p>
+              <div className="flex items-center space-x-3">
+                <span className="text-gray-600 text-sm">Bem-vindo,</span>
+                <span className="font-medium text-gray-900">{user?.name}</span>
               </div>
               
-              <button className="p-2 text-gray-400 hover:text-gray-600 relative">
-                <Bell size={20} />
-                {summary?.pending_transactions?.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {summary.pending_transactions.length}
-                  </span>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                  className="p-2 text-gray-400 hover:text-gray-600 relative transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                </button>
+                
+                {showNotificationPanel && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">Notificações</h3>
+                        <button
+                          onClick={() => {
+                            setNotifications(notifications.map(n => ({ ...n, read: true })));
+                            setUnreadNotifications(0);
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Marcar todas como lidas
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p>Nenhuma notificação</p>
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${
+                              !notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                            }`}
+                          >
+                            <div className="flex items-start">
+                              <div className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                                notification.type === 'error' ? 'bg-red-500' :
+                                notification.type === 'warning' ? 'bg-yellow-500' :
+                                notification.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+                              }`} />
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900 text-sm">
+                                  {notification.title}
+                                </p>
+                                <p className="text-gray-600 text-sm">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(notification.time).toLocaleString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
               
               <button
                 onClick={logout}
