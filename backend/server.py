@@ -824,6 +824,88 @@ async def get_transactions(
     
     return [Transaction(**transaction) for transaction in transactions]
 
+# Endpoint to confirm payment of pending transactions
+@api_router.patch("/transactions/{transaction_id}/confirm-payment")
+async def confirm_payment(transaction_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Confirm payment for a pending transaction and update account balance
+    """
+    # Check if transaction belongs to user and is pending
+    transaction = await db.transactions.find_one({
+        "id": transaction_id, 
+        "user_id": current_user.id,
+        "status": "Pendente"
+    })
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transação pendente não encontrada")
+    
+    # Update transaction status to "Pago"
+    await db.transactions.update_one(
+        {"id": transaction_id},
+        {"$set": {"status": "Pago", "updated_at": datetime.utcnow()}}
+    )
+    
+    # Update account balance based on transaction type
+    balance_change = transaction['value'] if transaction['type'] == "Receita" else -transaction['value']
+    await db.accounts.update_one(
+        {"id": transaction['account_id']},
+        {"$inc": {"current_balance": balance_change}}
+    )
+    
+    return {"message": "Pagamento confirmado com sucesso"}
+
+# Endpoint for transaction statistics
+@api_router.get("/transactions/statistics")
+async def get_transaction_statistics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get transaction statistics for charts and reports"""
+    query = {"user_id": current_user.id}
+    
+    # Apply date filter if provided
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = datetime.strptime(start_date, "%Y-%m-%d")
+        if end_date:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+            date_filter["$lte"] = end_date_obj.replace(hour=23, minute=59, second=59)
+        query["transaction_date"] = date_filter
+    
+    # Aggregate statistics
+    pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": {
+                "type": "$type",
+                "status": "$status"
+            },
+            "count": {"$sum": 1},
+            "total_value": {"$sum": "$value"}
+        }},
+        {"$group": {
+            "_id": None,
+            "stats": {
+                "$push": {
+                    "type": "$_id.type",
+                    "status": "$_id.status",
+                    "count": "$count",
+                    "total_value": "$total_value"
+                }
+            }
+        }}
+    ]
+    
+    result = await db.transactions.aggregate(pipeline).to_list(1)
+    
+    if result:
+        return {"statistics": result[0]["stats"]}
+    else:
+        return {"statistics": []}
+
 @api_router.put("/transactions/{transaction_id}", response_model=Transaction)
 async def update_transaction(transaction_id: str, transaction_data: TransactionCreate, current_user: User = Depends(get_current_user)):
     # Check if transaction belongs to user
