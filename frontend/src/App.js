@@ -487,7 +487,55 @@ const Dashboard = () => {
   const openBudgetModal = () => setShowBudgetModal(true);
   const openReportsModal = () => setShowReportsModal(true);
 
-  // Chart colors
+  // Chart data generators
+  const generateBalanceEvolutionData = () => {
+    const months = [];
+    const currentDate = new Date();
+    let runningBalance = summary?.total_balance || 0;
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      
+      // Simulate balance evolution (in real scenario, this would come from historical data)
+      const variance = (Math.random() - 0.5) * 1000;
+      runningBalance += variance;
+      
+      months.push({
+        month: monthName,
+        balance: Math.max(0, runningBalance) // Ensure non-negative balance
+      });
+    }
+    
+    return months;
+  };
+
+  const generateIncomeVsExpensesData = () => {
+    const months = [];
+    const currentDate = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      
+      // Use current month data for the latest month, simulate for others
+      if (i === 0) {
+        months.push({
+          month: monthName,
+          income: summary?.monthly_income || 0,
+          expenses: summary?.monthly_expenses || 0
+        });
+      } else {
+        months.push({
+          month: monthName,
+          income: Math.random() * 5000 + 1000,
+          expenses: Math.random() * 4000 + 800
+        });
+      }
+    }
+    
+    return months;
+  };
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
   // Prepare chart data
