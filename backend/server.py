@@ -1354,6 +1354,8 @@ async def get_cash_flow_report(
 
 # Helper function to create comprehensive default categories
 async def create_default_categories(user_id: str):
+    print(f"[DEBUG] Starting category creation for user: {user_id}")
+    
     default_categories = [
         # RECEITAS DETALHADAS
         {"name": "Salário", "type": "Receita"},
@@ -1515,41 +1517,74 @@ async def create_default_categories(user_id: str):
         {"name": "Outras Despesas", "type": "Despesa"}
     ]
     
-    # Create parent categories first
-    parent_categories = {}
-    categories_to_insert = []
+    print(f"[DEBUG] Total categories defined: {len(default_categories)}")
     
-    for cat_data in default_categories:
-        if "parent" not in cat_data:
-            category = Category(
-                user_id=user_id,
-                name=cat_data["name"],
-                type=cat_data["type"],
-                is_custom=False
-            )
-            categories_to_insert.append(category.dict())
-            parent_categories[cat_data["name"]] = category.id
-    
-    # Insert parent categories
-    await db.categories.insert_many(categories_to_insert)
-    
-    # Create subcategories
-    subcategories_to_insert = []
-    for cat_data in default_categories:
-        if "parent" in cat_data:
-            parent_id = parent_categories.get(cat_data["parent"])
-            if parent_id:
+    try:
+        # Create parent categories first
+        parent_categories = {}
+        categories_to_insert = []
+        
+        parent_count = 0
+        for cat_data in default_categories:
+            if "parent" not in cat_data:
                 category = Category(
                     user_id=user_id,
                     name=cat_data["name"],
                     type=cat_data["type"],
-                    parent_category_id=parent_id,
                     is_custom=False
                 )
-                subcategories_to_insert.append(category.dict())
-    
-    if subcategories_to_insert:
-        await db.categories.insert_many(subcategories_to_insert)
+                categories_to_insert.append(category.dict())
+                parent_categories[cat_data["name"]] = category.id
+                parent_count += 1
+        
+        print(f"[DEBUG] Parent categories to insert: {parent_count}")
+        
+        # Insert parent categories in batches
+        if categories_to_insert:
+            try:
+                result = await db.categories.insert_many(categories_to_insert)
+                print(f"[DEBUG] Parent categories inserted successfully: {len(result.inserted_ids)}")
+            except Exception as e:
+                print(f"[ERROR] Failed to insert parent categories: {e}")
+                return False
+        
+        # Create subcategories
+        subcategories_to_insert = []
+        subcategory_count = 0
+        
+        for cat_data in default_categories:
+            if "parent" in cat_data:
+                parent_id = parent_categories.get(cat_data["parent"])
+                if parent_id:
+                    category = Category(
+                        user_id=user_id,
+                        name=cat_data["name"],
+                        type=cat_data["type"],
+                        parent_category_id=parent_id,
+                        is_custom=False
+                    )
+                    subcategories_to_insert.append(category.dict())
+                    subcategory_count += 1
+                else:
+                    print(f"[WARNING] Parent not found for {cat_data['name']} -> {cat_data['parent']}")
+        
+        print(f"[DEBUG] Subcategories to insert: {subcategory_count}")
+        
+        # Insert subcategories in batches
+        if subcategories_to_insert:
+            try:
+                result = await db.categories.insert_many(subcategories_to_insert)
+                print(f"[DEBUG] Subcategories inserted successfully: {len(result.inserted_ids)}")
+            except Exception as e:
+                print(f"[ERROR] Failed to insert subcategories: {e}")
+                return False
+        
+        print(f"[DEBUG] Category creation completed successfully")
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Category creation failed: {e}")
+        return False
 
 # Helper function to update budget spent amount
 async def update_budget_spent(user_id: str, category_id: str, month_year: str, amount: float):
