@@ -1020,6 +1020,7 @@ const Dashboard = () => {
               setTransactionType(transaction.type);
               setShowTransactionModal(true);
             }}
+            onDelete={handleDeleteTransaction}
           />
         )}
 
@@ -1031,6 +1032,7 @@ const Dashboard = () => {
               setEditingItem(account);
               setShowAccountModal(true);
             }}
+            onDelete={handleDeleteAccount}
             onCreateNew={openNewAccountModal}
           />
         )}
@@ -1042,6 +1044,11 @@ const Dashboard = () => {
             summary={summary}
             onRefresh={loadDashboard}
             onCreateNew={openBudgetModal}
+            onEdit={(budget) => {
+              setEditingItem(budget);
+              setShowBudgetModal(true);
+            }}
+            onDelete={handleDeleteBudget}
           />
         )}
       </div>
