@@ -64,6 +64,9 @@ class User(BaseModel):
     email: str
     password_hash: str
     email_verified: bool = False
+    email_verification_token: Optional[str] = None
+    password_reset_token: Optional[str] = None
+    password_reset_expires: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class AccountCreate(BaseModel):
