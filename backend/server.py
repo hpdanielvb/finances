@@ -642,6 +642,84 @@ async def refresh_token(current_user: User = Depends(get_current_user)):
         "expires_in": ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600
     }
 
+# Balance Audit and Correction Endpoint
+@api_router.post("/admin/audit-and-fix-balances")
+async def audit_and_fix_balances(current_user: User = Depends(get_current_user)):
+    """
+    ADMIN ENDPOINT: Audit and fix balance calculation errors
+    This addresses the critical R$ 84.08 discrepancy issue
+    """
+    print(f"[AUDIT] Starting balance audit and correction for user: {current_user.id}")
+    
+    try:
+        # Get all user accounts
+        accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+        
+        corrections = []
+        total_discrepancy = 0
+        
+        for account in accounts:
+            account_id = account["id"]
+            account_name = account["name"]
+            initial_balance = account["initial_balance"]
+            current_system_balance = account["current_balance"]
+            
+            # Calculate correct balance from transactions
+            transactions = await db.transactions.find({
+                "user_id": current_user.id,
+                "account_id": account_id,
+                "status": "Pago"  # Only paid transactions should affect balance
+            }).to_list(1000)
+            
+            calculated_balance = initial_balance
+            
+            for trans in transactions:
+                if trans["type"] == "Receita":
+                    calculated_balance += trans["value"]
+                elif trans["type"] == "Despesa":
+                    calculated_balance -= trans["value"]
+            
+            discrepancy = abs(calculated_balance - current_system_balance)
+            
+            if discrepancy > 0.01:  # More than 1 cent difference
+                # Fix the balance
+                await db.accounts.update_one(
+                    {"id": account_id},
+                    {"$set": {"current_balance": calculated_balance}}
+                )
+                
+                corrections.append({
+                    "account_name": account_name,
+                    "old_balance": current_system_balance,
+                    "correct_balance": calculated_balance,
+                    "discrepancy": current_system_balance - calculated_balance,
+                    "fixed": True
+                })
+                
+                total_discrepancy += discrepancy
+                
+                print(f"[AUDIT] Fixed {account_name}: {current_system_balance:.2f} → {calculated_balance:.2f}")
+            else:
+                corrections.append({
+                    "account_name": account_name,
+                    "old_balance": current_system_balance,
+                    "correct_balance": calculated_balance,
+                    "discrepancy": 0,
+                    "fixed": False
+                })
+        
+        return {
+            "message": "Auditoria de saldos concluída com sucesso!",
+            "corrections_made": len([c for c in corrections if c["fixed"]]),
+            "total_discrepancy_fixed": total_discrepancy,
+            "corrections": corrections,
+            "audit_successful": True
+        }
+        
+    except Exception as e:
+        print(f"[AUDIT ERROR] Failed to audit balances: {e}")
+        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
+
 # Enhanced Account endpoints
 @api_router.post("/accounts", response_model=Account)
 async def create_account(account_data: AccountCreate, current_user: User = Depends(get_current_user)):
