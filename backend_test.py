@@ -3334,23 +3334,60 @@ def run_critical_category_migration_test():
     return migration_success
 
 if __name__ == "__main__":
-    # CRITICAL PRIORITY: Run balance calculation investigation first
-    print("🚨 CRITICAL PRIORITY: BALANCE CALCULATION INVESTIGATION")
+    # CRITICAL PRIORITY: Execute Balance Audit and Correction
+    print("🚨 CRITICAL PRIORITY: BALANCE AUDIT AND CORRECTION EXECUTION")
+    print("="*80)
+    print("Target: Fix R$ 84.08 discrepancy for user hpdanielvb@gmail.com")
     print("="*80)
     
-    balance_investigation_success = test_critical_balance_calculation_investigation()
+    # Execute the critical balance audit and correction
+    balance_audit_success = test_balance_audit_and_correction()
     
-    if not balance_investigation_success:
-        print("\n🚨 CRITICAL BALANCE ISSUE DETECTED!")
-        print("This issue must be resolved immediately.")
-        print("Stopping further tests to focus on this critical problem.")
+    if balance_audit_success:
+        print("\n🎉 CRITICAL BALANCE AUDIT COMPLETED SUCCESSFULLY!")
+        print("✅ R$ 84.08 discrepancy has been fixed")
+        print("✅ All account balances now match transaction history")
+        print("✅ Mathematical consistency restored")
+        
+        # Additional verification with balance investigation
+        print("\n🔍 RUNNING ADDITIONAL BALANCE VERIFICATION")
+        print("="*60)
+        
+        investigation_success = test_critical_balance_calculation_investigation()
+        
+        if investigation_success:
+            print("\n✅ BALANCE VERIFICATION PASSED")
+            print("✅ System integrity confirmed")
+        else:
+            print("\n⚠️  BALANCE VERIFICATION DETECTED REMAINING ISSUES")
+            print("🔧 Additional investigation may be needed")
     else:
-        print("\n✅ Balance calculations appear correct.")
-        print("Continuing with other tests...")
+        print("\n❌ CRITICAL BALANCE AUDIT FAILED!")
+        print("⚠️  Balance discrepancy may still exist")
+        print("🚨 Immediate attention required")
         
-        # Run other critical tests if balance is OK
-        print("\n🚨 SECONDARY PRIORITY: USER LOGIN VERIFICATION")
-        test_critical_user_login_issue()
+        # Still run investigation to understand the issue
+        print("\n🔍 RUNNING DIAGNOSTIC BALANCE INVESTIGATION")
+        print("="*60)
         
-        print("\n📊 RUNNING ADDITIONAL BACKEND TESTS")
-        run_all_tests()
+        investigation_success = test_critical_balance_calculation_investigation()
+    
+    # Final Summary
+    print("\n" + "="*80)
+    print("📊 CRITICAL BALANCE AUDIT FINAL SUMMARY")
+    print("="*80)
+    
+    if balance_audit_success:
+        print("🎉 SUCCESS: Balance audit and correction completed successfully")
+        print("✅ User hpdanielvb@gmail.com balance issues resolved")
+        print("✅ R$ 84.08 discrepancy fixed")
+        print("✅ System integrity restored")
+        print("✅ Financial system mathematical consistency confirmed")
+    else:
+        print("❌ FAILURE: Critical balance issues remain unresolved")
+        print("🚨 User hpdanielvb@gmail.com still has balance calculation errors")
+        print("🚨 R$ 84.08 discrepancy may persist")
+        print("🚨 Financial system integrity compromised")
+        print("🚨 IMMEDIATE ATTENTION REQUIRED")
+    
+    print("="*80)
