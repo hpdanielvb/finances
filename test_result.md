@@ -242,9 +242,9 @@ backend:
 
   - task: "Comprehensive Brazilian Categories System"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -263,6 +263,9 @@ backend:
         - working: true
         - agent: "testing"
         - comment: "🎉 CORRECTED CATEGORIES CREATION FUNCTION VERIFIED SUCCESSFULLY! Comprehensive testing of the bug fix completed with excellent results: ✅ NEW USER TESTING: Created fresh test user 'category.test@email.com' to trigger corrected create_default_categories function ✅ DEBUGGING OUTPUT CONFIRMED: Server logs show '[DEBUG] Total categories defined: 129', '[DEBUG] Parent categories inserted successfully: 27', '[DEBUG] Subcategories inserted successfully: 102', '[DEBUG] Category creation completed successfully' ✅ FULL CATEGORY VERIFICATION: New user has exactly 129/129 categories (100% success rate) - all 13 Receita categories, all 12 main expense groups, all 102 subcategories created ✅ ALL MISSING CATEGORIES RESTORED: Netflix, Spotify, Uber/99/Táxi, Consultas Médicas, Odontologia, and all other previously missing categories now present ✅ COMPLETE MAIN GROUPS: All 12 main groups now created (Moradia, Transporte, Alimentação, Educação, Saúde, Lazer e Entretenimento, Compras/Vestuário, Serviços Pessoais, Dívidas e Empréstimos, Impostos e Taxas, Investimentos, Despesas com Pets). The corrected MongoDB insertion logic with improved error handling and debugging is working perfectly. Bug fix successful - category creation system is now production-ready!"
+        - working: false
+        - agent: "testing"
+        - comment: "🚨 CRITICAL USER DATA INVESTIGATION: Real user teste.debug@email.com has only 42/129 categories (32.6%), missing Netflix, Spotify, Uber/99/Táxi, Consultas Médicas. ROOT CAUSE: User was created BEFORE category creation bug fix and is stuck with incomplete legacy data. While new users get 129 categories correctly, existing users remain with old 42-category set. This explains user's report of seeing only 8 categories in frontend. URGENT: Category migration needed for existing users to upgrade from legacy 42-category set to full 129-category set."
 
   - task: "Intelligent Category Suggestion System"
     implemented: true
