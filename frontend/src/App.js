@@ -284,7 +284,8 @@ const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [budgets, setBudgets] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [goalsStats, setGoalsStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   
@@ -292,8 +293,10 @@ const Dashboard = () => {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showContributeModal, setShowContributeModal] = useState(false);
   const [transactionType, setTransactionType] = useState('');
   const [editingItem, setEditingItem] = useState(null);
 
