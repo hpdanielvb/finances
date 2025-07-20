@@ -1124,6 +1124,226 @@ def run_critical_balance_test():
     
     return result
 
+def test_categories_creation_debug():
+    """
+    COMPREHENSIVE CATEGORIES CREATION DEBUG TEST
+    
+    Debug why only 42 categories are being created instead of the expected 120+.
+    
+    Test Plan:
+    1. Test with EXISTING user (teste.debug@email.com)
+    2. Get current categories count
+    3. Check if categories were created correctly for this user
+    4. Test Categories Creation Logic
+    5. Call the categories endpoint and count categories by type and parent relationships
+    6. Verify parent/child relationships are being created properly
+    7. Check if the create_default_categories function is working correctly
+    8. Detailed Category Analysis - Count main groups and subcategories
+    9. Identify which groups/subcategories are missing
+    """
+    print("\n" + "="*80)
+    print("🔍 DEBUG: COMPREHENSIVE BRAZILIAN CATEGORIES SYSTEM")
+    print("="*80)
+    print("Debugging why only 42 categories are created instead of expected 120+")
+    
+    if not auth_token:
+        print_test_result("Categories Debug", False, "Token não disponível")
+        return False
+    
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    
+    try:
+        # Step 1: Get all categories for the user
+        print("\n📊 STEP 1: Getting all categories for user teste.debug@email.com")
+        response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if response.status_code != 200:
+            print_test_result("Get Categories", False, 
+                            f"Status: {response.status_code}, Error: {response.text}")
+            return False
+        
+        categories = response.json()
+        total_categories = len(categories)
+        
+        print_test_result("Get Categories", True, f"Found {total_categories} categories")
+        
+        # Step 2: Analyze categories by type
+        print("\n📊 STEP 2: Analyzing categories by type")
+        receita_categories = [cat for cat in categories if cat.get("type") == "Receita"]
+        despesa_categories = [cat for cat in categories if cat.get("type") == "Despesa"]
+        
+        print(f"   📈 Receita categories: {len(receita_categories)}")
+        print(f"   📉 Despesa categories: {len(despesa_categories)}")
+        
+        # Step 3: Analyze parent/child relationships
+        print("\n📊 STEP 3: Analyzing parent/child relationships")
+        parent_categories = [cat for cat in categories if cat.get("parent_category_id") is None]
+        child_categories = [cat for cat in categories if cat.get("parent_category_id") is not None]
+        
+        print(f"   👨‍👩‍👧‍👦 Parent categories: {len(parent_categories)}")
+        print(f"   👶 Child categories: {len(child_categories)}")
+        
+        # Step 4: Expected main groups analysis
+        print("\n📊 STEP 4: Expected main groups analysis")
+        expected_main_groups = [
+            "Moradia", "Transporte", "Alimentação", "Saúde", 
+            "Lazer e Entretenimento", "Educação", "Compras/Vestuário", 
+            "Serviços Pessoais", "Dívidas e Empréstimos", "Impostos e Taxas", 
+            "Investimentos", "Despesas com Pets"
+        ]
+        
+        found_main_groups = []
+        missing_main_groups = []
+        
+        for group in expected_main_groups:
+            found = any(cat.get("name") == group for cat in parent_categories)
+            if found:
+                found_main_groups.append(group)
+            else:
+                missing_main_groups.append(group)
+        
+        print(f"   ✅ Found main groups ({len(found_main_groups)}/12): {', '.join(found_main_groups)}")
+        if missing_main_groups:
+            print(f"   ❌ Missing main groups ({len(missing_main_groups)}/12): {', '.join(missing_main_groups)}")
+        
+        # Step 5: Detailed subcategory analysis for each found main group
+        print("\n📊 STEP 5: Detailed subcategory analysis")
+        
+        subcategory_analysis = {}
+        for main_group in found_main_groups:
+            parent_cat = next((cat for cat in parent_categories if cat.get("name") == main_group), None)
+            if parent_cat:
+                parent_id = parent_cat.get("id")
+                subcategories = [cat for cat in child_categories if cat.get("parent_category_id") == parent_id]
+                subcategory_analysis[main_group] = {
+                    "count": len(subcategories),
+                    "names": [cat.get("name") for cat in subcategories]
+                }
+                print(f"   🏠 {main_group}: {len(subcategories)} subcategories")
+                if subcategories:
+                    print(f"      └─ {', '.join([cat.get('name') for cat in subcategories])}")
+        
+        # Step 6: Check for expected subcategories in key groups
+        print("\n📊 STEP 6: Checking for expected subcategories in key groups")
+        
+        expected_subcategories = {
+            "Transporte": ["Combustível (Gasolina)", "Uber/99/Táxi", "Transporte Público", "Estacionamento", "IPVA"],
+            "Saúde": ["Plano de Saúde", "Consultas Médicas", "Remédios", "Odontologia"],
+            "Lazer e Entretenimento": ["Cinema", "Netflix", "Spotify", "Viagens (Passagens)", "Viagens (Hospedagem)"],
+            "Alimentação": ["Supermercado", "Restaurantes", "Delivery", "Feira", "Bares/Cafés"]
+        }
+        
+        for group, expected_subs in expected_subcategories.items():
+            if group in subcategory_analysis:
+                found_subs = subcategory_analysis[group]["names"]
+                missing_subs = [sub for sub in expected_subs if sub not in found_subs]
+                if missing_subs:
+                    print(f"   ❌ {group} missing subcategories: {', '.join(missing_subs)}")
+                else:
+                    print(f"   ✅ {group} has all expected subcategories")
+            else:
+                print(f"   ❌ {group} main group not found")
+        
+        # Step 7: Check for income categories
+        print("\n📊 STEP 7: Analyzing income categories")
+        expected_income_categories = [
+            "Salário", "Freelance/PJ", "Pró-Labore", "Aluguel Recebido", 
+            "Dividendos/Juros (Investimentos)", "13º Salário", "Férias", "Bônus"
+        ]
+        
+        found_income = []
+        missing_income = []
+        
+        income_names = [cat.get("name") for cat in receita_categories]
+        for income_cat in expected_income_categories:
+            if income_cat in income_names:
+                found_income.append(income_cat)
+            else:
+                missing_income.append(income_cat)
+        
+        print(f"   ✅ Found income categories ({len(found_income)}/{len(expected_income_categories)}): {', '.join(found_income)}")
+        if missing_income:
+            print(f"   ❌ Missing income categories: {', '.join(missing_income)}")
+        
+        # Step 8: Summary and diagnosis
+        print("\n📊 STEP 8: DIAGNOSIS SUMMARY")
+        print("="*60)
+        print(f"Total Categories Found: {total_categories}")
+        print(f"Expected Categories: 120+")
+        print(f"Gap: {120 - total_categories} categories missing")
+        print()
+        print(f"Main Groups Found: {len(found_main_groups)}/12")
+        print(f"Income Categories Found: {len(found_income)}/{len(expected_income_categories)}")
+        print(f"Parent Categories: {len(parent_categories)}")
+        print(f"Child Categories: {len(child_categories)}")
+        
+        # Step 9: Identify the root cause
+        print("\n🔍 STEP 9: ROOT CAUSE ANALYSIS")
+        print("="*60)
+        
+        if len(found_main_groups) < 12:
+            print(f"❌ ISSUE 1: Only {len(found_main_groups)}/12 main groups created")
+            print(f"   Missing groups: {', '.join(missing_main_groups)}")
+        
+        if len(child_categories) < 80:  # Expected ~80+ subcategories
+            print(f"❌ ISSUE 2: Only {len(child_categories)} subcategories created (expected 80+)")
+        
+        if len(receita_categories) < 13:  # Expected 13 income categories
+            print(f"❌ ISSUE 3: Only {len(receita_categories)} income categories created (expected 13)")
+        
+        # Step 10: Check if create_default_categories function is working properly
+        print("\n🔍 STEP 10: TESTING CATEGORY CREATION LOGIC")
+        print("="*60)
+        
+        # Let's check if we can see the pattern in what's missing
+        if total_categories == 42:
+            print("🔍 PATTERN DETECTED: Exactly 42 categories suggests partial creation")
+            print("   This indicates the create_default_categories function may be:")
+            print("   1. Stopping early due to an error")
+            print("   2. Not processing all categories in the default list")
+            print("   3. Having issues with parent-child relationship creation")
+        
+        # Final assessment
+        if total_categories < 100:
+            print_test_result("Categories Creation Debug", False, 
+                            f"Only {total_categories}/120+ categories created. Major gaps identified.")
+            return False
+        else:
+            print_test_result("Categories Creation Debug", True, 
+                            f"Categories creation working properly: {total_categories} categories found")
+            return True
+        
+    except Exception as e:
+        print_test_result("Categories Creation Debug", False, f"Exception: {str(e)}")
+        return False
+
+def run_categories_debug_test():
+    """Run only the categories creation debug test"""
+    print("🔍 EXECUTANDO DEBUG DE CRIAÇÃO DE CATEGORIAS")
+    print("=" * 80)
+    print(f"URL do Backend: {BACKEND_URL}")
+    print("=" * 80)
+    
+    # Setup required for the test - login with existing user
+    if not test_user_login():
+        print("❌ Falha no login - não é possível executar o teste")
+        return False
+    
+    # Run the categories debug test
+    result = test_categories_creation_debug()
+    
+    print("\n" + "="*80)
+    print("RESULTADO DO DEBUG DE CATEGORIAS")
+    print("="*80)
+    
+    if result:
+        print("🎉 CATEGORIAS FUNCIONANDO CORRETAMENTE!")
+    else:
+        print("❌ PROBLEMAS IDENTIFICADOS NA CRIAÇÃO DE CATEGORIAS!")
+        print("   Verifique os detalhes acima para identificar as causas.")
+    
+    return result
+
 if __name__ == "__main__":
-    # Run only the critical balance logic test as requested
-    run_critical_balance_test()
+    # Run the categories creation debug test as requested
+    run_categories_debug_test()
