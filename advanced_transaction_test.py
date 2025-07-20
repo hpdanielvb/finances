@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import uuid
 
 # Configuration
-BACKEND_URL = "https://d760404c-d8e2-4b6c-a73d-a54db14f2378.preview.emergentagent.com/api"
+BACKEND_URL = "https://71aad304-8e39-41ba-a4a1-3482fa474659.preview.emergentagent.com/api"
 
 # Test user credentials (existing user from previous tests)
 TEST_USER_LOGIN = {
