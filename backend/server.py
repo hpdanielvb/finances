@@ -743,18 +743,85 @@ async def get_transactions(
     account_id: Optional[str] = None,
     category_id: Optional[str] = None,
     type_filter: Optional[str] = None,
+    status: Optional[str] = None,  # "Pago" ou "Pendente"
+    start_date: Optional[str] = None,  # Format: YYYY-MM-DD
+    end_date: Optional[str] = None,    # Format: YYYY-MM-DD
+    search: Optional[str] = None,      # Search in description
+    min_value: Optional[float] = None,
+    max_value: Optional[float] = None,
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Advanced transaction filtering endpoint with comprehensive search options:
+    - Date range filtering (start_date, end_date)
+    - Search by description
+    - Filter by account, category, type, status
+    - Value range filtering
+    - Pagination support
+    """
     # Build query
     query = {"user_id": current_user.id}
+    
+    # Account filter
     if account_id:
         query["account_id"] = account_id
+    
+    # Category filter
     if category_id:
         query["category_id"] = category_id
+    
+    # Type filter (Receita/Despesa)
     if type_filter:
         query["type"] = type_filter
     
-    transactions = await db.transactions.find(query).sort("transaction_date", -1).skip(offset).limit(limit).to_list(limit)
+    # Status filter (Pago/Pendente)
+    if status:
+        query["status"] = status
+    
+    # Date range filter
+    date_filter = {}
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+            date_filter["$gte"] = start_datetime
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+    
+    if end_date:
+        try:
+            end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+            # Add 23:59:59 to include the entire end date
+            end_datetime = end_datetime.replace(hour=23, minute=59, second=59)
+            date_filter["$lte"] = end_datetime
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+    
+    if date_filter:
+        query["transaction_date"] = date_filter
+    
+    # Description search (case insensitive)
+    if search:
+        query["description"] = {"$regex": search, "$options": "i"}
+    
+    # Value range filter
+    value_filter = {}
+    if min_value is not None:
+        value_filter["$gte"] = min_value
+    if max_value is not None:
+        value_filter["$lte"] = max_value
+    if value_filter:
+        query["value"] = value_filter
+    
+    # Get total count for pagination info
+    total_count = await db.transactions.count_documents(query)
+    
+    # Execute query with sorting and pagination
+    transactions = await db.transactions.find(query)\
+        .sort("transaction_date", -1)\
+        .skip(offset)\
+        .limit(limit)\
+        .to_list(limit)
+    
     return [Transaction(**transaction) for transaction in transactions]
 
 @api_router.put("/transactions/{transaction_id}", response_model=Transaction)
