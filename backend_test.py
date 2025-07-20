@@ -55,6 +55,286 @@ def print_test_result(test_name, success, details=""):
     if details:
         print(f"   Detalhes: {details}")
 
+def test_critical_user_endpoints():
+    """
+    CRITICAL TEST: Test all backend endpoints for user hpdanielvb@gmail.com
+    
+    This addresses the URGENT review request:
+    - User reports complete system failure
+    - Test authentication, categories, accounts, transactions, dashboard
+    - Provide exact numbers and data for each endpoint
+    """
+    print("\n" + "="*80)
+    print("🚨 CRITICAL BACKEND API TESTING - USER hpdanielvb@gmail.com")
+    print("="*80)
+    print("Testing all critical backend endpoints for reported system failure")
+    
+    # Test credentials from review request
+    critical_user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "TestPassword123"
+    }
+    
+    test_results = {
+        "login_success": False,
+        "categories_count": 0,
+        "accounts_count": 0,
+        "account_balance": 0,
+        "transactions_count": 0,
+        "dashboard_working": False,
+        "auth_token": None
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Authentication System - POST /api/auth/login")
+        print(f"   Testing credentials: {critical_user_login['email']} / {critical_user_login['password']}")
+        
+        # Test login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=critical_user_login)
+        
+        if response.status_code == 200:
+            data = response.json()
+            user_info = data.get("user", {})
+            auth_token = data.get("access_token")
+            test_results["auth_token"] = auth_token
+            test_results["login_success"] = True
+            
+            print_test_result("AUTHENTICATION SYSTEM", True, 
+                            f"✅ Login successful for {user_info.get('name')} ({user_info.get('email')})")
+            print(f"   User ID: {user_info.get('id')}")
+            print(f"   Token expires in: {data.get('expires_in', 0)} seconds")
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("AUTHENTICATION SYSTEM", False, 
+                            f"❌ Login failed: {error_detail}")
+            print(f"   Status Code: {response.status_code}")
+            return test_results
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Categories System - GET /api/categories
+        print(f"\n🔍 STEP 2: Categories System - GET /api/categories")
+        print(f"   User reports seeing only 8 categories instead of 184")
+        
+        categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if categories_response.status_code == 200:
+            categories = categories_response.json()
+            test_results["categories_count"] = len(categories)
+            
+            print_test_result("CATEGORIES SYSTEM", True, 
+                            f"✅ Retrieved {len(categories)} categories")
+            
+            # Analyze categories breakdown
+            receita_categories = [c for c in categories if c.get('type') == 'Receita']
+            despesa_categories = [c for c in categories if c.get('type') == 'Despesa']
+            
+            print(f"   Categories Breakdown:")
+            print(f"      Total Categories: {len(categories)}")
+            print(f"      Receita Categories: {len(receita_categories)}")
+            print(f"      Despesa Categories: {len(despesa_categories)}")
+            
+            # Check for specific categories mentioned in test_result.md
+            key_categories = ["Netflix", "Spotify", "Uber/99/Táxi", "Consultas Médicas", "Odontologia"]
+            found_key_categories = []
+            
+            for key_cat in key_categories:
+                if any(c.get('name') == key_cat for c in categories):
+                    found_key_categories.append(key_cat)
+            
+            print(f"   Key Categories Found: {len(found_key_categories)}/{len(key_categories)}")
+            print(f"      Found: {', '.join(found_key_categories)}")
+            
+            if len(found_key_categories) < len(key_categories):
+                missing = [cat for cat in key_categories if cat not in found_key_categories]
+                print(f"      Missing: {', '.join(missing)}")
+            
+            # Compare with expected 184 categories
+            if len(categories) >= 184:
+                print(f"   ✅ Categories count meets expectation (≥184)")
+            else:
+                print(f"   ⚠️  Categories count below expectation: {len(categories)}/184")
+                
+        else:
+            print_test_result("CATEGORIES SYSTEM", False, 
+                            f"❌ Failed to retrieve categories: {categories_response.status_code}")
+        
+        # STEP 3: Accounts System - GET /api/accounts
+        print(f"\n🔍 STEP 3: Accounts System - GET /api/accounts")
+        print(f"   User reports initial balance R$ 3,398.43 shows negative")
+        
+        accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        
+        if accounts_response.status_code == 200:
+            accounts = accounts_response.json()
+            test_results["accounts_count"] = len(accounts)
+            
+            total_balance = sum(acc.get('current_balance', 0) for acc in accounts)
+            test_results["account_balance"] = total_balance
+            
+            print_test_result("ACCOUNTS SYSTEM", True, 
+                            f"✅ Retrieved {len(accounts)} account(s)")
+            
+            print(f"   Accounts Details:")
+            for i, account in enumerate(accounts, 1):
+                name = account.get('name', 'Unknown')
+                account_type = account.get('type', 'Unknown')
+                initial_balance = account.get('initial_balance', 0)
+                current_balance = account.get('current_balance', 0)
+                
+                print(f"      Account {i}: {name} ({account_type})")
+                print(f"         Initial Balance: R$ {initial_balance:.2f}")
+                print(f"         Current Balance: R$ {current_balance:.2f}")
+                
+                if current_balance < 0:
+                    print(f"         ⚠️  NEGATIVE BALANCE DETECTED")
+            
+            print(f"   Total Balance: R$ {total_balance:.2f}")
+            
+            if total_balance < 0:
+                print(f"   ⚠️  TOTAL BALANCE IS NEGATIVE - User complaint confirmed")
+            else:
+                print(f"   ✅ Total balance is positive")
+                
+        else:
+            print_test_result("ACCOUNTS SYSTEM", False, 
+                            f"❌ Failed to retrieve accounts: {accounts_response.status_code}")
+        
+        # STEP 4: Transactions System - GET /api/transactions
+        print(f"\n🔍 STEP 4: Transactions System - GET /api/transactions")
+        print(f"   User reports missing transactions")
+        
+        transactions_response = requests.get(f"{BACKEND_URL}/transactions?limit=100", headers=headers)
+        
+        if transactions_response.status_code == 200:
+            transactions = transactions_response.json()
+            test_results["transactions_count"] = len(transactions)
+            
+            print_test_result("TRANSACTIONS SYSTEM", True, 
+                            f"✅ Retrieved {len(transactions)} transaction(s)")
+            
+            # Analyze transactions
+            receita_transactions = [t for t in transactions if t.get('type') == 'Receita']
+            despesa_transactions = [t for t in transactions if t.get('type') == 'Despesa']
+            pago_transactions = [t for t in transactions if t.get('status') == 'Pago']
+            pendente_transactions = [t for t in transactions if t.get('status') == 'Pendente']
+            
+            total_receitas = sum(t.get('value', 0) for t in receita_transactions if t.get('status') == 'Pago')
+            total_despesas = sum(t.get('value', 0) for t in despesa_transactions if t.get('status') == 'Pago')
+            
+            print(f"   Transactions Breakdown:")
+            print(f"      Total Transactions: {len(transactions)}")
+            print(f"      Receita Transactions: {len(receita_transactions)}")
+            print(f"      Despesa Transactions: {len(despesa_transactions)}")
+            print(f"      Paid Transactions: {len(pago_transactions)}")
+            print(f"      Pending Transactions: {len(pendente_transactions)}")
+            print(f"      Total Paid Income: R$ {total_receitas:.2f}")
+            print(f"      Total Paid Expenses: R$ {total_despesas:.2f}")
+            print(f"      Net Amount: R$ {(total_receitas - total_despesas):.2f}")
+            
+            if len(transactions) == 0:
+                print(f"   ⚠️  NO TRANSACTIONS FOUND - User complaint confirmed")
+            else:
+                print(f"   ✅ Transactions found")
+                
+        else:
+            print_test_result("TRANSACTIONS SYSTEM", False, 
+                            f"❌ Failed to retrieve transactions: {transactions_response.status_code}")
+        
+        # STEP 5: Dashboard Summary - GET /api/dashboard/summary
+        print(f"\n🔍 STEP 5: Dashboard Summary - GET /api/dashboard/summary")
+        print(f"   User reports missing dashboard features")
+        
+        dashboard_response = requests.get(f"{BACKEND_URL}/dashboard/summary", headers=headers)
+        
+        if dashboard_response.status_code == 200:
+            dashboard_data = dashboard_response.json()
+            test_results["dashboard_working"] = True
+            
+            print_test_result("DASHBOARD SUMMARY", True, 
+                            f"✅ Dashboard data retrieved successfully")
+            
+            # Analyze dashboard data
+            total_balance = dashboard_data.get('total_balance', 0)
+            monthly_income = dashboard_data.get('monthly_income', 0)
+            monthly_expenses = dashboard_data.get('monthly_expenses', 0)
+            monthly_net = dashboard_data.get('monthly_net', 0)
+            accounts_summary = dashboard_data.get('accounts', [])
+            expense_by_category = dashboard_data.get('expense_by_category', {})
+            income_by_category = dashboard_data.get('income_by_category', {})
+            pending_transactions = dashboard_data.get('pending_transactions', [])
+            
+            print(f"   Dashboard Summary:")
+            print(f"      Total Balance: R$ {total_balance:.2f}")
+            print(f"      Monthly Income: R$ {monthly_income:.2f}")
+            print(f"      Monthly Expenses: R$ {monthly_expenses:.2f}")
+            print(f"      Monthly Net: R$ {monthly_net:.2f}")
+            print(f"      Accounts in Summary: {len(accounts_summary)}")
+            print(f"      Expense Categories: {len(expense_by_category)}")
+            print(f"      Income Categories: {len(income_by_category)}")
+            print(f"      Pending Transactions: {len(pending_transactions)}")
+            
+            # Check for required dashboard features
+            required_features = ['total_balance', 'monthly_income', 'monthly_expenses', 
+                               'accounts', 'expense_by_category', 'income_by_category']
+            missing_features = [f for f in required_features if f not in dashboard_data]
+            
+            if not missing_features:
+                print(f"   ✅ All required dashboard features present")
+            else:
+                print(f"   ⚠️  Missing dashboard features: {', '.join(missing_features)}")
+                
+        else:
+            print_test_result("DASHBOARD SUMMARY", False, 
+                            f"❌ Failed to retrieve dashboard: {dashboard_response.status_code}")
+        
+        # STEP 6: Final Summary
+        print(f"\n🔍 STEP 6: FINAL SUMMARY FOR USER hpdanielvb@gmail.com")
+        print("="*60)
+        
+        print(f"📊 CRITICAL ENDPOINT TEST RESULTS:")
+        print(f"   ✅ Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   📁 Categories: {test_results['categories_count']} found (Expected: 184)")
+        print(f"   🏦 Accounts: {test_results['accounts_count']} found")
+        print(f"   💰 Total Balance: R$ {test_results['account_balance']:.2f}")
+        print(f"   📋 Transactions: {test_results['transactions_count']} found")
+        print(f"   📊 Dashboard: {'WORKING' if test_results['dashboard_working'] else 'FAILED'}")
+        
+        # Determine overall system status
+        critical_issues = []
+        
+        if not test_results['login_success']:
+            critical_issues.append("Authentication failure")
+        
+        if test_results['categories_count'] < 100:  # Significantly below expected 184
+            critical_issues.append(f"Categories count too low ({test_results['categories_count']}/184)")
+        
+        if test_results['account_balance'] < 0:
+            critical_issues.append(f"Negative total balance (R$ {test_results['account_balance']:.2f})")
+        
+        if test_results['transactions_count'] == 0:
+            critical_issues.append("No transactions found")
+        
+        if not test_results['dashboard_working']:
+            critical_issues.append("Dashboard not working")
+        
+        if critical_issues:
+            print(f"\n🚨 CRITICAL ISSUES CONFIRMED:")
+            for issue in critical_issues:
+                print(f"   ❌ {issue}")
+            
+            print(f"\n💡 USER'S SYSTEM FAILURE REPORT IS PARTIALLY/FULLY VALID")
+            return False
+        else:
+            print(f"\n🎉 ALL CRITICAL ENDPOINTS WORKING CORRECTLY")
+            print(f"   User's system failure report may be frontend-related")
+            return True
+        
+    except Exception as e:
+        print_test_result("CRITICAL USER ENDPOINTS TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_balance_audit_and_correction():
     """
     CRITICAL BALANCE AUDIT AND CORRECTION TEST
