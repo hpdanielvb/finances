@@ -1376,22 +1376,167 @@ const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdi
   );
 };
 
-const AccountsView = ({ accounts, onRefresh, onEdit, onCreateNew }) => {
+const AccountsView = ({ accounts, onRefresh, onEdit, onDelete, onCreateNew }) => {
   return (
-    <div className="bg-white rounded-xl shadow-lg">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Gerenciar Contas</h2>
-        <button
-          onClick={onCreateNew}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <Plus size={16} />
-          Nova Conta
-        </button>
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-lg">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">Gerenciar Contas</h2>
+          <button
+            onClick={onCreateNew}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Nova Conta
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conta</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instituição</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo Inicial</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo Atual</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {accounts.map((account) => (
+                <tr key={account.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-3"
+                        style={{ backgroundColor: account.color_hex }}
+                      ></div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{account.name}</div>
+                        {account.type === 'Cartão de Crédito' && account.credit_limit && (
+                          <div className="text-sm text-gray-500">
+                            Limite: {formatCurrency(account.credit_limit)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                      {account.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {account.institution || 'Não informado'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                    {formatCurrency(account.initial_balance)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <span className={`text-sm font-bold ${
+                      account.current_balance >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatCurrency(account.current_balance)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex justify-center space-x-2">
+                      <button
+                        onClick={() => onEdit(account)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Editar conta"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(account.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Excluir conta"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {accounts.length === 0 && (
+          <div className="text-center py-12">
+            <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">Nenhuma conta cadastrada</p>
+            <button
+              onClick={onCreateNew}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Criar sua primeira conta
+            </button>
+          </div>
+        )}
       </div>
-      <div className="p-6">
-        {/* Account management interface would go here */}
-        <p className="text-gray-500">Gerenciamento de contas em desenvolvimento...</p>
+
+      {/* Account Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo por Tipo</h3>
+          <div className="space-y-3">
+            {[...new Set(accounts.map(a => a.type))].map(type => {
+              const typeAccounts = accounts.filter(a => a.type === type);
+              const totalBalance = typeAccounts.reduce((sum, acc) => sum + acc.current_balance, 0);
+              
+              return (
+                <div key={type} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{type}</span>
+                  <span className="text-sm font-medium">{formatCurrency(totalBalance)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Por Instituição</h3>
+          <div className="space-y-3">
+            {[...new Set(accounts.map(a => a.institution).filter(Boolean))].map(institution => {
+              const instAccounts = accounts.filter(a => a.institution === institution);
+              const totalBalance = instAccounts.reduce((sum, acc) => sum + acc.current_balance, 0);
+              
+              return (
+                <div key={institution} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{institution}</span>
+                  <span className="text-sm font-medium">{formatCurrency(totalBalance)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Estatísticas</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Total de Contas</span>
+              <span className="text-sm font-medium">{accounts.length}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Saldo Médio</span>
+              <span className="text-sm font-medium">
+                {accounts.length > 0 ? formatCurrency(
+                  accounts.reduce((sum, acc) => sum + acc.current_balance, 0) / accounts.length
+                ) : formatCurrency(0)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Contas Positivas</span>
+              <span className="text-sm font-medium">
+                {accounts.filter(a => a.current_balance > 0).length} de {accounts.length}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
