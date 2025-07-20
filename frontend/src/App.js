@@ -25,75 +25,42 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const [tokenExpiry, setTokenExpiry] = useState(localStorage.getItem('tokenExpiry'));
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    const storedExpiry = localStorage.getItem('tokenExpiry');
+    const storedToken = localStorage.getItem('token');
     
-    if (storedUser && token && storedExpiry) {
-      // Check if token is expired
-      const now = new Date().getTime();
-      const expiry = parseInt(storedExpiry);
-      
-      if (now < expiry) {
+    if (storedUser && storedToken) {
+      try {
         setUser(JSON.parse(storedUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        // Set up auto-refresh 5 minutes before expiry
-        const refreshTime = expiry - now - (5 * 60 * 1000); // 5 minutes before
-        if (refreshTime > 0) {
-          setTimeout(refreshToken, refreshTime);
-        }
-      } else {
-        // Token expired, clear storage
+        setToken(storedToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        console.log('User restored from localStorage:', JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
         logout();
       }
     }
     setLoading(false);
-  }, [token]);
-
-  const refreshToken = async () => {
-    try {
-      const response = await axios.post(`${API}/auth/refresh`);
-      const { access_token, expires_in } = response.data;
-      
-      const expiryTime = new Date().getTime() + (expires_in * 1000);
-      
-      setToken(access_token);
-      setTokenExpiry(expiryTime.toString());
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('tokenExpiry', expiryTime.toString());
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      
-      // Schedule next refresh
-      setTimeout(refreshToken, (expires_in - 300) * 1000); // 5 minutes before expiry
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      logout();
-    }
-  };
+  }, []);
 
   const login = async (email, password) => {
     try {
       const response = await axios.post(`${API}/auth/login`, { email, password });
-      const { access_token, expires_in, user } = response.data;
-      
-      const expiryTime = new Date().getTime() + (expires_in * 1000);
+      const { access_token, user } = response.data;
       
       setToken(access_token);
       setUser(user);
-      setTokenExpiry(expiryTime.toString());
       localStorage.setItem('token', access_token);
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('tokenExpiry', expiryTime.toString());
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      // Schedule token refresh
-      setTimeout(refreshToken, (expires_in - 300) * 1000); // 5 minutes before expiry
+      console.log('Login successful:', user);
+      toast.success(`Bem-vindo, ${user.name}!`);
       
       return { success: true };
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, message: error.response?.data?.detail || 'Erro no login' };
     }
   };
@@ -103,35 +70,32 @@ const AuthProvider = ({ children }) => {
       const response = await axios.post(`${API}/auth/register`, { 
         name, email, password, confirm_password: confirmPassword 
       });
-      const { access_token, expires_in, user } = response.data;
-      
-      const expiryTime = new Date().getTime() + (expires_in * 1000);
+      const { access_token, user } = response.data;
       
       setToken(access_token);
       setUser(user);
-      setTokenExpiry(expiryTime.toString());
       localStorage.setItem('token', access_token);
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('tokenExpiry', expiryTime.toString());
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      // Schedule token refresh
-      setTimeout(refreshToken, (expires_in - 300) * 1000); // 5 minutes before expiry
+      console.log('Registration successful:', user);
+      toast.success(`Conta criada com sucesso! Bem-vindo, ${user.name}!`);
       
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
       return { success: false, message: error.response?.data?.detail || 'Erro no cadastro' };
     }
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     setToken(null);
-    setTokenExpiry(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('tokenExpiry');
     delete axios.defaults.headers.common['Authorization'];
+    toast.success('Logout realizado com sucesso!');
   };
 
   return (
