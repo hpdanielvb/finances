@@ -157,8 +157,13 @@ def verify_token(token: str):
             return None
         return user_id
     except jwt.ExpiredSignatureError:
+        print(f"Token expired")
         return None
-    except jwt.PyJWTError:
+    except jwt.InvalidTokenError as e:
+        print(f"Invalid token: {e}")
+        return None
+    except Exception as e:
+        print(f"Token verification error: {e}")
         return None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
