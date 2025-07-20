@@ -1669,7 +1669,271 @@ const AccountsView = ({ accounts, onRefresh, onEdit, onDelete, onCreateNew }) =>
   );
 };
 
-const BudgetsView = ({ budgets, categories, summary, onRefresh, onCreateNew, onEdit, onDelete }) => {
+// Goals View Component
+const GoalsView = ({ goals, goalsStats, onRefresh, onCreateNew, onEdit, onDelete, onContribute }) => {
+  const getGoalProgress = (goal) => {
+    const percentage = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0;
+    return Math.min(percentage, 100);
+  };
+
+  const getProgressColor = (percentage) => {
+    if (percentage >= 100) return 'bg-green-500';
+    if (percentage >= 75) return 'bg-blue-500';
+    if (percentage >= 50) return 'bg-yellow-500';
+    return 'bg-gray-300';
+  };
+
+  const getDaysRemaining = (targetDate) => {
+    const today = new Date();
+    const target = new Date(targetDate);
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'Alta': return 'text-red-600 bg-red-100';
+      case 'Média': return 'text-yellow-600 bg-yellow-100';
+      case 'Baixa': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Goals Statistics */}
+      {goalsStats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <h3 className="text-sm font-medium text-blue-100 mb-2">Total de Metas</h3>
+            <p className="text-3xl font-bold">{goalsStats.total_goals}</p>
+            <p className="text-sm text-blue-200 mt-1">{goalsStats.active_goals} ativas</p>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <h3 className="text-sm font-medium text-green-100 mb-2">Metas Atingidas</h3>
+            <p className="text-3xl font-bold">{goalsStats.achieved_goals}</p>
+            <p className="text-sm text-green-200 mt-1">
+              {goalsStats.total_goals > 0 ? Math.round((goalsStats.achieved_goals / goalsStats.total_goals) * 100) : 0}% completas
+            </p>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <h3 className="text-sm font-medium text-purple-100 mb-2">Total Poupado</h3>
+            <p className="text-3xl font-bold">{formatCurrency(goalsStats.total_saved_amount)}</p>
+            <p className="text-sm text-purple-200 mt-1">De {formatCurrency(goalsStats.total_target_amount)}</p>
+          </div>
+          
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+            <h3 className="text-sm font-medium text-orange-100 mb-2">Progresso Geral</h3>
+            <p className="text-3xl font-bold">{goalsStats.overall_progress.toFixed(1)}%</p>
+            <p className="text-sm text-orange-200 mt-1">Das suas metas</p>
+          </div>
+        </div>
+      )}
+
+      {/* Goals Management */}
+      <div className="bg-white rounded-xl shadow-lg">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">Suas Metas Financeiras</h2>
+          <button
+            onClick={onCreateNew}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Nova Meta
+          </button>
+        </div>
+
+        <div className="p-6">
+          {goals.length === 0 ? (
+            <div className="text-center py-12">
+              <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma meta definida</h3>
+              <p className="text-gray-500 mb-6">
+                Defina metas financeiras para alcançar seus objetivos mais facilmente!
+              </p>
+              <button
+                onClick={onCreateNew}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Criar sua primeira meta
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {goals.map((goal) => {
+                const progress = getGoalProgress(goal);
+                const daysRemaining = getDaysRemaining(goal.target_date);
+                
+                return (
+                  <div key={goal.id} className="border rounded-xl p-6 hover:shadow-md transition-all bg-white relative">
+                    {goal.is_achieved && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-2">
+                        <span className="text-xs">🎉</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{goal.name}</h3>
+                        {goal.description && (
+                          <p className="text-sm text-gray-600 mb-2">{goal.description}</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(goal.priority)}`}>
+                            {goal.priority}
+                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            {goal.category}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex space-x-2 ml-4">
+                        <button
+                          onClick={() => onEdit(goal)}
+                          className="text-blue-600 hover:text-blue-800 p-1"
+                          title="Editar meta"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => onDelete(goal.id)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Excluir meta"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Progress Section */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Progresso</span>
+                        <span className="font-medium">{progress.toFixed(1)}%</span>
+                      </div>
+                      
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`h-3 rounded-full transition-all duration-300 ${getProgressColor(progress)}`}
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Economizado:</span>
+                          <p className="font-bold text-green-600">{formatCurrency(goal.current_amount)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Meta:</span>
+                          <p className="font-bold text-blue-600">{formatCurrency(goal.target_amount)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Faltam:</span>
+                          <p className="font-bold text-orange-600">{formatCurrency(goal.target_amount - goal.current_amount)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Prazo:</span>
+                          <p className={`font-bold ${daysRemaining < 30 ? 'text-red-600' : daysRemaining < 90 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {daysRemaining > 0 ? `${daysRemaining} dias` : 'Vencido'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Auto Contribution */}
+                      {goal.auto_contribution && (
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            💰 Contribuição automática: {formatCurrency(goal.auto_contribution)}/mês
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      {!goal.is_achieved && (
+                        <button
+                          onClick={() => onContribute(goal)}
+                          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        >
+                          Contribuir
+                        </button>
+                      )}
+                      
+                      {goal.is_achieved && (
+                        <div className="flex-1 bg-green-100 text-green-800 py-2 px-4 rounded-lg text-center text-sm font-medium">
+                          ✅ Meta Atingida!
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Achievement Badge */}
+                    {goal.is_achieved && goal.achieved_date && (
+                      <div className="mt-3 text-center">
+                        <p className="text-xs text-gray-500">
+                          Atingida em {formatDate(goal.achieved_date)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Goals by Category */}
+      {goalsStats?.category_statistics && Object.keys(goalsStats.category_statistics).length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Progresso por Categoria</h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(goalsStats.category_statistics).map(([category, stats]) => (
+                <div key={category} className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">{category}</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Metas:</span>
+                      <span className="font-medium">{stats.count}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total:</span>
+                      <span className="font-medium">{formatCurrency(stats.target)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Economizado:</span>
+                      <span className="font-medium text-green-600">{formatCurrency(stats.saved)}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{ width: `${Math.min(stats.progress, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-center text-sm font-medium text-blue-600">
+                      {stats.progress.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const getBudgetProgress = (budget) => {
