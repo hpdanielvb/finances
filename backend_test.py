@@ -45,6 +45,8 @@ category_id = None
 expense_category_id = None
 transaction_id = None
 budget_id = None
+goal_id = None
+goal_contribution_id = None
 
 def print_test_result(test_name, success, details=""):
     """Print formatted test results"""
