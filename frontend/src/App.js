@@ -1224,6 +1224,28 @@ const Dashboard = () => {
         />
       )}
 
+      {showGoalModal && (
+        <GoalModal
+          goal={editingItem}
+          onClose={() => {
+            setShowGoalModal(false);
+            setEditingItem(null);
+          }}
+          onCreate={handleCreateGoal}
+        />
+      )}
+
+      {showContributeModal && (
+        <ContributeModal
+          goal={editingItem}
+          onClose={() => {
+            setShowContributeModal(false);
+            setEditingItem(null);
+          }}
+          onContribute={handleContributeGoal}
+        />
+      )}
+
       <Toaster position="top-right" />
     </div>
   );
