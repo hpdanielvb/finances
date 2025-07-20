@@ -3054,5 +3054,23 @@ def run_critical_category_migration_test():
     return migration_success
 
 if __name__ == "__main__":
-    # Run the CRITICAL CATEGORY MIGRATION TEST as requested
-    run_critical_category_migration_test()
+    # CRITICAL PRIORITY: Run balance calculation investigation first
+    print("🚨 CRITICAL PRIORITY: BALANCE CALCULATION INVESTIGATION")
+    print("="*80)
+    
+    balance_investigation_success = test_critical_balance_calculation_investigation()
+    
+    if not balance_investigation_success:
+        print("\n🚨 CRITICAL BALANCE ISSUE DETECTED!")
+        print("This issue must be resolved immediately.")
+        print("Stopping further tests to focus on this critical problem.")
+    else:
+        print("\n✅ Balance calculations appear correct.")
+        print("Continuing with other tests...")
+        
+        # Run other critical tests if balance is OK
+        print("\n🚨 SECONDARY PRIORITY: USER LOGIN VERIFICATION")
+        test_critical_user_login_issue()
+        
+        print("\n📊 RUNNING ADDITIONAL BACKEND TESTS")
+        run_all_tests()
