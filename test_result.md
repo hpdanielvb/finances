@@ -257,6 +257,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "❌ COMPREHENSIVE TESTING FAILED: Advanced testing revealed significant gaps in the Brazilian categories system. Found only 42 categories total vs expected 120+. Missing key subcategories: Only 2/5 Transport subcategories (missing Uber/99/Táxi, Combustível variants), only 2/4 Health subcategories (missing Consultas Médicas, Odontologia), only 1/5 Entertainment subcategories (missing Netflix, Spotify, Viagens). Missing 6 of 12 main category groups. System needs major expansion to meet comprehensive Brazilian financial categorization requirements."
+        - working: false
+        - agent: "testing"
+        - comment: "🔍 DETAILED DEBUG COMPLETED: Root cause identified! The create_default_categories function in server.py (lines 1356-1552) contains all 129 expected categories but is only creating 42 (32.6% success rate). CRITICAL FINDINGS: (1) Function stops partway through creation process - missing 6/12 main groups: 'Lazer e Entretenimento', 'Compras/Vestuário', 'Serviços Pessoais', 'Dívidas e Empréstimos', 'Impostos e Taxas', 'Despesas com Pets' (2) Subcategories severely incomplete: Moradia 8/11, Transporte 5/14, Alimentação 4/9, Saúde 3/10, Educação 0/6, Investimentos 0/5 (3) Income categories missing 5/13 entries. ROOT CAUSE: Database insertion error or parent-child relationship mapping failure in create_default_categories function. The function has all categories defined correctly but fails during execution, likely due to uncaught database errors during bulk insertion or parent ID mapping issues."
 
   - task: "Intelligent Category Suggestion System"
     implemented: true
