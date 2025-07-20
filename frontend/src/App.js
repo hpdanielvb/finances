@@ -130,13 +130,11 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('🔍 DEBUG: handleSubmit called!', { isLogin, showForgotPassword, formData });
     setLoading(true);
     setError('');
 
     try {
       if (showForgotPassword) {
-        console.log('🔍 DEBUG: Handling forgot password...');
         // Handle forgot password
         const response = await axios.post(`${API}/auth/forgot-password`, {
           email: formData.email
@@ -145,30 +143,23 @@ const LoginForm = () => {
         setShowForgotPassword(false);
         setFormData({ name: '', email: '', password: '', confirmPassword: '' });
       } else if (!isLogin && formData.password !== formData.confirmPassword) {
-        console.log('🔍 DEBUG: Password mismatch in registration');
         setError('Senhas não coincidem');
         setLoading(false);
         return;
       } else {
-        console.log('🔍 DEBUG: Calling login/register function...', { isLogin });
         const result = isLogin 
           ? await login(formData.email, formData.password)
           : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
 
-        console.log('🔍 DEBUG: Login/register result:', result);
-
         if (!result.success) {
-          console.log('🔍 DEBUG: Login/register failed:', result.message);
           setError(result.message);
           toast.error(result.message);
           setLoading(false);
-        } else {
-          console.log('🔍 DEBUG: Login/register successful!');
         }
       }
       // Don't set loading to false here - let the context handle the redirect
     } catch (error) {
-      console.error('🔍 DEBUG: Form submit error:', error);
+      console.error('Form submit error:', error);
       const errorMessage = error.response?.data?.detail || 'Erro interno. Tente novamente.';
       setError(errorMessage);
       toast.error(errorMessage);
