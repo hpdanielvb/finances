@@ -1068,19 +1068,22 @@ async def get_cash_flow_report(
 # Helper function to create comprehensive default categories
 async def create_default_categories(user_id: str):
     default_categories = [
-        # Receitas
+        # RECEITAS DETALHADAS
         {"name": "Salário", "type": "Receita"},
         {"name": "Freelance/PJ", "type": "Receita"},
         {"name": "Pró-Labore", "type": "Receita"},
         {"name": "Aluguel Recebido", "type": "Receita"},
-        {"name": "Dividendos/Juros", "type": "Receita"},
-        {"name": "Vendas", "type": "Receita"},
+        {"name": "Dividendos/Juros (Investimentos)", "type": "Receita"},
+        {"name": "Vendas (Produtos/Serviços)", "type": "Receita"},
+        {"name": "Restituição de IR", "type": "Receita"},
         {"name": "13º Salário", "type": "Receita"},
         {"name": "Férias", "type": "Receita"},
+        {"name": "Indenizações", "type": "Receita"},
+        {"name": "Presentes/Doações Recebidas", "type": "Receita"},
         {"name": "Bônus", "type": "Receita"},
         {"name": "Outras Receitas", "type": "Receita"},
         
-        # Despesas - Moradia
+        # DESPESAS - MORADIA (Principal)
         {"name": "Moradia", "type": "Despesa"},
         {"name": "Aluguel", "type": "Despesa", "parent": "Moradia"},
         {"name": "Condomínio", "type": "Despesa", "parent": "Moradia"},
@@ -1089,39 +1092,139 @@ async def create_default_categories(user_id: str):
         {"name": "Luz", "type": "Despesa", "parent": "Moradia"},
         {"name": "Gás", "type": "Despesa", "parent": "Moradia"},
         {"name": "Internet", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Telefone", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Telefone Fixo", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Manutenção e Reparos", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Financiamento Imobiliário", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Seguro Residencial", "type": "Despesa", "parent": "Moradia"},
         
-        # Despesas - Transporte
+        # DESPESAS - TRANSPORTE (Principal)
         {"name": "Transporte", "type": "Despesa"},
-        {"name": "Combustível", "type": "Despesa", "parent": "Transporte"},
-        {"name": "Transporte Público", "type": "Despesa", "parent": "Transporte"},
-        {"name": "Uber/99", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Combustível (Gasolina)", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Combustível (Etanol)", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Combustível (GNV)", "type": "Despesa", "parent": "Transporte"},
         {"name": "Estacionamento", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Pedágio", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Transporte Público", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Uber/99/Táxi", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Manutenção do Veículo", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Seguro Auto", "type": "Despesa", "parent": "Transporte"},
         {"name": "IPVA", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Licenciamento", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Multas", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Lavagem de Carro", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Revisões", "type": "Despesa", "parent": "Transporte"},
         
-        # Despesas - Alimentação
+        # DESPESAS - ALIMENTAÇÃO (Principal)
         {"name": "Alimentação", "type": "Despesa"},
         {"name": "Supermercado", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Restaurantes", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Delivery", "type": "Despesa", "parent": "Alimentação"},
         {"name": "Feira", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Hortifrúti", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Açougue/Padaria", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Restaurantes", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Lanches", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Delivery", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Bares/Cafés", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Suplementos Alimentares", "type": "Despesa", "parent": "Alimentação"},
         
-        # Despesas - Saúde
+        # DESPESAS - EDUCAÇÃO (Principal)
+        {"name": "Educação", "type": "Despesa"},
+        {"name": "Mensalidade Escolar", "type": "Despesa", "parent": "Educação"},
+        {"name": "Mensalidade Universitária", "type": "Despesa", "parent": "Educação"},
+        {"name": "Cursos Livres/Idiomas", "type": "Despesa", "parent": "Educação"},
+        {"name": "Material Escolar", "type": "Despesa", "parent": "Educação"},
+        {"name": "Livros", "type": "Despesa", "parent": "Educação"},
+        {"name": "Pós-graduação", "type": "Despesa", "parent": "Educação"},
+        
+        # DESPESAS - SAÚDE (Principal)
         {"name": "Saúde", "type": "Despesa"},
         {"name": "Plano de Saúde", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Consultas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Consultas Médicas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Especialistas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Exames", "type": "Despesa", "parent": "Saúde"},
         {"name": "Remédios", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Óculos/Lentes", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Odontologia", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Fisioterapia", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Terapias", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Vacinas", "type": "Despesa", "parent": "Saúde"},
         
-        # Despesas - Lazer
-        {"name": "Lazer", "type": "Despesa"},
-        {"name": "Cinema", "type": "Despesa", "parent": "Lazer"},
-        {"name": "Viagens", "type": "Despesa", "parent": "Lazer"},
-        {"name": "Streaming", "type": "Despesa", "parent": "Lazer"},
+        # DESPESAS - LAZER E ENTRETENIMENTO (Principal)
+        {"name": "Lazer e Entretenimento", "type": "Despesa"},
+        {"name": "Cinema", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Teatro", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Shows", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Eventos Esportivos", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Viagens (Passagens)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Viagens (Hospedagem)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Viagens (Passeios)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Netflix", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Spotify", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Prime Video", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Globoplay", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Jogos", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Hobbies", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Festas/Eventos Sociais", "type": "Despesa", "parent": "Lazer e Entretenimento"},
         
-        # Outras categorias principais
-        {"name": "Educação", "type": "Despesa"},
-        {"name": "Compras", "type": "Despesa"},
+        # DESPESAS - COMPRAS/VESTUÁRIO (Principal)
+        {"name": "Compras/Vestuário", "type": "Despesa"},
+        {"name": "Roupas", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Calçados", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Acessórios", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Eletrônicos", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Eletrodomésticos", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Móveis", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Utensílios Domésticos", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Presentes", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Artigos de Decoração", "type": "Despesa", "parent": "Compras/Vestuário"},
+        
+        # DESPESAS - SERVIÇOS PESSOAIS (Principal)
+        {"name": "Serviços Pessoais", "type": "Despesa"},
+        {"name": "Salão de Beleza", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Cabeleireiro", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Manicure", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Barbearia", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Academia", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Personal Trainer", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Estética", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Massagem", "type": "Despesa", "parent": "Serviços Pessoais"},
+        {"name": "Lavanderia", "type": "Despesa", "parent": "Serviços Pessoais"},
+        
+        # DESPESAS - DÍVIDAS E EMPRÉSTIMOS (Principal)
+        {"name": "Dívidas e Empréstimos", "type": "Despesa"},
+        {"name": "Empréstimos Pessoais", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
+        {"name": "Financiamento de Veículo", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
+        {"name": "Fatura do Cartão de Crédito", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
+        {"name": "Juros de Dívidas", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
+        {"name": "Cheque Especial", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
+        
+        # DESPESAS - IMPOSTOS E TAXAS (Principal)
+        {"name": "Impostos e Taxas", "type": "Despesa"},
+        {"name": "Imposto de Renda", "type": "Despesa", "parent": "Impostos e Taxas"},
+        {"name": "Taxas Bancárias", "type": "Despesa", "parent": "Impostos e Taxas"},
+        {"name": "Contribuição Sindical", "type": "Despesa", "parent": "Impostos e Taxas"},
+        {"name": "Taxas de Condomínio Extras", "type": "Despesa", "parent": "Impostos e Taxas"},
+        
+        # DESPESAS - INVESTIMENTOS (Principal)
         {"name": "Investimentos", "type": "Despesa"},
+        {"name": "Aplicações Financeiras", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Compra de Ações", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Fundos de Investimento", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Poupança Programada", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Custos de Corretagem", "type": "Despesa", "parent": "Investimentos"},
+        
+        # DESPESAS - DOAÇÕES (Principal)
+        {"name": "Doações", "type": "Despesa"},
+        {"name": "Caridade", "type": "Despesa", "parent": "Doações"},
+        {"name": "Dízimo", "type": "Despesa", "parent": "Doações"},
+        
+        # DESPESAS - PETS (Principal)
+        {"name": "Despesas com Pets", "type": "Despesa"},
+        {"name": "Ração", "type": "Despesa", "parent": "Despesas com Pets"},
+        {"name": "Veterinário", "type": "Despesa", "parent": "Despesas com Pets"},
+        {"name": "Acessórios para Pets", "type": "Despesa", "parent": "Despesas com Pets"},
+        {"name": "Banho e Tosa", "type": "Despesa", "parent": "Despesas com Pets"},
+        
+        # OUTRAS DESPESAS
         {"name": "Outras Despesas", "type": "Despesa"}
     ]
     
