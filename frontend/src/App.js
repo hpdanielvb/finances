@@ -497,6 +497,20 @@ const Dashboard = () => {
     loadDashboard();
   }, []);
 
+  // Close notification panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotificationPanel && !event.target.closest('.notification-panel')) {
+        setShowNotificationPanel(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotificationPanel]);
+
   // Event handlers
   const handleCreateAccount = async (accountData) => {
     try {
