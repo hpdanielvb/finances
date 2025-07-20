@@ -722,17 +722,18 @@ async def create_transaction(transaction_data: TransactionCreate, current_user: 
     
     await db.transactions.insert_one(transaction.dict())
     
-    # Update account balance
-    balance_change = transaction_data.value if transaction_data.type == "Receita" else -transaction_data.value
-    await db.accounts.update_one(
-        {"id": transaction_data.account_id},
-        {"$inc": {"current_balance": balance_change}}
-    )
-    
-    # Update budget if category is provided
-    if transaction_data.category_id and transaction_data.type == "Despesa":
-        current_month = transaction_data.transaction_date.strftime("%Y-%m")
-        await update_budget_spent(current_user.id, transaction_data.category_id, current_month, transaction_data.value)
+    # Update account balance ONLY if transaction is "Pago" (not pending)
+    if transaction_data.status == "Pago":
+        balance_change = transaction_data.value if transaction_data.type == "Receita" else -transaction_data.value
+        await db.accounts.update_one(
+            {"id": transaction_data.account_id},
+            {"$inc": {"current_balance": balance_change}}
+        )
+        
+        # Update budget if category is provided and transaction is paid
+        if transaction_data.category_id and transaction_data.type == "Despesa":
+            current_month = transaction_data.transaction_date.strftime("%Y-%m")
+            await update_budget_spent(current_user.id, transaction_data.category_id, current_month, transaction_data.value)
     
     return transaction
 
