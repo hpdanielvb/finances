@@ -25,14 +25,14 @@ BACKEND_URL = "https://d760404c-d8e2-4b6c-a73d-a54db14f2378.preview.emergentagen
 
 # Test data with Brazilian names and content
 TEST_USER_DATA = {
-    "name": "Maria Silva Santos",
-    "email": "maria.silva@email.com.br",
+    "name": "Teste Debug User",
+    "email": "teste.debug@email.com",
     "password": "MinhaSenh@123",
     "confirm_password": "MinhaSenh@123"
 }
 
 TEST_USER_LOGIN = {
-    "email": "maria.silva@email.com.br", 
+    "email": "teste.debug@email.com", 
     "password": "MinhaSenh@123"
 }
 
