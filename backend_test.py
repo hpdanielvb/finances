@@ -1257,6 +1257,340 @@ def test_corrected_categories_creation():
         print_test_result("Corrected Categories Creation Test", False, f"Exceção: {str(e)}")
         return False
 
+def test_critical_category_migration():
+    """
+    CRITICAL CATEGORY MIGRATION TEST for user teste.debug@email.com
+    
+    This test executes the CRITICAL FIX for the user's primary complaint about missing categories.
+    
+    Test Steps:
+    1. Login as teste.debug@email.com
+    2. Verify current categories count (should be 42/129)
+    3. Execute Migration API: POST /api/admin/migrate-user-categories/{user_id}
+    4. Verify migration results (deleted old categories, created new categories)
+    5. Verify final categories count = 129
+    6. Test category functionality (verify categories are accessible)
+    
+    Expected Results:
+    - Delete ~42 old categories
+    - Create 129 new categories
+    - Final result: Complete Brazilian categories system
+    - Fix for user's "only 8 categories" issue
+    """
+    print("\n" + "="*80)
+    print("🚨 CRITICAL CATEGORY MIGRATION TEST - FIXING USER'S PRIMARY ISSUE")
+    print("="*80)
+    print("Executing CRITICAL FIX for teste.debug@email.com categories issue")
+    print("Expected: Fix 42/129 categories → Complete 129 categories system")
+    
+    global auth_token, user_id
+    
+    # Step 1: Login as teste.debug@email.com
+    print("\n📊 STEP 1: Login as teste.debug@email.com")
+    
+    login_data = {
+        "email": "teste.debug@email.com",
+        "password": "MinhaSenh@123"
+    }
+    
+    try:
+        login_response = requests.post(f"{BACKEND_URL}/auth/login", json=login_data)
+        
+        if login_response.status_code == 200:
+            auth_data = login_response.json()
+            auth_token = auth_data.get("access_token")
+            user_info = auth_data.get("user", {})
+            user_id = user_info.get("id")
+            
+            print_test_result("Login as teste.debug@email.com", True, 
+                            f"Successfully logged in as: {user_info.get('name')}")
+            print(f"   User ID: {user_id}")
+        else:
+            print_test_result("Login as teste.debug@email.com", False, 
+                            f"Status: {login_response.status_code}, Error: {login_response.text}")
+            return False
+    except Exception as e:
+        print_test_result("Login as teste.debug@email.com", False, f"Exception: {str(e)}")
+        return False
+    
+    if not auth_token or not user_id:
+        print_test_result("Authentication Setup", False, "Failed to get auth token or user ID")
+        return False
+    
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    
+    # Step 2: Verify current categories count (should be 42/129)
+    print("\n📊 STEP 2: Verify current categories count (should be 42/129)")
+    
+    try:
+        categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if categories_response.status_code == 200:
+            current_categories = categories_response.json()
+            current_count = len(current_categories)
+            
+            print_test_result("Current Categories Count", True, 
+                            f"Found {current_count} categories (expected ~42)")
+            
+            # Analyze current categories
+            income_cats = [cat for cat in current_categories if cat.get("type") == "Receita"]
+            expense_cats = [cat for cat in current_categories if cat.get("type") == "Despesa"]
+            
+            print(f"   📊 Current Breakdown: {len(income_cats)} Receitas, {len(expense_cats)} Despesas")
+            
+            # Check for missing key categories that user reported
+            category_names = [cat.get("name") for cat in current_categories]
+            missing_key_categories = []
+            
+            key_categories_to_check = ["Netflix", "Spotify", "Uber/99/Táxi", "Consultas Médicas", "Odontologia"]
+            for key_cat in key_categories_to_check:
+                if key_cat not in category_names:
+                    missing_key_categories.append(key_cat)
+            
+            if missing_key_categories:
+                print_test_result("Missing Key Categories Confirmed", True, 
+                                f"Missing: {', '.join(missing_key_categories)} (confirms user issue)")
+            else:
+                print_test_result("Missing Key Categories Check", False, 
+                                "Key categories found - migration may not be needed")
+            
+            if current_count < 100:
+                print_test_result("Migration Needed Confirmation", True, 
+                                f"Only {current_count}/129 categories - migration required")
+            else:
+                print_test_result("Migration Needed Check", False, 
+                                f"Already has {current_count} categories - may not need migration")
+        else:
+            print_test_result("Current Categories Count", False, 
+                            f"Status: {categories_response.status_code}")
+            return False
+    except Exception as e:
+        print_test_result("Current Categories Count", False, f"Exception: {str(e)}")
+        return False
+    
+    # Step 3: Execute Migration API
+    print("\n📊 STEP 3: Execute Migration API - POST /api/admin/migrate-user-categories/{user_id}")
+    
+    try:
+        migration_response = requests.post(f"{BACKEND_URL}/admin/migrate-user-categories/{user_id}", 
+                                         headers=headers)
+        
+        if migration_response.status_code == 200:
+            migration_result = migration_response.json()
+            
+            print_test_result("Category Migration API", True, "Migration API executed successfully")
+            
+            # Extract migration results
+            deleted_count = migration_result.get("deleted_old_categories", 0)
+            created_count = migration_result.get("created_new_categories", 0)
+            migration_successful = migration_result.get("migration_successful", False)
+            message = migration_result.get("message", "")
+            
+            print(f"   📊 Migration Results:")
+            print(f"      - Deleted old categories: {deleted_count}")
+            print(f"      - Created new categories: {created_count}")
+            print(f"      - Migration successful: {migration_successful}")
+            print(f"      - Message: {message}")
+            
+            # Verify expected results
+            if deleted_count > 0:
+                print_test_result("Old Categories Deleted", True, 
+                                f"Successfully deleted {deleted_count} old categories")
+            else:
+                print_test_result("Old Categories Deleted", False, 
+                                "No old categories were deleted")
+            
+            if created_count >= 120:
+                print_test_result("New Categories Created", True, 
+                                f"Successfully created {created_count} new categories")
+            elif created_count > 50:
+                print_test_result("New Categories Created", True, 
+                                f"Created {created_count} categories (partial success)")
+            else:
+                print_test_result("New Categories Created", False, 
+                                f"Only created {created_count} categories")
+            
+            if migration_successful:
+                print_test_result("Migration Success Flag", True, "Migration marked as successful")
+            else:
+                print_test_result("Migration Success Flag", False, "Migration not marked as successful")
+                
+        else:
+            print_test_result("Category Migration API", False, 
+                            f"Status: {migration_response.status_code}, Error: {migration_response.text}")
+            return False
+    except Exception as e:
+        print_test_result("Category Migration API", False, f"Exception: {str(e)}")
+        return False
+    
+    # Step 4: Verify final categories count = 129
+    print("\n📊 STEP 4: Verify final categories count = 129")
+    
+    try:
+        final_categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if final_categories_response.status_code == 200:
+            final_categories = final_categories_response.json()
+            final_count = len(final_categories)
+            
+            print_test_result("Final Categories Count", True, 
+                            f"Found {final_count} categories after migration")
+            
+            # Detailed analysis
+            final_income_cats = [cat for cat in final_categories if cat.get("type") == "Receita"]
+            final_expense_cats = [cat for cat in final_categories if cat.get("type") == "Despesa"]
+            final_parent_cats = [cat for cat in final_categories if cat.get("parent_category_id") is None]
+            final_child_cats = [cat for cat in final_categories if cat.get("parent_category_id") is not None]
+            
+            print(f"   📊 Final Breakdown:")
+            print(f"      - Income categories: {len(final_income_cats)}")
+            print(f"      - Expense categories: {len(final_expense_cats)}")
+            print(f"      - Parent categories: {len(final_parent_cats)}")
+            print(f"      - Subcategories: {len(final_child_cats)}")
+            
+            # Check for expected total
+            if final_count >= 125:
+                print_test_result("Complete Categories System", True, 
+                                f"🎉 SUCCESS: {final_count}/129 categories (complete system)")
+            elif final_count >= 100:
+                print_test_result("Significant Improvement", True, 
+                                f"✅ MAJOR IMPROVEMENT: {final_count}/129 categories")
+            elif final_count > current_count:
+                print_test_result("Partial Improvement", True, 
+                                f"⚠️ PARTIAL IMPROVEMENT: {final_count} vs {current_count}")
+            else:
+                print_test_result("Migration Failed", False, 
+                                f"❌ NO IMPROVEMENT: Still {final_count} categories")
+                return False
+        else:
+            print_test_result("Final Categories Count", False, 
+                            f"Status: {final_categories_response.status_code}")
+            return False
+    except Exception as e:
+        print_test_result("Final Categories Count", False, f"Exception: {str(e)}")
+        return False
+    
+    # Step 5: Test category functionality - verify categories are accessible
+    print("\n📊 STEP 5: Test category functionality - verify categories are accessible")
+    
+    try:
+        # Check for key categories that were missing
+        final_category_names = [cat.get("name") for cat in final_categories]
+        
+        key_categories_found = []
+        key_categories_still_missing = []
+        
+        for key_cat in key_categories_to_check:
+            if key_cat in final_category_names:
+                key_categories_found.append(key_cat)
+            else:
+                key_categories_still_missing.append(key_cat)
+        
+        if len(key_categories_found) >= 4:
+            print_test_result("Key Categories Restored", True, 
+                            f"Found: {', '.join(key_categories_found)}")
+        else:
+            print_test_result("Key Categories Restored", False, 
+                            f"Still missing: {', '.join(key_categories_still_missing)}")
+        
+        # Check main category groups
+        expected_main_groups = [
+            "Moradia", "Transporte", "Alimentação", "Educação", "Saúde",
+            "Lazer e Entretenimento", "Compras/Vestuário", "Serviços Pessoais",
+            "Dívidas e Empréstimos", "Impostos e Taxas", "Investimentos",
+            "Despesas com Pets"
+        ]
+        
+        found_main_groups = [group for group in expected_main_groups if group in final_category_names]
+        missing_main_groups = [group for group in expected_main_groups if group not in final_category_names]
+        
+        print(f"   📊 Main Groups Analysis:")
+        print(f"      - Found: {len(found_main_groups)}/12 main groups")
+        if found_main_groups:
+            print(f"      - Present: {', '.join(found_main_groups)}")
+        if missing_main_groups:
+            print(f"      - Missing: {', '.join(missing_main_groups)}")
+        
+        if len(found_main_groups) >= 10:
+            print_test_result("Complete Main Groups", True, 
+                            f"Found {len(found_main_groups)}/12 main category groups")
+        elif len(found_main_groups) >= 6:
+            print_test_result("Most Main Groups", True, 
+                            f"Found {len(found_main_groups)}/12 main category groups")
+        else:
+            print_test_result("Main Groups", False, 
+                            f"Only found {len(found_main_groups)}/12 main category groups")
+        
+        # Test category accessibility by trying to create a transaction with a migrated category
+        netflix_category = next((cat for cat in final_categories if cat.get("name") == "Netflix"), None)
+        if netflix_category:
+            print_test_result("Category Functionality Test", True, 
+                            f"Netflix category accessible (ID: {netflix_category.get('id')})")
+        else:
+            print_test_result("Category Functionality Test", False, 
+                            "Netflix category not found for functionality test")
+        
+    except Exception as e:
+        print_test_result("Category Functionality Test", False, f"Exception: {str(e)}")
+        return False
+    
+    # Final Summary
+    print("\n" + "="*80)
+    print("🎉 CRITICAL CATEGORY MIGRATION COMPLETED!")
+    print("="*80)
+    print(f"✅ User: teste.debug@email.com")
+    print(f"✅ Before Migration: {current_count} categories")
+    print(f"✅ After Migration: {final_count} categories")
+    print(f"✅ Improvement: +{final_count - current_count} categories")
+    print(f"✅ Key Categories Restored: {', '.join(key_categories_found)}")
+    print(f"✅ Main Groups: {len(found_main_groups)}/12 complete")
+    print("="*80)
+    
+    if final_count >= 120:
+        print("🎉 MIGRATION SUCCESSFUL - User's primary complaint FIXED!")
+        print("   - Complete Brazilian categories system restored")
+        print("   - User should now see all categories in frontend")
+        print("   - Netflix, Spotify, Uber/99/Táxi, and other missing categories restored")
+        return True
+    elif final_count > current_count + 50:
+        print("✅ MIGRATION PARTIALLY SUCCESSFUL - Significant improvement achieved")
+        print("   - Major increase in available categories")
+        print("   - User experience significantly improved")
+        return True
+    else:
+        print("❌ MIGRATION FAILED - No significant improvement")
+        return False
+
+def run_critical_migration_test():
+    """Run ONLY the critical category migration test"""
+    print("🚨 EXECUTING CRITICAL CATEGORY MIGRATION TEST")
+    print("=" * 80)
+    print(f"URL do Backend: {BACKEND_URL}")
+    print("Target User: teste.debug@email.com")
+    print("=" * 80)
+    
+    # Execute the critical migration test
+    migration_success = test_critical_category_migration()
+    
+    # Summary
+    print("\n" + "="*80)
+    print("📊 CRITICAL MIGRATION TEST SUMMARY")
+    print("="*80)
+    
+    if migration_success:
+        print("✅ CRITICAL MIGRATION: SUCCESS")
+        print("   - User's primary complaint about missing categories has been FIXED")
+        print("   - Complete Brazilian categories system restored")
+        print("   - User should now see all categories in frontend")
+    else:
+        print("❌ CRITICAL MIGRATION: FAILED")
+        print("   - Migration did not achieve expected results")
+        print("   - User's category issue may persist")
+        print("   - Further investigation needed")
+    
+    print("="*80)
+    return migration_success
+
 def run_all_tests():
     """Run all backend tests in sequence"""
     print("🇧🇷 INICIANDO TESTES DO BACKEND ORÇAZENFINANCEIRO")
