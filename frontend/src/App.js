@@ -340,6 +340,9 @@ const Dashboard = () => {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [goalsStats, setGoalsStats] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   
