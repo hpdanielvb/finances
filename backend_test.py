@@ -55,6 +55,286 @@ def print_test_result(test_name, success, details=""):
     if details:
         print(f"   Detalhes: {details}")
 
+def test_balance_audit_and_correction():
+    """
+    CRITICAL BALANCE AUDIT AND CORRECTION TEST
+    
+    Execute the balance audit and correction for user hpdanielvb@gmail.com
+    to fix the R$ 84.08 discrepancy identified in previous investigation.
+    
+    Test Steps:
+    1. Login as hpdanielvb@gmail.com (password: TestPassword123)
+    2. Execute Balance Audit: Call POST /api/admin/audit-and-fix-balances
+    3. Verify Corrections: Check if the R$ 84.08 discrepancy is fixed
+    4. Test Corrected Balances: Verify that account balances now match transaction history
+    """
+    print("\n" + "="*80)
+    print("🚨 CRITICAL BALANCE AUDIT AND CORRECTION EXECUTION")
+    print("="*80)
+    print("Executing balance audit and correction for user hpdanielvb@gmail.com")
+    print("Target: Fix R$ 84.08 discrepancy identified in previous investigation")
+    
+    # Test credentials from review request
+    critical_user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "TestPassword123"
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Login as {critical_user_login['email']}")
+        
+        # Attempt login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=critical_user_login)
+        
+        if response.status_code != 200:
+            print_test_result("CRITICAL USER LOGIN", False, 
+                            f"❌ Login failed: {response.json().get('detail', 'Unknown error')}")
+            return False
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        print_test_result("CRITICAL USER LOGIN", True, 
+                        f"✅ Successfully logged in as {user_info.get('name')}")
+        print(f"   User ID: {user_info.get('id')}")
+        
+        # STEP 2: Get pre-audit account balances
+        print(f"\n🔍 STEP 2: Recording pre-audit account balances")
+        
+        accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if accounts_response.status_code != 200:
+            print_test_result("GET PRE-AUDIT ACCOUNTS", False, "Failed to retrieve accounts")
+            return False
+        
+        pre_audit_accounts = accounts_response.json()
+        print_test_result("GET PRE-AUDIT ACCOUNTS", True, f"Found {len(pre_audit_accounts)} account(s)")
+        
+        pre_audit_balances = {}
+        total_pre_audit_balance = 0
+        
+        for account in pre_audit_accounts:
+            account_id = account.get('id')
+            account_name = account.get('name', 'Unknown')
+            current_balance = account.get('current_balance', 0)
+            
+            pre_audit_balances[account_id] = {
+                'name': account_name,
+                'balance': current_balance
+            }
+            total_pre_audit_balance += current_balance
+            
+            print(f"   Pre-Audit: {account_name} = R$ {current_balance:.2f}")
+        
+        print(f"📊 TOTAL PRE-AUDIT BALANCE: R$ {total_pre_audit_balance:.2f}")
+        
+        # STEP 3: Execute Balance Audit and Correction
+        print(f"\n🔍 STEP 3: Executing Balance Audit and Correction")
+        print("   Calling POST /api/admin/audit-and-fix-balances...")
+        
+        audit_response = requests.post(f"{BACKEND_URL}/admin/audit-and-fix-balances", headers=headers)
+        
+        if audit_response.status_code != 200:
+            print_test_result("BALANCE AUDIT EXECUTION", False, 
+                            f"❌ Audit failed: {audit_response.json().get('detail', 'Unknown error')}")
+            return False
+        
+        audit_data = audit_response.json()
+        print_test_result("BALANCE AUDIT EXECUTION", True, "✅ Balance audit executed successfully")
+        
+        # Display audit results
+        corrections_made = audit_data.get('corrections_made', 0)
+        total_discrepancy_fixed = audit_data.get('total_discrepancy_fixed', 0)
+        corrections = audit_data.get('corrections', [])
+        audit_successful = audit_data.get('audit_successful', False)
+        
+        print(f"   Corrections Made: {corrections_made}")
+        print(f"   Total Discrepancy Fixed: R$ {total_discrepancy_fixed:.2f}")
+        print(f"   Audit Successful: {audit_successful}")
+        
+        # Display detailed corrections
+        if corrections:
+            print(f"\n📋 DETAILED CORRECTIONS:")
+            for correction in corrections:
+                account_name = correction.get('account_name', 'Unknown')
+                old_balance = correction.get('old_balance', 0)
+                correct_balance = correction.get('correct_balance', 0)
+                discrepancy = correction.get('discrepancy', 0)
+                fixed = correction.get('fixed', False)
+                
+                status = "✅ FIXED" if fixed else "✅ OK"
+                print(f"   {status} {account_name}:")
+                print(f"      Old Balance: R$ {old_balance:.2f}")
+                print(f"      Correct Balance: R$ {correct_balance:.2f}")
+                if fixed:
+                    print(f"      Discrepancy Fixed: R$ {discrepancy:.2f}")
+        
+        # STEP 4: Verify post-audit balances
+        print(f"\n🔍 STEP 4: Verifying post-audit account balances")
+        
+        post_audit_accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if post_audit_accounts_response.status_code != 200:
+            print_test_result("GET POST-AUDIT ACCOUNTS", False, "Failed to retrieve post-audit accounts")
+            return False
+        
+        post_audit_accounts = post_audit_accounts_response.json()
+        print_test_result("GET POST-AUDIT ACCOUNTS", True, f"Retrieved {len(post_audit_accounts)} account(s)")
+        
+        total_post_audit_balance = 0
+        balance_changes = []
+        
+        for account in post_audit_accounts:
+            account_id = account.get('id')
+            account_name = account.get('name', 'Unknown')
+            new_balance = account.get('current_balance', 0)
+            
+            total_post_audit_balance += new_balance
+            
+            if account_id in pre_audit_balances:
+                old_balance = pre_audit_balances[account_id]['balance']
+                balance_change = new_balance - old_balance
+                
+                balance_changes.append({
+                    'name': account_name,
+                    'old_balance': old_balance,
+                    'new_balance': new_balance,
+                    'change': balance_change
+                })
+                
+                print(f"   Post-Audit: {account_name} = R$ {new_balance:.2f}")
+                if abs(balance_change) > 0.01:
+                    print(f"      Change: R$ {old_balance:.2f} → R$ {new_balance:.2f} (Δ R$ {balance_change:.2f})")
+        
+        print(f"📊 TOTAL POST-AUDIT BALANCE: R$ {total_post_audit_balance:.2f}")
+        
+        # STEP 5: Verify the R$ 84.08 discrepancy fix
+        print(f"\n🔍 STEP 5: Verifying R$ 84.08 discrepancy fix")
+        
+        total_balance_change = total_post_audit_balance - total_pre_audit_balance
+        
+        if corrections_made > 0:
+            print_test_result("BALANCE CORRECTIONS APPLIED", True, 
+                            f"✅ {corrections_made} correction(s) applied")
+            
+            if abs(total_discrepancy_fixed - 84.08) < 0.01:
+                print_test_result("R$ 84.08 DISCREPANCY FIX", True, 
+                                f"✅ Exact R$ 84.08 discrepancy fixed!")
+            elif total_discrepancy_fixed > 0:
+                print_test_result("BALANCE DISCREPANCY FIX", True, 
+                                f"✅ R$ {total_discrepancy_fixed:.2f} discrepancy fixed")
+            else:
+                print_test_result("BALANCE DISCREPANCY FIX", False, 
+                                "❌ No discrepancy was fixed")
+        else:
+            print_test_result("BALANCE CORRECTIONS", True, 
+                            "✅ No corrections needed - balances were already correct")
+        
+        # STEP 6: Manual verification of corrected balances
+        print(f"\n🔍 STEP 6: Manual verification of corrected balances")
+        
+        # Get all transactions to manually verify balance calculations
+        transactions_response = requests.get(f"{BACKEND_URL}/transactions?limit=1000", headers=headers)
+        if transactions_response.status_code != 200:
+            print_test_result("GET TRANSACTIONS FOR VERIFICATION", False, "Failed to retrieve transactions")
+            return False
+        
+        transactions = transactions_response.json()
+        print_test_result("GET TRANSACTIONS FOR VERIFICATION", True, f"Retrieved {len(transactions)} transactions")
+        
+        # Manual balance calculation for each account
+        manual_balances = {}
+        
+        # Initialize with account initial balances
+        for account in post_audit_accounts:
+            account_id = account.get('id')
+            account_name = account.get('name', 'Unknown')
+            initial_balance = account.get('initial_balance', 0)
+            current_balance = account.get('current_balance', 0)
+            
+            manual_balances[account_id] = {
+                'name': account_name,
+                'initial': initial_balance,
+                'calculated': initial_balance,
+                'system': current_balance
+            }
+        
+        # Process transactions to calculate manual balances
+        for transaction in transactions:
+            account_id = transaction.get('account_id')
+            trans_type = transaction.get('type', 'Unknown')
+            value = transaction.get('value', 0)
+            status = transaction.get('status', 'Unknown')
+            
+            # Only count PAID transactions for balance calculation
+            if account_id in manual_balances and status == "Pago":
+                if trans_type == "Receita":
+                    manual_balances[account_id]['calculated'] += value
+                elif trans_type == "Despesa":
+                    manual_balances[account_id]['calculated'] -= value
+        
+        # Compare manual vs system balances
+        verification_passed = True
+        total_remaining_discrepancy = 0
+        
+        print(f"\n📊 BALANCE VERIFICATION RESULTS:")
+        for account_id, balance_info in manual_balances.items():
+            account_name = balance_info['name']
+            manual_balance = balance_info['calculated']
+            system_balance = balance_info['system']
+            discrepancy = abs(manual_balance - system_balance)
+            
+            total_remaining_discrepancy += discrepancy
+            
+            print(f"   Account: {account_name}")
+            print(f"      Manual Calculated: R$ {manual_balance:.2f}")
+            print(f"      System Balance: R$ {system_balance:.2f}")
+            print(f"      Discrepancy: R$ {discrepancy:.2f}")
+            
+            if discrepancy > 0.01:  # More than 1 cent difference
+                print(f"      ⚠️  REMAINING DISCREPANCY!")
+                verification_passed = False
+            else:
+                print(f"      ✅ BALANCE CORRECT")
+        
+        print(f"\n📊 TOTAL REMAINING DISCREPANCY: R$ {total_remaining_discrepancy:.2f}")
+        
+        if verification_passed:
+            print_test_result("BALANCE VERIFICATION", True, 
+                            "✅ All account balances now match transaction history")
+        else:
+            print_test_result("BALANCE VERIFICATION", False, 
+                            f"❌ R$ {total_remaining_discrepancy:.2f} discrepancy still remains")
+        
+        # STEP 7: Final summary
+        print(f"\n🔍 STEP 7: FINAL AUDIT SUMMARY")
+        print("="*60)
+        
+        if audit_successful and verification_passed:
+            print("🎉 BALANCE AUDIT AND CORRECTION COMPLETED SUCCESSFULLY!")
+            print(f"✅ User: {user_info.get('name')} ({critical_user_login['email']})")
+            print(f"✅ Corrections Applied: {corrections_made}")
+            print(f"✅ Total Discrepancy Fixed: R$ {total_discrepancy_fixed:.2f}")
+            print(f"✅ All balances now match transaction history")
+            print(f"✅ Mathematical consistency restored")
+            
+            if abs(total_discrepancy_fixed - 84.08) < 0.01:
+                print(f"🎯 TARGET ACHIEVED: R$ 84.08 discrepancy successfully fixed!")
+            
+            return True
+        else:
+            print("❌ BALANCE AUDIT AND CORRECTION ISSUES DETECTED:")
+            if not audit_successful:
+                print("   - Audit execution failed")
+            if not verification_passed:
+                print(f"   - R$ {total_remaining_discrepancy:.2f} discrepancy still remains")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("BALANCE AUDIT AND CORRECTION", False, f"Exception: {str(e)}")
+        return False
+
 def test_critical_balance_calculation_investigation():
     """
     CRITICAL INVESTIGATION: Balance calculation error for user hpdanielvb@gmail.com
