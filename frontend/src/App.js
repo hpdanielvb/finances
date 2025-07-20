@@ -396,7 +396,88 @@ const Dashboard = () => {
         setGoalsStats(null);
       }
       
+  const generateNotifications = () => {
+    const newNotifications = [];
+    const now = new Date();
+
+    // Check for overdue transactions
+    transactions.forEach(transaction => {
+      if (transaction.status === 'Pendente' && new Date(transaction.transaction_date) < now) {
+        newNotifications.push({
+          id: `overdue-${transaction.id}`,
+          type: 'warning',
+          title: 'Transação em atraso',
+          message: `${transaction.description} - ${formatCurrency(transaction.value)}`,
+          time: new Date().toISOString(),
+          read: false
+        });
+      }
+    });
+
+    // Check for budget alerts
+    budgets.forEach(budget => {
+      const spent = summary?.categories?.find(c => c.id === budget.category_id)?.spent || 0;
+      const percentage = (spent / budget.budget_amount) * 100;
+      
+      if (percentage >= 100) {
+        newNotifications.push({
+          id: `budget-exceeded-${budget.id}`,
+          type: 'error',
+          title: 'Orçamento ultrapassado',
+          message: `Categoria excedeu o limite mensal`,
+          time: new Date().toISOString(),
+          read: false
+        });
+      } else if (percentage >= 80) {
+        newNotifications.push({
+          id: `budget-warning-${budget.id}`,
+          type: 'warning',
+          title: 'Orçamento próximo do limite',
+          message: `${percentage.toFixed(0)}% do orçamento utilizado`,
+          time: new Date().toISOString(),
+          read: false
+        });
+      }
+    });
+
+    // Check for goal milestones
+    goals.forEach(goal => {
+      const progress = (goal.current_amount / goal.target_amount) * 100;
+      if (progress >= 75 && progress < 100) {
+        const remainingDays = Math.ceil((new Date(goal.target_date) - now) / (1000 * 60 * 60 * 24));
+        newNotifications.push({
+          id: `goal-milestone-${goal.id}`,
+          type: 'success',
+          title: 'Meta quase atingida!',
+          message: `${goal.name} - ${progress.toFixed(0)}% completa (${remainingDays} dias restantes)`,
+          time: new Date().toISOString(),
+          read: false
+        });
+      }
+    });
+
+    // Low balance alerts
+    accounts.forEach(account => {
+      if (account.current_balance < 100 && account.type !== 'Cartão de Crédito') {
+        newNotifications.push({
+          id: `low-balance-${account.id}`,
+          type: 'warning',
+          title: 'Saldo baixo',
+          message: `${account.name} - ${formatCurrency(account.current_balance)}`,
+          time: new Date().toISOString(),
+          read: false
+        });
+      }
+    });
+
+    setNotifications(newNotifications);
+    setUnreadNotifications(newNotifications.filter(n => !n.read).length);
+  };
+
       console.log('Dashboard loaded successfully');
+      
+      // Generate notifications after loading data
+      setTimeout(generateNotifications, 1000);
       
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
