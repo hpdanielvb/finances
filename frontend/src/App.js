@@ -181,24 +181,43 @@ const LoginForm = () => {
           <p className="text-gray-600">Seu controle financeiro pessoal completo</p>
         </div>
 
-        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-          <button
-            className={`flex-1 py-2 text-center font-medium transition-all ${
-              isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-            } rounded-md`}
-            onClick={() => setIsLogin(true)}
-          >
-            Entrar
-          </button>
-          <button
-            className={`flex-1 py-2 text-center font-medium transition-all ${
-              !isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-            } rounded-md`}
-            onClick={() => setIsLogin(false)}
-          >
-            Cadastrar
-          </button>
-        </div>
+        {!showForgotPassword ? (
+          <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+            <button
+              type="button"
+              className={`flex-1 py-2 text-center font-medium transition-all ${
+                isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
+              } rounded-md`}
+              onClick={() => {
+                setIsLogin(true);
+                setShowForgotPassword(false);
+                setError('');
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+              }}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-2 text-center font-medium transition-all ${
+                !isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
+              } rounded-md`}
+              onClick={() => {
+                setIsLogin(false);
+                setShowForgotPassword(false);
+                setError('');
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+              }}
+            >
+              Cadastrar
+            </button>
+          </div>
+        ) : (
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-800">Recuperar Senha</h3>
+            <p className="text-sm text-gray-600 mt-1">Digite seu email para receber instruções</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
