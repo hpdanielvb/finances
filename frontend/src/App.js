@@ -327,6 +327,18 @@ const Dashboard = () => {
         console.log('Budget loading failed, continuing without budgets');
         setBudgets([]);
       }
+
+      try {
+        const goalsRes = await axios.get(`${API}/goals`);
+        setGoals(goalsRes.data);
+        
+        const goalsStatsRes = await axios.get(`${API}/goals/statistics`);
+        setGoalsStats(goalsStatsRes.data);
+      } catch (goalsError) {
+        console.log('Goals loading failed, continuing without goals');
+        setGoals([]);
+        setGoalsStats(null);
+      }
       
       console.log('Dashboard loaded successfully');
       
