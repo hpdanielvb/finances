@@ -167,15 +167,21 @@ def verify_token(token: str):
         return None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    user_id = verify_token(credentials.credentials)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
-    
-    user = await db.users.find_one({"id": user_id})
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuário não encontrado")
-    
-    return User(**user)
+    try:
+        user_id = verify_token(credentials.credentials)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+        
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuário não encontrado")
+        
+        return User(**user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Auth error: {e}")
+        raise HTTPException(status_code=401, detail="Erro de autenticação")
 
 # Enhanced Auth endpoints
 @api_router.post("/auth/register")
