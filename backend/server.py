@@ -244,6 +244,95 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         print(f"Auth error: {e}")
         raise HTTPException(status_code=401, detail="Erro de autenticação")
 
+# Email utility functions
+def generate_verification_token():
+    """Generate a secure random token for email verification"""
+    return secrets.token_urlsafe(32)
+
+async def send_email(to_email: str, subject: str, html_content: str, text_content: str = None):
+    """Send email using SMTP (simulated for MVP)"""
+    try:
+        # For MVP, we'll log the email instead of actually sending
+        print(f"[EMAIL SIMULATION] To: {to_email}")
+        print(f"[EMAIL SIMULATION] Subject: {subject}")
+        print(f"[EMAIL SIMULATION] Content: {html_content}")
+        
+        # In production, this would actually send the email:
+        # msg = MIMEMultipart("alternative")
+        # msg["Subject"] = subject
+        # msg["From"] = EMAIL_FROM
+        # msg["To"] = to_email
+        # 
+        # if text_content:
+        #     msg.attach(MIMEText(text_content, "plain"))
+        # msg.attach(MIMEText(html_content, "html"))
+        # 
+        # with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        #     server.starttls()
+        #     server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        #     server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f"Email sending error: {e}")
+        return False
+
+async def send_verification_email(user_email: str, verification_token: str):
+    """Send email verification email"""
+    verification_url = f"{FRONTEND_URL}/verify-email?token={verification_token}"
+    
+    subject = "Confirme seu email - OrçaZenFinanceiro"
+    html_content = f"""
+    <html>
+    <body>
+        <h2>Bem-vindo ao OrçaZenFinanceiro!</h2>
+        <p>Obrigado por se cadastrar. Para ativar sua conta, clique no link abaixo:</p>
+        <p><a href="{verification_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Confirmar Email</a></p>
+        <p>Ou acesse: {verification_url}</p>
+        <p>Este link expira em 24 horas.</p>
+        <p>Se você não se cadastrou no OrçaZenFinanceiro, ignore este email.</p>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    Bem-vindo ao OrçaZenFinanceiro!
+    
+    Para ativar sua conta, acesse: {verification_url}
+    
+    Este link expira em 24 horas.
+    """
+    
+    return await send_email(user_email, subject, html_content, text_content)
+
+async def send_password_reset_email(user_email: str, reset_token: str):
+    """Send password reset email"""
+    reset_url = f"{FRONTEND_URL}/reset-password?token={reset_token}"
+    
+    subject = "Redefinir senha - OrçaZenFinanceiro"
+    html_content = f"""
+    <html>
+    <body>
+        <h2>Redefinir sua senha</h2>
+        <p>Você solicitou uma redefinição de senha. Clique no link abaixo para criar uma nova senha:</p>
+        <p><a href="{reset_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a></p>
+        <p>Ou acesse: {reset_url}</p>
+        <p>Este link expira em 1 hora por segurança.</p>
+        <p>Se você não solicitou esta redefinição, ignore este email.</p>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    Redefinir sua senha
+    
+    Para redefinir sua senha, acesse: {reset_url}
+    
+    Este link expira em 1 hora.
+    """
+    
+    return await send_email(user_email, subject, html_content, text_content)
+
 # Enhanced Auth endpoints
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
