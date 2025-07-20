@@ -717,7 +717,7 @@ const Dashboard = () => {
                   ) : (
                     <div className="space-y-4">
                       {accounts.map((account) => (
-                        <div key={account.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors">
+                        <div key={account.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors group">
                           <div className="flex items-center">
                             <div 
                               className="w-4 h-4 rounded-full mr-3 shadow-sm"
@@ -728,9 +728,30 @@ const Dashboard = () => {
                               <p className="text-sm text-gray-500">{account.type} • {account.institution}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-gray-900">{formatCurrency(account.current_balance)}</p>
-                            <p className="text-xs text-gray-500">Saldo atual</p>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-bold text-gray-900">{formatCurrency(account.current_balance)}</p>
+                              <p className="text-xs text-gray-500">Saldo atual</p>
+                            </div>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => {
+                                  setEditingItem(account);
+                                  setShowAccountModal(true);
+                                }}
+                                className="p-1 text-blue-600 hover:text-blue-800"
+                                title="Editar conta"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAccount(account.id)}
+                                className="p-1 text-red-600 hover:text-red-800"
+                                title="Excluir conta"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
