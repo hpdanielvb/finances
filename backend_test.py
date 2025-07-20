@@ -2137,5 +2137,5 @@ def run_categories_debug_test():
     return result1 and result2
 
 if __name__ == "__main__":
-    # Run the categories creation debug test as requested
-    run_categories_debug_test()
+    # Run the CRITICAL CATEGORY MIGRATION TEST as requested
+    run_critical_migration_test()
