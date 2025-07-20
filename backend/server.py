@@ -334,6 +334,143 @@ async def send_password_reset_email(user_email: str, reset_token: str):
     
     return await send_email(user_email, subject, html_content, text_content)
 
+# Intelligent category suggestion function
+def suggest_category_from_description(description: str, transaction_type: str) -> str:
+    """
+    Suggest category based on transaction description using simple keyword matching
+    """
+    description_lower = description.lower()
+    
+    # Keywords mapping for intelligent suggestions
+    category_keywords = {
+        # RECEITAS
+        "Salário": ["salario", "salário", "pagamento", "ordenado", "vencimento"],
+        "Freelance/PJ": ["freelance", "freela", "projeto", "consultoria", "pj", "pessoa juridica"],
+        "Pró-Labore": ["pro labore", "pró-labore", "pro-labore", "prolabore"],
+        "Aluguel Recebido": ["aluguel recebido", "locação", "inquilino"],
+        "Dividendos/Juros (Investimentos)": ["dividendos", "juros", "rendimento", "yield", "proventos"],
+        "Vendas (Produtos/Serviços)": ["venda", "vendas", "produto vendido", "serviço prestado"],
+        "13º Salário": ["13 salario", "13º salário", "decimo terceiro"],
+        "Férias": ["ferias", "férias", "descanso remunerado"],
+        "Bônus": ["bonus", "bônus", "premiação", "gratificação"],
+        
+        # MORADIA
+        "Aluguel": ["aluguel", "locação", "rent"],
+        "Condomínio": ["condominio", "condomínio", "administração", "taxa condominial"],
+        "IPTU": ["iptu", "imposto territorial", "predial"],
+        "Água": ["agua", "água", "saneamento", "cedae", "sabesp"],
+        "Luz": ["luz", "energia", "eletricidade", "cemig", "cpfl", "light"],
+        "Gás": ["gas", "gás", "comgas", "ultragaz"],
+        "Internet": ["internet", "banda larga", "wi-fi", "wifi", "vivo fibra", "claro", "oi", "tim"],
+        "Telefone Fixo": ["telefone fixo", "linha fixa"],
+        
+        # TRANSPORTE
+        "Combustível (Gasolina)": ["gasolina", "posto", "combustível", "etanol", "alcool"],
+        "Uber/99/Táxi": ["uber", "99", "taxi", "táxi", "corrida", "viagem"],
+        "Transporte Público": ["metro", "metrô", "ônibus", "onibus", "trem", "cptm", "bilhete único"],
+        "Estacionamento": ["estacionamento", "parking", "zona azul"],
+        "IPVA": ["ipva", "imposto veiculo", "licenciamento"],
+        "Seguro Auto": ["seguro auto", "seguro carro", "seguro veículo"],
+        
+        # ALIMENTAÇÃO
+        "Supermercado": ["mercado", "supermercado", "compras", "pao de acucar", "carrefour", "extra"],
+        "Restaurantes": ["restaurante", "jantar", "almoço", "comida", "refeição"],
+        "Delivery": ["delivery", "ifood", "uber eats", "pedido", "entrega"],
+        "Feira": ["feira", "hortifruti", "verduras", "frutas"],
+        "Bares/Cafés": ["bar", "cafe", "café", "cerveja", "bebida", "starbucks"],
+        
+        # SAÚDE
+        "Plano de Saúde": ["plano saude", "plano de saúde", "unimed", "amil", "bradesco saúde"],
+        "Consultas Médicas": ["consulta", "medico", "médico", "clinica", "clínica"],
+        "Remédios": ["farmacia", "farmácia", "medicamento", "remedio", "droga"],
+        "Odontologia": ["dentista", "odonto", "dental"],
+        
+        # LAZER
+        "Cinema": ["cinema", "filme", "ingresso", "sessão"],
+        "Netflix": ["netflix", "streaming"],
+        "Spotify": ["spotify", "música", "musica"],
+        "Viagens (Passagens)": ["passagem", "avião", "voo", "gol", "tam", "azul"],
+        "Viagens (Hospedagem)": ["hotel", "pousada", "hospedagem", "booking"],
+        
+        # EDUCAÇÃO
+        "Mensalidade Escolar": ["escola", "colegio", "colégio", "mensalidade"],
+        "Cursos Livres/Idiomas": ["curso", "idioma", "inglês", "espanhol"],
+        "Livros": ["livro", "livraria", "amazon", "literatura"],
+        
+        # COMPRAS
+        "Roupas": ["roupa", "vestuário", "camisa", "calça", "vestido", "loja"],
+        "Eletrônicos": ["celular", "notebook", "tv", "eletrônico"],
+        "Supermercado": ["shampoo", "pasta dente", "produtos limpeza"],
+        
+        # SERVIÇOS PESSOAIS
+        "Salão de Beleza": ["salao", "salão", "cabeleireiro", "beleza"],
+        "Academia": ["academia", "gym", "musculação", "smart fit"],
+        
+        # PETS
+        "Ração": ["racao", "ração", "pet", "cachorro", "gato"],
+        "Veterinário": ["veterinario", "veterinário", "vet", "animal"]
+    }
+    
+    # Find best match based on keywords
+    best_match = None
+    max_matches = 0
+    
+    for category, keywords in category_keywords.items():
+        matches = sum(1 for keyword in keywords if keyword in description_lower)
+        if matches > max_matches:
+            max_matches = matches
+            best_match = category
+    
+    # Return suggestion or default
+    if best_match and max_matches > 0:
+        return best_match
+    else:
+        return "Outras Receitas" if transaction_type == "Receita" else "Outras Despesas"
+
+# Endpoint for intelligent category suggestion
+@api_router.post("/transactions/suggest-category")
+async def suggest_category(request: dict, current_user: User = Depends(get_current_user)):
+    description = request.get('description', '')
+    transaction_type = request.get('type', 'Despesa')
+    
+    suggested_category = suggest_category_from_description(description, transaction_type)
+    
+    # Find the category in the database
+    category = await db.categories.find_one({
+        "$or": [
+            {"user_id": current_user.id, "name": suggested_category},
+            {"user_id": None, "name": suggested_category}  # System categories
+        ]
+    })
+    
+    if category:
+        return {
+            "suggested_category": suggested_category,
+            "category_id": category["id"],
+            "confidence": "high" if suggested_category != "Outras Despesas" and suggested_category != "Outras Receitas" else "low"
+        }
+    else:
+        return {
+            "suggested_category": "Outras Despesas" if transaction_type == "Despesa" else "Outras Receitas",
+            "category_id": None,
+            "confidence": "low"
+        }
+
+# Endpoint for recent description suggestions
+@api_router.get("/transactions/recent-descriptions")
+async def get_recent_descriptions(current_user: User = Depends(get_current_user)):
+    """Get recent unique transaction descriptions for autocomplete"""
+    pipeline = [
+        {"$match": {"user_id": current_user.id}},
+        {"$group": {"_id": "$description", "last_used": {"$max": "$transaction_date"}}},
+        {"$sort": {"last_used": -1}},
+        {"$limit": 20},
+        {"$project": {"_id": 0, "description": "$_id"}}
+    ]
+    
+    recent_descriptions = await db.transactions.aggregate(pipeline).to_list(20)
+    return [item["description"] for item in recent_descriptions]
+
 # Enhanced Auth endpoints
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
