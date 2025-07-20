@@ -284,6 +284,7 @@ const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [goalsStats, setGoalsStats] = useState(null);
   const [loading, setLoading] = useState(true);
