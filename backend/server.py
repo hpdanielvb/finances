@@ -533,7 +533,36 @@ async def get_budgets(month_year: Optional[str] = None, current_user: User = Dep
     budgets = await db.budgets.find(query).to_list(1000)
     return [Budget(**budget) for budget in budgets]
 
-# File upload endpoint
+@api_router.delete("/budgets/{budget_id}")
+async def delete_budget(budget_id: str, current_user: User = Depends(get_current_user)):
+    # Check if budget belongs to user
+    budget = await db.budgets.find_one({"id": budget_id, "user_id": current_user.id})
+    if not budget:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    
+    # Delete budget
+    result = await db.budgets.delete_one({"id": budget_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    
+    return {"message": "Orçamento excluído com sucesso"}
+
+@api_router.put("/budgets/{budget_id}", response_model=Budget)
+async def update_budget(budget_id: str, budget_data: BudgetCreate, current_user: User = Depends(get_current_user)):
+    # Check if budget belongs to user
+    budget = await db.budgets.find_one({"id": budget_id, "user_id": current_user.id})
+    if not budget:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    
+    # Update budget
+    update_data = budget_data.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.budgets.update_one({"id": budget_id}, {"$set": update_data})
+    
+    # Return updated budget
+    updated_budget = await db.budgets.find_one({"id": budget_id})
+    return Budget(**updated_budget)
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     # Read file content
