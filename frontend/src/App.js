@@ -2186,11 +2186,11 @@ const TransferModal = ({ accounts, onClose, onCreate }) => {
 };
 
 // Budget Modal Component
-const BudgetModal = ({ categories, onClose, onCreate }) => {
+const BudgetModal = ({ budget, categories, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
-    category_id: '',
-    budget_amount: 0,
-    month_year: new Date().toISOString().slice(0, 7) // YYYY-MM format
+    category_id: budget?.category_id || '',
+    budget_amount: budget?.budget_amount || 0,
+    month_year: budget?.month_year || new Date().toISOString().slice(0, 7) // YYYY-MM format
   });
 
   const handleSubmit = (e) => {
@@ -2207,7 +2207,9 @@ const BudgetModal = ({ categories, onClose, onCreate }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-semibold mb-6">Definir Orçamento</h3>
+        <h3 className="text-xl font-semibold mb-6">
+          {budget ? 'Editar Orçamento' : 'Definir Orçamento'}
+        </h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -2261,7 +2263,7 @@ const BudgetModal = ({ categories, onClose, onCreate }) => {
               type="submit"
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              Definir Orçamento
+              {budget ? 'Atualizar' : 'Definir'} Orçamento
             </button>
           </div>
         </form>
