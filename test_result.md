@@ -465,7 +465,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Goals System Backend API"
     - "Goals Frontend Modal Implementation"
   stuck_tasks: []
   test_all: false
