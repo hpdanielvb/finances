@@ -543,8 +543,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Goals Frontend Modal Implementation"
-  stuck_tasks: []
+    - "Comprehensive Brazilian Categories System"
+    - "Intelligent Category Suggestion System"
+    - "Transaction Status Management System"
+  stuck_tasks:
+    - "Comprehensive Brazilian Categories System"
   test_all: false
   test_priority: "high_first"
 
