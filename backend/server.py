@@ -598,6 +598,148 @@ async def update_budget(budget_id: str, budget_data: BudgetCreate, current_user:
     # Return updated budget
     updated_budget = await db.budgets.find_one({"id": budget_id})
     return Budget(**updated_budget)
+
+# Goals endpoints
+@api_router.post("/goals", response_model=Goal)
+async def create_goal(goal_data: GoalCreate, current_user: User = Depends(get_current_user)):
+    goal = Goal(
+        user_id=current_user.id,
+        name=goal_data.name,
+        description=goal_data.description,
+        target_amount=goal_data.target_amount,
+        current_amount=goal_data.current_amount,
+        target_date=goal_data.target_date,
+        category=goal_data.category,
+        priority=goal_data.priority,
+        auto_contribution=goal_data.auto_contribution
+    )
+    
+    await db.goals.insert_one(goal.dict())
+    return goal
+
+@api_router.get("/goals", response_model=List[Goal])
+async def get_goals(current_user: User = Depends(get_current_user)):
+    goals = await db.goals.find({"user_id": current_user.id, "is_active": True}).to_list(1000)
+    return [Goal(**goal) for goal in goals]
+
+@api_router.put("/goals/{goal_id}", response_model=Goal)
+async def update_goal(goal_id: str, goal_data: GoalCreate, current_user: User = Depends(get_current_user)):
+    # Check if goal belongs to user
+    goal = await db.goals.find_one({"id": goal_id, "user_id": current_user.id})
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    
+    # Update goal
+    update_data = goal_data.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.goals.update_one({"id": goal_id}, {"$set": update_data})
+    
+    # Return updated goal
+    updated_goal = await db.goals.find_one({"id": goal_id})
+    return Goal(**updated_goal)
+
+@api_router.delete("/goals/{goal_id}")
+async def delete_goal(goal_id: str, current_user: User = Depends(get_current_user)):
+    # Check if goal belongs to user
+    goal = await db.goals.find_one({"id": goal_id, "user_id": current_user.id})
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    
+    # Delete goal (soft delete)
+    await db.goals.update_one({"id": goal_id}, {"$set": {"is_active": False}})
+    
+    return {"message": "Meta excluída com sucesso"}
+
+@api_router.post("/goals/{goal_id}/contribute")
+async def contribute_to_goal(goal_id: str, amount: float, current_user: User = Depends(get_current_user)):
+    # Check if goal belongs to user and is active
+    goal = await db.goals.find_one({"id": goal_id, "user_id": current_user.id, "is_active": True})
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    
+    # Create contribution record
+    contribution = GoalContribution(
+        user_id=current_user.id,
+        goal_id=goal_id,
+        amount=amount,
+        description=f"Contribuição para {goal['name']}"
+    )
+    
+    await db.goal_contributions.insert_one(contribution.dict())
+    
+    # Update goal current amount
+    new_amount = goal['current_amount'] + amount
+    
+    # Check if goal is achieved
+    is_achieved = new_amount >= goal['target_amount']
+    update_data = {
+        "current_amount": new_amount,
+        "updated_at": datetime.utcnow()
+    }
+    
+    if is_achieved and not goal.get('is_achieved'):
+        update_data["is_achieved"] = True
+        update_data["achieved_date"] = datetime.utcnow()
+    
+    await db.goals.update_one({"id": goal_id}, {"$set": update_data})
+    
+    return {"message": "Contribuição adicionada com sucesso", "goal_achieved": is_achieved}
+
+@api_router.get("/goals/{goal_id}/contributions")
+async def get_goal_contributions(goal_id: str, current_user: User = Depends(get_current_user)):
+    # Check if goal belongs to user
+    goal = await db.goals.find_one({"id": goal_id, "user_id": current_user.id})
+    if not goal:
+        raise HTTPException(status_code=404, detail="Meta não encontrada")
+    
+    contributions = await db.goal_contributions.find({"goal_id": goal_id}).sort("contribution_date", -1).to_list(1000)
+    return contributions
+
+@api_router.get("/goals/statistics")
+async def get_goals_statistics(current_user: User = Depends(get_current_user)):
+    goals = await db.goals.find({"user_id": current_user.id, "is_active": True}).to_list(1000)
+    
+    total_goals = len(goals)
+    achieved_goals = len([g for g in goals if g.get('is_achieved')])
+    active_goals = total_goals - achieved_goals
+    
+    total_target = sum(g['target_amount'] for g in goals)
+    total_saved = sum(g['current_amount'] for g in goals)
+    
+    # Calculate progress by category
+    category_stats = {}
+    for goal in goals:
+        category = goal['category']
+        if category not in category_stats:
+            category_stats[category] = {
+                'count': 0,
+                'target': 0,
+                'saved': 0,
+                'progress': 0
+            }
+        
+        category_stats[category]['count'] += 1
+        category_stats[category]['target'] += goal['target_amount']
+        category_stats[category]['saved'] += goal['current_amount']
+    
+    # Calculate progress percentage for each category
+    for category in category_stats:
+        if category_stats[category]['target'] > 0:
+            category_stats[category]['progress'] = (
+                category_stats[category]['saved'] / category_stats[category]['target'] * 100
+            )
+    
+    return {
+        "total_goals": total_goals,
+        "achieved_goals": achieved_goals,
+        "active_goals": active_goals,
+        "total_target_amount": total_target,
+        "total_saved_amount": total_saved,
+        "overall_progress": (total_saved / total_target * 100) if total_target > 0 else 0,
+        "category_statistics": category_stats
+    }
+
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     # Read file content
