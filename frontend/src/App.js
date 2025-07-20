@@ -471,9 +471,80 @@ const Dashboard = () => {
     }
   };
 
+  const handleCreateGoal = async (goalData) => {
+    try {
+      if (editingItem && editingItem.id) {
+        // Update existing goal
+        await axios.put(`${API}/goals/${editingItem.id}`, goalData);
+        toast.success('Meta atualizada com sucesso!');
+      } else {
+        // Create new goal
+        await axios.post(`${API}/goals`, goalData);
+        toast.success('Meta criada com sucesso!');
+      }
+      await loadDashboard();
+      setShowGoalModal(false);
+      setEditingItem(null);
+    } catch (error) {
+      toast.error('Erro ao salvar meta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta meta?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/goals/${goalId}`);
+      await loadDashboard();
+      toast.success('Meta excluída com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao excluir meta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleContributeToGoal = async (goalId, amount) => {
+    try {
+      const response = await axios.post(`${API}/goals/${goalId}/contribute?amount=${amount}`);
+      await loadDashboard();
+      setShowContributeModal(false);
+      setEditingItem(null);
+      
+      if (response.data.goal_achieved) {
+        toast.success('🎉 Parabéns! Você atingiu sua meta!');
+      } else {
+        toast.success('Contribuição adicionada com sucesso!');
+      }
+    } catch (error) {
+      toast.error('Erro ao fazer contribuição: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
   const handleMarkTransactionPaid = async (transactionId) => {
     try {
-      await axios.put(`${API}/transactions/${transactionId}`, { status: 'Pago' });
+      // Get the transaction data first
+      const transaction = transactions.find(t => t.id === transactionId);
+      if (!transaction) {
+        toast.error('Transação não encontrada');
+        return;
+      }
+
+      // Update transaction with new data including status
+      const updatedTransactionData = {
+        description: transaction.description,
+        value: transaction.value,
+        type: transaction.type,
+        transaction_date: transaction.transaction_date,
+        account_id: transaction.account_id,
+        category_id: transaction.category_id,
+        observation: transaction.observation,
+        is_recurring: transaction.is_recurring,
+        recurrence_interval: transaction.recurrence_interval,
+        status: 'Pago'
+      };
+
+      await axios.put(`${API}/transactions/${transactionId}`, updatedTransactionData);
       await loadDashboard();
       toast.success('Transação marcada como paga!');
     } catch (error) {
