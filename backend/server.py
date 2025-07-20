@@ -350,12 +350,16 @@ async def register(user_data: UserRegister):
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
     
+    # Generate email verification token
+    verification_token = generate_verification_token()
+    
     # Create user
     user = User(
         name=user_data.name,
         email=user_data.email,
         password_hash=password_hash,
-        email_verified=True  # Auto-verify for now
+        email_verified=False,  # Require email verification
+        email_verification_token=verification_token
     )
     
     await db.users.insert_one(user.dict())
@@ -363,14 +367,12 @@ async def register(user_data: UserRegister):
     # Create default categories for user
     await create_default_categories(user.id)
     
-    # Create access token with longer expiry
-    token = create_access_token({"sub": user.id, "email": user.email, "name": user.name})
+    # Send verification email
+    await send_verification_email(user_data.email, verification_token)
     
     return {
-        "access_token": token, 
-        "token_type": "bearer", 
-        "expires_in": ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600,
-        "user": {"id": user.id, "name": user.name, "email": user.email}
+        "message": "Usuário criado com sucesso! Verifique seu email para ativar a conta.",
+        "email_sent": True
     }
 
 @api_router.post("/auth/login")
