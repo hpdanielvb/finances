@@ -1769,6 +1769,8 @@ const GoalsView = ({ goals, goalsStats, onRefresh, onCreateNew, onEdit, onDelete
     </div>
   );
 };
+
+const BudgetsView = ({ budgets, categories, summary, onRefresh, onCreateNew, onEdit, onDelete }) => {
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const getBudgetProgress = (budget) => {
