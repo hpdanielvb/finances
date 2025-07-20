@@ -67,21 +67,16 @@ const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, confirmPassword) => {
     try {
+      console.log('Registration attempt for:', email);
       const response = await axios.post(`${API}/auth/register`, { 
         name, email, password, confirm_password: confirmPassword 
       });
-      const { access_token, user } = response.data;
       
-      setToken(access_token);
-      setUser(user);
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      // New registration flow - no immediate login
+      console.log('Registration response:', response.data);
+      toast.success(response.data.message || 'Conta criada! Verifique seu email para ativar.');
       
-      console.log('Registration successful:', user);
-      toast.success(`Conta criada com sucesso! Bem-vindo, ${user.name}!`);
-      
-      return { success: true };
+      return { success: true, requiresVerification: true };
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: error.response?.data?.detail || 'Erro no cadastro' };
