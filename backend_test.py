@@ -55,6 +55,292 @@ def print_test_result(test_name, success, details=""):
     if details:
         print(f"   Detalhes: {details}")
 
+def test_critical_balance_calculation_investigation():
+    """
+    CRITICAL INVESTIGATION: Balance calculation error for user hpdanielvb@gmail.com
+    
+    User reports:
+    - Initial entry of R$ 3.398,43
+    - Current balance showing NEGATIVE -R$ 496,71
+    - This is mathematically impossible if there were no expenses exceeding the total
+    
+    Investigation Steps:
+    1. Login as hpdanielvb@gmail.com (password: TestPassword123)
+    2. Get all user accounts and their current_balance values
+    3. Get complete transaction history for this user
+    4. Calculate manual balance: Starting balance + Income - Expenses
+    5. Compare manual calculation vs system balance
+    6. Check for duplicate transactions or missing income
+    7. Verify transaction processing logic
+    8. Check dashboard summary verification
+    """
+    print("\n" + "="*80)
+    print("🚨 CRITICAL INVESTIGATION: BALANCE CALCULATION ERROR")
+    print("="*80)
+    print("Investigating severe balance calculation error for user hpdanielvb@gmail.com")
+    print("User reports: Initial R$ 3.398,43 → Current NEGATIVE -R$ 496,71")
+    
+    # Test credentials from review request
+    critical_user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "TestPassword123"
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Login as {critical_user_login['email']}")
+        
+        # Attempt login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=critical_user_login)
+        
+        if response.status_code != 200:
+            print_test_result("CRITICAL USER LOGIN", False, 
+                            f"❌ Login failed: {response.json().get('detail', 'Unknown error')}")
+            return False
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        print_test_result("CRITICAL USER LOGIN", True, 
+                        f"✅ Successfully logged in as {user_info.get('name')}")
+        print(f"   User ID: {user_info.get('id')}")
+        
+        # STEP 2: Get all user accounts and their current_balance values
+        print(f"\n🔍 STEP 2: Analyzing all user accounts and balances")
+        
+        accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if accounts_response.status_code != 200:
+            print_test_result("GET ACCOUNTS", False, "Failed to retrieve accounts")
+            return False
+        
+        accounts = accounts_response.json()
+        print_test_result("GET ACCOUNTS", True, f"Found {len(accounts)} account(s)")
+        
+        total_system_balance = 0
+        account_details = []
+        
+        for i, account in enumerate(accounts, 1):
+            account_name = account.get('name', 'Unknown')
+            account_type = account.get('type', 'Unknown')
+            initial_balance = account.get('initial_balance', 0)
+            current_balance = account.get('current_balance', 0)
+            account_id = account.get('id')
+            
+            total_system_balance += current_balance
+            account_details.append({
+                'id': account_id,
+                'name': account_name,
+                'type': account_type,
+                'initial_balance': initial_balance,
+                'current_balance': current_balance
+            })
+            
+            print(f"   Account {i}: {account_name} ({account_type})")
+            print(f"      Initial Balance: R$ {initial_balance:.2f}")
+            print(f"      Current Balance: R$ {current_balance:.2f}")
+            
+            # Check for negative balances
+            if current_balance < 0:
+                print(f"      ⚠️  NEGATIVE BALANCE DETECTED: R$ {current_balance:.2f}")
+        
+        print(f"\n📊 TOTAL SYSTEM BALANCE: R$ {total_system_balance:.2f}")
+        
+        if total_system_balance < 0:
+            print("🚨 CRITICAL ISSUE CONFIRMED: Total balance is NEGATIVE!")
+        
+        # STEP 3: Get complete transaction history
+        print(f"\n🔍 STEP 3: Analyzing complete transaction history")
+        
+        transactions_response = requests.get(f"{BACKEND_URL}/transactions?limit=1000", headers=headers)
+        if transactions_response.status_code != 200:
+            print_test_result("GET TRANSACTIONS", False, "Failed to retrieve transactions")
+            return False
+        
+        transactions = transactions_response.json()
+        print_test_result("GET TRANSACTIONS", True, f"Found {len(transactions)} transaction(s)")
+        
+        # STEP 4: Calculate manual balance for each account
+        print(f"\n🔍 STEP 4: Manual balance calculation and verification")
+        
+        manual_balances = {}
+        transaction_summary = {
+            'total_income': 0,
+            'total_expenses': 0,
+            'paid_income': 0,
+            'paid_expenses': 0,
+            'pending_income': 0,
+            'pending_expenses': 0
+        }
+        
+        # Initialize manual balances with initial balances
+        for account in account_details:
+            manual_balances[account['id']] = {
+                'initial': account['initial_balance'],
+                'calculated': account['initial_balance'],
+                'system': account['current_balance'],
+                'name': account['name']
+            }
+        
+        # Process each transaction
+        duplicate_transactions = []
+        transaction_ids_seen = set()
+        
+        for transaction in transactions:
+            trans_id = transaction.get('id')
+            description = transaction.get('description', 'No description')
+            value = transaction.get('value', 0)
+            trans_type = transaction.get('type', 'Unknown')
+            status = transaction.get('status', 'Unknown')
+            account_id = transaction.get('account_id')
+            trans_date = transaction.get('transaction_date', 'Unknown')
+            
+            # Check for duplicate transaction IDs
+            if trans_id in transaction_ids_seen:
+                duplicate_transactions.append(trans_id)
+            transaction_ids_seen.add(trans_id)
+            
+            # Update summary
+            if trans_type == "Receita":
+                transaction_summary['total_income'] += value
+                if status == "Pago":
+                    transaction_summary['paid_income'] += value
+                else:
+                    transaction_summary['pending_income'] += value
+            elif trans_type == "Despesa":
+                transaction_summary['total_expenses'] += value
+                if status == "Pago":
+                    transaction_summary['paid_expenses'] += value
+                else:
+                    transaction_summary['pending_expenses'] += value
+            
+            # Update manual balance calculation (only for PAID transactions)
+            if account_id in manual_balances and status == "Pago":
+                if trans_type == "Receita":
+                    manual_balances[account_id]['calculated'] += value
+                elif trans_type == "Despesa":
+                    manual_balances[account_id]['calculated'] -= value
+            
+            print(f"   Transaction: {description[:50]}")
+            print(f"      Type: {trans_type}, Value: R$ {value:.2f}, Status: {status}")
+            print(f"      Date: {trans_date}, Account: {account_id}")
+        
+        # Check for duplicates
+        if duplicate_transactions:
+            print_test_result("DUPLICATE TRANSACTIONS", False, 
+                            f"Found {len(duplicate_transactions)} duplicate transaction IDs")
+        else:
+            print_test_result("DUPLICATE TRANSACTIONS", True, "No duplicate transactions found")
+        
+        # STEP 5: Compare manual calculation vs system balance
+        print(f"\n🔍 STEP 5: Balance comparison - Manual vs System")
+        
+        total_manual_balance = 0
+        balance_discrepancies = []
+        
+        for account_id, balance_info in manual_balances.items():
+            manual_balance = balance_info['calculated']
+            system_balance = balance_info['system']
+            account_name = balance_info['name']
+            initial_balance = balance_info['initial']
+            
+            total_manual_balance += manual_balance
+            
+            discrepancy = abs(manual_balance - system_balance)
+            
+            print(f"   Account: {account_name}")
+            print(f"      Initial Balance: R$ {initial_balance:.2f}")
+            print(f"      Manual Calculated: R$ {manual_balance:.2f}")
+            print(f"      System Balance: R$ {system_balance:.2f}")
+            print(f"      Discrepancy: R$ {discrepancy:.2f}")
+            
+            if discrepancy > 0.01:  # More than 1 cent difference
+                balance_discrepancies.append({
+                    'account': account_name,
+                    'manual': manual_balance,
+                    'system': system_balance,
+                    'discrepancy': discrepancy
+                })
+                print(f"      ⚠️  BALANCE MISMATCH DETECTED!")
+        
+        print(f"\n📊 BALANCE COMPARISON SUMMARY:")
+        print(f"   Total Manual Balance: R$ {total_manual_balance:.2f}")
+        print(f"   Total System Balance: R$ {total_system_balance:.2f}")
+        print(f"   Total Discrepancy: R$ {abs(total_manual_balance - total_system_balance):.2f}")
+        
+        # STEP 6: Transaction summary analysis
+        print(f"\n🔍 STEP 6: Transaction summary analysis")
+        
+        print(f"📊 TRANSACTION SUMMARY:")
+        print(f"   Total Income (All): R$ {transaction_summary['total_income']:.2f}")
+        print(f"   Total Expenses (All): R$ {transaction_summary['total_expenses']:.2f}")
+        print(f"   Paid Income: R$ {transaction_summary['paid_income']:.2f}")
+        print(f"   Paid Expenses: R$ {transaction_summary['paid_expenses']:.2f}")
+        print(f"   Pending Income: R$ {transaction_summary['pending_income']:.2f}")
+        print(f"   Pending Expenses: R$ {transaction_summary['pending_expenses']:.2f}")
+        
+        net_paid = transaction_summary['paid_income'] - transaction_summary['paid_expenses']
+        print(f"   Net Paid Transactions: R$ {net_paid:.2f}")
+        
+        # STEP 7: Dashboard verification
+        print(f"\n🔍 STEP 7: Dashboard summary verification")
+        
+        dashboard_response = requests.get(f"{BACKEND_URL}/dashboard/summary", headers=headers)
+        if dashboard_response.status_code == 200:
+            dashboard_data = dashboard_response.json()
+            dashboard_balance = dashboard_data.get('total_balance', 0)
+            monthly_income = dashboard_data.get('monthly_income', 0)
+            monthly_expenses = dashboard_data.get('monthly_expenses', 0)
+            
+            print_test_result("DASHBOARD ACCESS", True, "Dashboard data retrieved")
+            print(f"   Dashboard Total Balance: R$ {dashboard_balance:.2f}")
+            print(f"   Monthly Income: R$ {monthly_income:.2f}")
+            print(f"   Monthly Expenses: R$ {monthly_expenses:.2f}")
+            
+            # Compare dashboard balance with accounts total
+            dashboard_discrepancy = abs(dashboard_balance - total_system_balance)
+            if dashboard_discrepancy > 0.01:
+                print(f"   ⚠️  DASHBOARD BALANCE MISMATCH: R$ {dashboard_discrepancy:.2f}")
+            else:
+                print(f"   ✅ Dashboard balance matches accounts total")
+        else:
+            print_test_result("DASHBOARD ACCESS", False, "Failed to retrieve dashboard data")
+        
+        # STEP 8: Final diagnosis
+        print(f"\n🔍 STEP 8: FINAL DIAGNOSIS")
+        print("="*60)
+        
+        if balance_discrepancies:
+            print("🚨 CRITICAL BALANCE CALCULATION ERRORS FOUND:")
+            for discrepancy in balance_discrepancies:
+                print(f"   Account: {discrepancy['account']}")
+                print(f"   Manual: R$ {discrepancy['manual']:.2f}")
+                print(f"   System: R$ {discrepancy['system']:.2f}")
+                print(f"   Error: R$ {discrepancy['discrepancy']:.2f}")
+            
+            print("\n🔍 POSSIBLE CAUSES:")
+            print("   1. Double deduction of expenses")
+            print("   2. Missing income transactions")
+            print("   3. Incorrect pending transaction handling")
+            print("   4. Balance update logic errors")
+            
+            return False
+        else:
+            print("✅ BALANCE CALCULATIONS APPEAR CORRECT")
+            print("   Manual calculations match system balances")
+            
+            if total_system_balance < 0:
+                print("\n🔍 NEGATIVE BALANCE ANALYSIS:")
+                print("   The negative balance appears to be mathematically correct")
+                print("   based on the transaction history.")
+                print("   User may have legitimate expenses exceeding income.")
+            
+            return True
+        
+    except Exception as e:
+        print_test_result("CRITICAL BALANCE INVESTIGATION", False, f"Exception: {str(e)}")
+        return False
+
 def test_critical_user_login_issue():
     """
     CRITICAL TEST: Test login for user hpdanielvb@gmail.com
