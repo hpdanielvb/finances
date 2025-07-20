@@ -301,28 +301,40 @@ const Dashboard = () => {
 
   const loadDashboard = async () => {
     try {
-      const [summaryRes, accountsRes, transactionsRes, categoriesRes, budgetsRes] = await Promise.all([
-        axios.get(`${API}/dashboard/summary`),
-        axios.get(`${API}/accounts`),
-        axios.get(`${API}/transactions?limit=10`),
-        axios.get(`${API}/categories`),
-        axios.get(`${API}/budgets`)
-      ]);
+      console.log('Loading dashboard data...');
       
+      // Load data sequentially to avoid overloading
+      const summaryRes = await axios.get(`${API}/dashboard/summary`);
       setSummary(summaryRes.data);
+      
+      const accountsRes = await axios.get(`${API}/accounts`);
       setAccounts(accountsRes.data);
+      
+      const transactionsRes = await axios.get(`${API}/transactions?limit=10`);
       setTransactions(transactionsRes.data);
+      
+      const categoriesRes = await axios.get(`${API}/categories`);
       setCategories(categoriesRes.data);
-      setBudgets(budgetsRes.data);
+      
+      try {
+        const budgetsRes = await axios.get(`${API}/budgets`);
+        setBudgets(budgetsRes.data);
+      } catch (budgetError) {
+        console.log('Budget loading failed, continuing without budgets');
+        setBudgets([]);
+      }
+      
+      console.log('Dashboard loaded successfully');
+      
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
       
-      // Only logout if it's an authentication error, not network errors
-      if (error.response?.status === 401 && error.response?.data?.detail?.includes('inválido')) {
+      // Only logout if it's a clear auth error
+      if (error.response?.status === 401) {
         toast.error('Sessão expirada. Faça login novamente.');
         logout();
       } else {
-        toast.error('Erro ao carregar dados. Tente novamente.');
+        toast.error('Erro ao carregar dados. Verifique sua conexão.');
       }
     }
     setLoading(false);
