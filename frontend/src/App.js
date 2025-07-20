@@ -1132,6 +1132,27 @@ const Dashboard = () => {
           />
         )}
 
+        {activeView === 'goals' && (
+          <GoalsView 
+            goals={goals}
+            goalsStats={goalsStats}
+            onRefresh={loadDashboard}
+            onCreateNew={() => {
+              setEditingItem(null);
+              setShowGoalModal(true);
+            }}
+            onEdit={(goal) => {
+              setEditingItem(goal);
+              setShowGoalModal(true);
+            }}
+            onDelete={handleDeleteGoal}
+            onContribute={(goal) => {
+              setEditingItem(goal);
+              setShowContributeModal(true);
+            }}
+          />
+        )}
+
         {activeView === 'budgets' && (
           <BudgetsView 
             budgets={budgets}
