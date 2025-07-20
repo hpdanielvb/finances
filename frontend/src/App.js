@@ -2367,6 +2367,11 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
     is_recurring: transaction?.is_recurring || false,
     recurrence_interval: transaction?.recurrence_interval || '',
     status: transaction?.status || 'Pago',
+    expense_type: transaction?.expense_type || 'Variável', // NOVO CAMPO
+    due_date: transaction?.due_date ? formatDateForInput(transaction.due_date) : '', // NOVO CAMPO
+    paid_by: transaction?.paid_by || '', // NOVO CAMPO
+    installment_number: transaction?.installment_number || '', // NOVO CAMPO
+    total_installments: transaction?.total_installments || '', // NOVO CAMPO
     file: null
   });
 
