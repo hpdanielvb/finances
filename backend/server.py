@@ -1586,6 +1586,50 @@ async def create_default_categories(user_id: str):
         print(f"[ERROR] Category creation failed: {e}")
         return False
 
+# Endpoint to migrate existing users to complete categories
+@api_router.post("/admin/migrate-user-categories/{user_id}")
+async def migrate_user_categories(user_id: str, current_user: User = Depends(get_current_user)):
+    """
+    ADMIN ENDPOINT: Migrate existing user to complete 129 categories system
+    This fixes the issue where existing users have only 42/129 categories
+    """
+    # Security check - only allow self-migration for now (or admin check)
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized to migrate other users")
+    
+    print(f"[MIGRATION] Starting category migration for user: {user_id}")
+    
+    try:
+        # Delete existing categories for this user (except custom ones)
+        delete_result = await db.categories.delete_many({
+            "user_id": user_id,
+            "is_custom": {"$ne": True}
+        })
+        
+        print(f"[MIGRATION] Deleted {delete_result.deleted_count} existing system categories")
+        
+        # Create fresh complete categories
+        migration_success = await create_default_categories(user_id)
+        
+        if migration_success:
+            # Count new categories
+            new_categories = await db.categories.find({"user_id": user_id}).to_list(200)
+            
+            print(f"[MIGRATION] Created {len(new_categories)} new categories")
+            
+            return {
+                "message": "Migração de categorias concluída com sucesso!",
+                "deleted_old_categories": delete_result.deleted_count,
+                "created_new_categories": len(new_categories),
+                "migration_successful": True
+            }
+        else:
+            raise Exception("Category creation failed during migration")
+            
+    except Exception as e:
+        print(f"[MIGRATION ERROR] Failed to migrate categories: {e}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
 # Helper function to update budget spent amount
 async def update_budget_spent(user_id: str, category_id: str, month_year: str, amount: float):
     await db.budgets.update_one(
