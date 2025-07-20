@@ -1125,4 +1125,5 @@ def run_critical_balance_test():
     return result
 
 if __name__ == "__main__":
-    run_all_tests()
+    # Run only the critical balance logic test as requested
+    run_critical_balance_test()
