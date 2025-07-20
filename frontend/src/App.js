@@ -137,23 +137,27 @@ const LoginForm = () => {
     setLoading(true);
     setError('');
 
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      setError('Senhas não coincidem');
+    try {
+      if (!isLogin && formData.password !== formData.confirmPassword) {
+        setError('Senhas não coincidem');
+        setLoading(false);
+        return;
+      }
+
+      const result = isLogin 
+        ? await login(formData.email, formData.password)
+        : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
+
+      if (!result.success) {
+        setError(result.message);
+        toast.error(result.message);
+      }
+      // Don't set loading to false here - let the context handle the redirect
+    } catch (error) {
+      console.error('Form submit error:', error);
+      setError('Erro interno. Tente novamente.');
       setLoading(false);
-      return;
     }
-
-    const result = isLogin 
-      ? await login(formData.email, formData.password)
-      : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
-
-    if (!result.success) {
-      setError(result.message);
-      toast.error(result.message);
-    } else {
-      toast.success(isLogin ? 'Login realizado com sucesso!' : 'Cadastro realizado com sucesso!');
-    }
-    setLoading(false);
   };
 
   return (
