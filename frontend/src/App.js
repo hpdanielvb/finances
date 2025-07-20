@@ -2739,6 +2739,272 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
   );
 };
 
+// Goal Modal Component
+const GoalModal = ({ goal, onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    name: goal?.name || '',
+    description: goal?.description || '',
+    target_amount: goal?.target_amount || '',
+    current_amount: goal?.current_amount || 0,
+    target_date: goal?.target_date ? formatDateForInput(goal.target_date) : '',
+    category: goal?.category || 'Emergência',
+    priority: goal?.priority || 'Média',
+    auto_contribution: goal?.auto_contribution || ''
+  });
+
+  const goalCategories = ['Emergência', 'Casa Própria', 'Viagem', 'Aposentadoria', 'Outros'];
+  const priorities = ['Alta', 'Média', 'Baixa'];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    const goalData = {
+      name: formData.name,
+      description: formData.description,
+      target_amount: parseFloat(formData.target_amount),
+      current_amount: parseFloat(formData.current_amount) || 0,
+      target_date: new Date(formData.target_date).toISOString(),
+      category: formData.category,
+      priority: formData.priority,
+      auto_contribution: formData.auto_contribution ? parseFloat(formData.auto_contribution) : null
+    };
+
+    onCreate(goalData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {goal ? 'Editar Meta' : 'Nova Meta Financeira'}
+          </h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Meta *</label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              placeholder="Ex: Casa Própria, Viagem dos Sonhos"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Descrição detalhada da sua meta"
+              rows="3"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor Alvo *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.target_amount}
+                onChange={(e) => setFormData({...formData, target_amount: e.target.value})}
+                placeholder="0,00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor Atual</label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.current_amount}
+                onChange={(e) => setFormData({...formData, current_amount: e.target.value})}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Data Alvo *</label>
+            <input
+              type="date"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={formData.target_date}
+              onChange={(e) => setFormData({...formData, target_date: e.target.value})}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+              >
+                {goalCategories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Prioridade</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.priority}
+                onChange={(e) => setFormData({...formData, priority: e.target.value})}
+              >
+                {priorities.map(priority => (
+                  <option key={priority} value={priority}>{priority}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Contribuição Automática Mensal</label>
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={formData.auto_contribution}
+              onChange={(e) => setFormData({...formData, auto_contribution: e.target.value})}
+              placeholder="0,00 (opcional)"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {goal ? 'Atualizar' : 'Criar'} Meta
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Contribute Modal Component
+const ContributeModal = ({ goal, onClose, onContribute }) => {
+  const [amount, setAmount] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const contributionAmount = parseFloat(amount);
+    if (contributionAmount > 0) {
+      onContribute(goal.id, contributionAmount);
+    }
+  };
+
+  const remainingAmount = (goal?.target_amount || 0) - (goal?.current_amount || 0);
+  const progressPercentage = goal?.target_amount > 0 ? (goal?.current_amount / goal?.target_amount) * 100 : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <h2 className="text-xl font-semibold text-gray-900">Contribuir para Meta</h2>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{goal?.name}</h3>
+            <p className="text-sm text-gray-600 mb-4">{goal?.description}</p>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Progresso atual:</span>
+                <span>{progressPercentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                <div
+                  className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                ></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Valor atual:</span>
+                  <p className="font-medium">{formatCurrency(goal?.current_amount || 0)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Valor alvo:</span>
+                  <p className="font-medium">{formatCurrency(goal?.target_amount || 0)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Restante:</span>
+                  <p className="font-medium text-blue-600">{formatCurrency(remainingAmount)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Data alvo:</span>
+                  <p className="font-medium">{goal?.target_date ? formatDate(goal.target_date) : 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Contribuição *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0,00"
+                min="0.01"
+                max={remainingAmount}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Valor máximo: {formatCurrency(remainingAmount)}
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={!amount || parseFloat(amount) <= 0}
+              >
+                Contribuir
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main App Component
 function App() {
   const { user, loading } = useAuth();
