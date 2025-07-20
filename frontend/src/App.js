@@ -1651,8 +1651,8 @@ const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdi
           </div>
         </div>
 
-        {/* Advanced Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+        {/* Advanced Filters COMPLETOS conforme solicitação */}
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-4">
           <input
             type="text"
             placeholder="Buscar descrição ou valor..."
@@ -1669,6 +1669,29 @@ const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdi
             <option value="">Todos os tipos</option>
             <option value="Receita">Receitas</option>
             <option value="Despesa">Despesas</option>
+          </select>
+
+          {/* NOVO FILTRO: Tipo de Despesa */}
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.expense_type || ''}
+            onChange={(e) => setFilters({...filters, expense_type: e.target.value})}
+          >
+            <option value="">Todos os tipos de despesa</option>
+            <option value="Fixo">Fixo</option>
+            <option value="Variável">Variável</option>
+            <option value="Parcelado">Parcelado</option>
+          </select>
+
+          {/* NOVO FILTRO: Status Pago/Pendente */}
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            value={filters.status}
+            onChange={(e) => setFilters({...filters, status: e.target.value})}
+          >
+            <option value="">Todos os status</option>
+            <option value="Pago">Pago</option>
+            <option value="Pendente">Pendente</option>
           </select>
 
           <select
