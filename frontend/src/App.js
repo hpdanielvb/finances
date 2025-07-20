@@ -1089,8 +1089,12 @@ const Dashboard = () => {
 
       {showBudgetModal && (
         <BudgetModal
+          budget={editingItem}
           categories={categories}
-          onClose={() => setShowBudgetModal(false)}
+          onClose={() => {
+            setShowBudgetModal(false);
+            setEditingItem(null);
+          }}
           onCreate={handleCreateBudget}
         />
       )}
