@@ -687,6 +687,14 @@ const Dashboard = () => {
                   Contas
                 </button>
                 <button
+                  onClick={() => setActiveView('goals')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeView === 'goals' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Metas
+                </button>
+                <button
                   onClick={() => setActiveView('budgets')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     activeView === 'budgets' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
