@@ -552,10 +552,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Comprehensive Brazilian Categories System"
     - "Intelligent Category Suggestion System"
-  stuck_tasks:
-    - "Comprehensive Brazilian Categories System"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
