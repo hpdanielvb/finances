@@ -2426,7 +2426,12 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
       const transactionData = {
         ...formData,
         transaction_date: new Date(formData.transaction_date).toISOString(),
-        value: parseFloat(formData.value)
+        value: parseFloat(formData.value),
+        expense_type: formData.expense_type || 'Variável',
+        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
+        paid_by: formData.paid_by || null,
+        installment_number: formData.installment_number || null,
+        total_installments: formData.total_installments || null
       };
       
       // Handle file upload if present
