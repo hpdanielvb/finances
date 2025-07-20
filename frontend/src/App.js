@@ -2578,8 +2578,8 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
             </div>
           </div>
 
-          {/* Status and Observations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Status, Tipo de Despesa e Data de Vencimento */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
@@ -2592,16 +2592,85 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
               </select>
             </div>
 
+            {type === 'Despesa' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Despesa</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.expense_type}
+                  onChange={(e) => setFormData({...formData, expense_type: e.target.value})}
+                >
+                  <option value="Fixo">Fixo</option>
+                  <option value="Variável">Variável</option>
+                  <option value="Parcelado">Parcelado</option>
+                </select>
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Observações/Tags</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento</label>
               <input
-                type="text"
+                type="date"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                value={formData.observation}
-                onChange={(e) => setFormData({...formData, observation: e.target.value})}
-                placeholder="Ex: #viagem, nota fiscal"
+                value={formData.due_date}
+                onChange={(e) => setFormData({...formData, due_date: e.target.value})}
               />
             </div>
+          </div>
+
+          {/* Parcelamento (se Parcelado) e Pago Por */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {formData.expense_type === 'Parcelado' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Parcela Atual</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    value={formData.installment_number}
+                    onChange={(e) => setFormData({...formData, installment_number: e.target.value})}
+                    placeholder="Ex: 3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Total de Parcelas</label>
+                  <input
+                    type="number"
+                    min="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    value={formData.total_installments}
+                    onChange={(e) => setFormData({...formData, total_installments: e.target.value})}
+                    placeholder="Ex: 12"
+                  />
+                </div>
+              </>
+            )}
+            
+            {(!formData.expense_type || formData.expense_type !== 'Parcelado') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pago Por</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.paid_by}
+                  onChange={(e) => setFormData({...formData, paid_by: e.target.value})}
+                  placeholder="Nome da pessoa que pagou"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Observações/Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Observações/Tags</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={formData.observation}
+              onChange={(e) => setFormData({...formData, observation: e.target.value})}
+              placeholder="Ex: #viagem, nota fiscal, etc."
+            />
           </div>
 
           {/* Recurrence Options */}
