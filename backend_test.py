@@ -1124,6 +1124,253 @@ def run_critical_balance_test():
     
     return result
 
+def test_categories_creation_detailed_debug():
+    """
+    DETAILED DEBUG: Test category creation process step by step
+    """
+    print("\n" + "="*80)
+    print("🔍 DETAILED DEBUG: CATEGORY CREATION PROCESS")
+    print("="*80)
+    
+    if not auth_token:
+        print_test_result("Detailed Categories Debug", False, "Token não disponível")
+        return False
+    
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    
+    try:
+        # Step 1: Count categories in the backend code
+        print("\n📊 STEP 1: Analyzing backend code structure")
+        
+        # Let's manually count what should be created based on the backend code
+        expected_categories = {
+            # RECEITAS (13 categories)
+            "Receita": [
+                "Salário", "Freelance/PJ", "Pró-Labore", "Aluguel Recebido",
+                "Dividendos/Juros (Investimentos)", "Vendas (Produtos/Serviços)", 
+                "Restituição de IR", "13º Salário", "Férias", "Indenizações",
+                "Presentes/Doações Recebidas", "Bônus", "Outras Receitas"
+            ],
+            
+            # MAIN GROUPS (12 main expense groups)
+            "Main_Groups": [
+                "Moradia", "Transporte", "Alimentação", "Educação", "Saúde",
+                "Lazer e Entretenimento", "Compras/Vestuário", "Serviços Pessoais",
+                "Dívidas e Empréstimos", "Impostos e Taxas", "Investimentos",
+                "Despesas com Pets"
+            ],
+            
+            # SUBCATEGORIES by group
+            "Moradia_subs": [
+                "Aluguel", "Condomínio", "IPTU", "Água", "Luz", "Gás", 
+                "Internet", "Telefone Fixo", "Manutenção e Reparos",
+                "Financiamento Imobiliário", "Seguro Residencial"
+            ],
+            
+            "Transporte_subs": [
+                "Combustível (Gasolina)", "Combustível (Etanol)", "Combustível (GNV)",
+                "Estacionamento", "Pedágio", "Transporte Público", "Uber/99/Táxi",
+                "Manutenção do Veículo", "Seguro Auto", "IPVA", "Licenciamento",
+                "Multas", "Lavagem de Carro", "Revisões"
+            ],
+            
+            "Alimentacao_subs": [
+                "Supermercado", "Feira", "Hortifrúti", "Açougue/Padaria",
+                "Restaurantes", "Lanches", "Delivery", "Bares/Cafés",
+                "Suplementos Alimentares"
+            ],
+            
+            "Educacao_subs": [
+                "Mensalidade Escolar", "Mensalidade Universitária", "Cursos Livres/Idiomas",
+                "Material Escolar", "Livros", "Pós-graduação"
+            ],
+            
+            "Saude_subs": [
+                "Plano de Saúde", "Consultas Médicas", "Especialistas", "Exames",
+                "Remédios", "Óculos/Lentes", "Odontologia", "Fisioterapia",
+                "Terapias", "Vacinas"
+            ],
+            
+            "Lazer_subs": [
+                "Cinema", "Teatro", "Shows", "Eventos Esportivos",
+                "Viagens (Passagens)", "Viagens (Hospedagem)", "Viagens (Passeios)",
+                "Netflix", "Spotify", "Prime Video", "Globoplay", "Jogos",
+                "Hobbies", "Festas/Eventos Sociais"
+            ],
+            
+            "Compras_subs": [
+                "Roupas", "Calçados", "Acessórios", "Eletrônicos", "Eletrodomésticos",
+                "Móveis", "Utensílios Domésticos", "Presentes", "Artigos de Decoração"
+            ],
+            
+            "Servicos_subs": [
+                "Salão de Beleza", "Cabeleireiro", "Manicure", "Barbearia",
+                "Academia", "Personal Trainer", "Estética", "Massagem", "Lavanderia"
+            ],
+            
+            "Dividas_subs": [
+                "Empréstimos Pessoais", "Financiamento de Veículo", 
+                "Fatura do Cartão de Crédito", "Juros de Dívidas", "Cheque Especial"
+            ],
+            
+            "Impostos_subs": [
+                "Imposto de Renda", "Taxas Bancárias", "Contribuição Sindical",
+                "Taxas de Condomínio Extras"
+            ],
+            
+            "Investimentos_subs": [
+                "Aplicações Financeiras", "Compra de Ações", "Fundos de Investimento",
+                "Poupança Programada", "Custos de Corretagem"
+            ],
+            
+            "Pets_subs": [
+                "Ração", "Veterinário", "Acessórios para Pets", "Banho e Tosa"
+            ]
+        }
+        
+        # Calculate expected totals
+        expected_receitas = len(expected_categories["Receita"])
+        expected_main_groups = len(expected_categories["Main_Groups"])
+        expected_subcategories = sum([
+            len(expected_categories["Moradia_subs"]),
+            len(expected_categories["Transporte_subs"]),
+            len(expected_categories["Alimentacao_subs"]),
+            len(expected_categories["Educacao_subs"]),
+            len(expected_categories["Saude_subs"]),
+            len(expected_categories["Lazer_subs"]),
+            len(expected_categories["Compras_subs"]),
+            len(expected_categories["Servicos_subs"]),
+            len(expected_categories["Dividas_subs"]),
+            len(expected_categories["Impostos_subs"]),
+            len(expected_categories["Investimentos_subs"]),
+            len(expected_categories["Pets_subs"])
+        ])
+        
+        # Add other categories
+        expected_other = 2  # "Doações" main group + "Outras Despesas"
+        expected_doacoes_subs = 2  # "Caridade", "Dízimo"
+        
+        total_expected = expected_receitas + expected_main_groups + expected_subcategories + expected_other + expected_doacoes_subs
+        
+        print(f"   📊 Expected breakdown:")
+        print(f"      - Receita categories: {expected_receitas}")
+        print(f"      - Main expense groups: {expected_main_groups}")
+        print(f"      - Subcategories: {expected_subcategories}")
+        print(f"      - Other categories: {expected_other + expected_doacoes_subs}")
+        print(f"      - TOTAL EXPECTED: {total_expected}")
+        
+        # Step 2: Get actual categories
+        print("\n📊 STEP 2: Getting actual categories from database")
+        response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if response.status_code != 200:
+            print_test_result("Get Categories", False, f"Status: {response.status_code}")
+            return False
+        
+        categories = response.json()
+        actual_total = len(categories)
+        
+        print(f"   📊 Actual total: {actual_total}")
+        print(f"   📊 Gap: {total_expected - actual_total} categories missing")
+        
+        # Step 3: Detailed analysis of what's missing
+        print("\n📊 STEP 3: Detailed missing category analysis")
+        
+        category_names = [cat.get("name") for cat in categories]
+        
+        # Check each expected group
+        for group_name, expected_list in expected_categories.items():
+            if group_name.endswith("_subs"):
+                continue  # Skip subcategory lists for now
+                
+            missing_in_group = [cat for cat in expected_list if cat not in category_names]
+            found_in_group = [cat for cat in expected_list if cat in category_names]
+            
+            if missing_in_group:
+                print(f"   ❌ {group_name}: Missing {len(missing_in_group)}/{len(expected_list)}")
+                print(f"      Missing: {', '.join(missing_in_group)}")
+            else:
+                print(f"   ✅ {group_name}: All {len(expected_list)} categories found")
+        
+        # Step 4: Check subcategories for each main group
+        print("\n📊 STEP 4: Subcategory analysis by main group")
+        
+        parent_categories = [cat for cat in categories if cat.get("parent_category_id") is None]
+        child_categories = [cat for cat in categories if cat.get("parent_category_id") is not None]
+        
+        subcategory_groups = {
+            "Moradia": "Moradia_subs",
+            "Transporte": "Transporte_subs", 
+            "Alimentação": "Alimentacao_subs",
+            "Educação": "Educacao_subs",
+            "Saúde": "Saude_subs",
+            "Lazer e Entretenimento": "Lazer_subs",
+            "Compras/Vestuário": "Compras_subs",
+            "Serviços Pessoais": "Servicos_subs",
+            "Dívidas e Empréstimos": "Dividas_subs",
+            "Impostos e Taxas": "Impostos_subs",
+            "Investimentos": "Investimentos_subs",
+            "Despesas com Pets": "Pets_subs"
+        }
+        
+        for main_group, subs_key in subcategory_groups.items():
+            parent_cat = next((cat for cat in parent_categories if cat.get("name") == main_group), None)
+            
+            if parent_cat:
+                parent_id = parent_cat.get("id")
+                actual_subs = [cat for cat in child_categories if cat.get("parent_category_id") == parent_id]
+                actual_sub_names = [cat.get("name") for cat in actual_subs]
+                expected_subs = expected_categories[subs_key]
+                
+                missing_subs = [sub for sub in expected_subs if sub not in actual_sub_names]
+                
+                if missing_subs:
+                    print(f"   ❌ {main_group}: {len(actual_subs)}/{len(expected_subs)} subcategories")
+                    print(f"      Missing: {', '.join(missing_subs)}")
+                else:
+                    print(f"   ✅ {main_group}: All {len(expected_subs)} subcategories found")
+            else:
+                print(f"   ❌ {main_group}: Main group not found (0/{len(expected_categories[subs_key])} subcategories)")
+        
+        # Step 5: Identify the exact point where creation stops
+        print("\n📊 STEP 5: Identifying where category creation stops")
+        
+        # Based on the pattern, let's see which categories are the last ones created
+        print("   🔍 Analyzing creation pattern...")
+        
+        # Check if the issue is with specific groups
+        missing_main_groups = []
+        for group in expected_categories["Main_Groups"]:
+            if group not in category_names:
+                missing_main_groups.append(group)
+        
+        if missing_main_groups:
+            print(f"   ❌ Missing main groups: {', '.join(missing_main_groups)}")
+            print("   🔍 This suggests the create_default_categories function is stopping")
+            print("       before processing all main groups in the list.")
+        
+        # Final diagnosis
+        print(f"\n🔍 FINAL DIAGNOSIS:")
+        print(f"   Expected: {total_expected} categories")
+        print(f"   Actual: {actual_total} categories") 
+        print(f"   Success rate: {(actual_total/total_expected)*100:.1f}%")
+        
+        if actual_total < total_expected * 0.5:  # Less than 50% created
+            print("   🚨 CRITICAL: Less than 50% of categories created")
+            print("   🔍 Root cause: create_default_categories function is failing partway through")
+            print("   💡 Likely causes:")
+            print("      1. Database insertion error not being caught")
+            print("      2. Parent-child relationship mapping failure")
+            print("      3. Memory or timeout issues during bulk insertion")
+            
+            return False
+        else:
+            return True
+            
+    except Exception as e:
+        print_test_result("Detailed Categories Debug", False, f"Exception: {str(e)}")
+        return False
+
 def test_categories_creation_debug():
     """
     COMPREHENSIVE CATEGORIES CREATION DEBUG TEST
