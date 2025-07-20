@@ -46,15 +46,8 @@ const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log('🔍 DEBUG: Login function called with:', { email, API_URL: API });
-      console.log('🔍 DEBUG: Making POST request to:', `${API}/auth/login`);
-      
       const response = await axios.post(`${API}/auth/login`, { email, password });
-      console.log('🔍 DEBUG: Login response received:', response.data);
-      
       const { access_token, user } = response.data;
-      
-      console.log('🔍 DEBUG: Setting token and user...', { access_token: access_token?.substring(0, 10) + '...', user });
       
       setToken(access_token);
       setUser(user);
@@ -62,17 +55,12 @@ const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(user));
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      console.log('🔍 DEBUG: Login successful, showing toast');
+      console.log('Login successful:', user);
       toast.success(`Bem-vindo, ${user.name}!`);
       
       return { success: true };
     } catch (error) {
-      console.error('🔍 DEBUG: Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url
-      });
+      console.error('Login error:', error);
       return { success: false, message: error.response?.data?.detail || 'Erro no login' };
     }
   };
