@@ -548,7 +548,6 @@ test_plan:
   current_focus:
     - "Comprehensive Brazilian Categories System"
     - "Intelligent Category Suggestion System"
-    - "Transaction Status Management System"
   stuck_tasks:
     - "Comprehensive Brazilian Categories System"
   test_all: false
