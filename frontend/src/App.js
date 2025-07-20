@@ -2352,11 +2352,11 @@ const AccountModal = ({ account, onClose, onCreate }) => {
   );
 };
 
-// Transaction Modal Component
+// Enhanced Transaction Modal Component with Intelligence
 const TransactionModal = ({ transaction, type, accounts, categories, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
     description: transaction?.description || '',
-    value: transaction?.value || 0,
+    value: transaction?.value || '',
     type: type,
     transaction_date: transaction?.transaction_date ? 
       formatDateForInput(transaction.transaction_date) : 
@@ -2366,17 +2366,86 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
     observation: transaction?.observation || '',
     is_recurring: transaction?.is_recurring || false,
     recurrence_interval: transaction?.recurrence_interval || '',
-    status: transaction?.status || 'Pago'
+    status: transaction?.status || 'Pago',
+    file: null
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const transactionData = {
-      ...formData,
-      transaction_date: new Date(formData.transaction_date).toISOString(),
-      value: parseFloat(formData.value)
+  const [recentDescriptions, setRecentDescriptions] = useState([]);
+  const [showDescriptionSuggestions, setShowDescriptionSuggestions] = useState(false);
+  const [suggestedCategory, setSuggestedCategory] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load recent descriptions on mount
+  useEffect(() => {
+    const loadRecentDescriptions = async () => {
+      try {
+        const response = await axios.get(`${API}/transactions/recent-descriptions`);
+        setRecentDescriptions(response.data);
+      } catch (error) {
+        console.log('Failed to load recent descriptions');
+      }
     };
-    onCreate(transactionData);
+    loadRecentDescriptions();
+  }, []);
+
+  // Intelligent category suggestion when description changes
+  const handleDescriptionChange = async (value) => {
+    setFormData({...formData, description: value});
+    
+    if (value.length > 2) {
+      try {
+        const response = await axios.post(`${API}/transactions/suggest-category`, {
+          description: value,
+          type: type
+        });
+        
+        if (response.data.confidence === 'high') {
+          setSuggestedCategory(response.data);
+          // Auto-select if high confidence and no category selected
+          if (!formData.category_id && response.data.category_id) {
+            setFormData(prev => ({...prev, category_id: response.data.category_id}));
+          }
+        }
+      } catch (error) {
+        console.log('Category suggestion failed');
+      }
+    }
+  };
+
+  // Description autocomplete
+  const filteredDescriptions = recentDescriptions.filter(desc => 
+    desc.toLowerCase().includes(formData.description.toLowerCase()) && 
+    desc !== formData.description
+  );
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const transactionData = {
+        ...formData,
+        transaction_date: new Date(formData.transaction_date).toISOString(),
+        value: parseFloat(formData.value)
+      };
+      
+      // Handle file upload if present
+      if (formData.file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          transactionData.file_data = reader.result; // Base64
+          transactionData.file_name = formData.file.name;
+          onCreate(transactionData);
+        };
+        reader.readAsDataURL(formData.file);
+      } else {
+        onCreate(transactionData);
+      }
+    } catch (error) {
+      console.error('Transaction submission error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const relevantCategories = categories.filter(cat => cat.type === type);
@@ -2384,40 +2453,213 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-semibold mb-6">
-          {transaction ? `Editar ${type}` : `Adicionar ${type}`}
-        </h3>
+      <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">
+            {transaction ? `Editar ${type}` : `Adicionar ${type}`}
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            ✕
+          </button>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+          {/* Description with Autocomplete */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrição * 
+              {suggestedCategory && (
+                <span className="text-xs text-green-600 ml-2">
+                  (Categoria sugerida: {suggestedCategory.suggested_category})
+                </span>
+              )}
+            </label>
             <input
               type="text"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder={type === 'Receita' ? 'Ex: Salário' : 'Ex: Supermercado'}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
+              onFocus={() => setShowDescriptionSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowDescriptionSuggestions(false), 200)}
+              placeholder={type === 'Receita' ? 'Ex: Salário, Freelance' : 'Ex: Supermercado, Restaurante'}
             />
+            
+            {/* Description Suggestions Dropdown */}
+            {showDescriptionSuggestions && filteredDescriptions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                {filteredDescriptions.slice(0, 5).map((desc, index) => (
+                  <div
+                    key={index}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                    onClick={() => {
+                      handleDescriptionChange(desc);
+                      setShowDescriptionSuggestions(false);
+                    }}
+                  >
+                    {desc}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Value and Date Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$) *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.value}
+                onChange={(e) => setFormData({...formData, value: e.target.value})}
+                placeholder="0,00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data da Transação *</label>
+              <input
+                type="date"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.transaction_date}
+                onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
+              />
+            </div>
+          </div>
+
+          {/* Account and Category Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Conta *</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.account_id}
+                onChange={(e) => setFormData({...formData, account_id: e.target.value})}
+              >
+                <option value="">Selecione uma conta</option>
+                {accounts.map(account => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.type})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.category_id}
+                onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+              >
+                <option value="">Selecione uma categoria</option>
+                {relevantCategories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status and Observations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+              >
+                <option value="Pago">Pago</option>
+                <option value="Pendente">Pendente</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Observações/Tags</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.observation}
+                onChange={(e) => setFormData({...formData, observation: e.target.value})}
+                placeholder="Ex: #viagem, nota fiscal"
+              />
+            </div>
+          </div>
+
+          {/* Recurrence Options */}
+          <div className="border-t pt-4">
+            <div className="flex items-center mb-3">
+              <input
+                type="checkbox"
+                id="recurring"
+                className="mr-2"
+                checked={formData.is_recurring}
+                onChange={(e) => setFormData({...formData, is_recurring: e.target.checked})}
+              />
+              <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+                Transação Recorrente
+              </label>
+            </div>
+            
+            {formData.is_recurring && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Frequência</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.recurrence_interval}
+                  onChange={(e) => setFormData({...formData, recurrence_interval: e.target.value})}
+                >
+                  <option value="">Selecione a frequência</option>
+                  {recurrenceOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* File Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Anexar Comprovante</label>
             <input
-              type="number"
-              step="0.01"
-              required
+              type="file"
+              accept="image/*,.pdf"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-              value={formData.value}
-              onChange={(e) => setFormData({...formData, value: e.target.value})}
-              placeholder="0,00"
+              onChange={(e) => setFormData({...formData, file: e.target.files[0]})}
             />
+            <p className="text-xs text-gray-500 mt-1">Formatos aceitos: JPG, PNG, PDF (máx. 5MB)</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Data *</label>
-            <input
+          {/* Form Buttons */}
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Salvando...' : (transaction ? 'Atualizar' : 'Criar')} {type}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
               type="date"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
