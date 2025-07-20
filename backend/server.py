@@ -128,6 +128,41 @@ class TransferCreate(BaseModel):
     description: str
     transaction_date: datetime
 
+class GoalCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    target_amount: float
+    current_amount: float = 0
+    target_date: datetime
+    category: str  # "Emergência", "Casa Própria", "Viagem", "Aposentadoria", "Outros"
+    priority: str = "Média"  # "Alta", "Média", "Baixa"
+    auto_contribution: Optional[float] = None  # Valor mensal automático
+
+class Goal(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    description: Optional[str] = None
+    target_amount: float
+    current_amount: float = 0
+    target_date: datetime
+    category: str
+    priority: str
+    auto_contribution: Optional[float] = None
+    is_active: bool = True
+    is_achieved: bool = False
+    achieved_date: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GoalContribution(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    goal_id: str
+    amount: float
+    contribution_date: datetime = Field(default_factory=datetime.utcnow)
+    description: Optional[str] = None
+    transaction_id: Optional[str] = None  # Link to transaction if applicable
+
 class BudgetCreate(BaseModel):
     category_id: str
     budget_amount: float
