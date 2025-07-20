@@ -312,11 +312,13 @@ const Dashboard = () => {
       setBudgets(budgetsRes.data);
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
-      toast.error('Erro ao carregar dados');
       
-      // If unauthorized, logout
-      if (error.response?.status === 401) {
+      // Only logout if it's an authentication error, not network errors
+      if (error.response?.status === 401 && error.response?.data?.detail?.includes('inválido')) {
+        toast.error('Sessão expirada. Faça login novamente.');
         logout();
+      } else {
+        toast.error('Erro ao carregar dados. Tente novamente.');
       }
     }
     setLoading(false);
