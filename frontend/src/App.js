@@ -124,6 +124,7 @@ const formatDateForInput = (date) => {
 // Enhanced Login Component
 const LoginForm = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({ 
     name: '', email: '', password: '', confirmPassword: '' 
   });
@@ -138,24 +139,34 @@ const LoginForm = () => {
     setError('');
 
     try {
-      if (!isLogin && formData.password !== formData.confirmPassword) {
+      if (showForgotPassword) {
+        // Handle forgot password
+        const response = await axios.post(`${API}/auth/forgot-password`, {
+          email: formData.email
+        });
+        toast.success('Instruções enviadas para seu email!');
+        setShowForgotPassword(false);
+        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      } else if (!isLogin && formData.password !== formData.confirmPassword) {
         setError('Senhas não coincidem');
         setLoading(false);
         return;
-      }
+      } else {
+        const result = isLogin 
+          ? await login(formData.email, formData.password)
+          : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
 
-      const result = isLogin 
-        ? await login(formData.email, formData.password)
-        : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
-
-      if (!result.success) {
-        setError(result.message);
-        toast.error(result.message);
+        if (!result.success) {
+          setError(result.message);
+          toast.error(result.message);
+        }
       }
       // Don't set loading to false here - let the context handle the redirect
     } catch (error) {
       console.error('Form submit error:', error);
-      setError('Erro interno. Tente novamente.');
+      const errorMessage = error.response?.data?.detail || 'Erro interno. Tente novamente.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
