@@ -347,25 +347,67 @@ const Dashboard = () => {
   // Event handlers
   const handleCreateAccount = async (accountData) => {
     try {
-      await axios.post(`${API}/accounts`, accountData);
+      if (editingItem && editingItem.id) {
+        // Update existing account
+        await axios.put(`${API}/accounts/${editingItem.id}`, accountData);
+        toast.success('Conta atualizada com sucesso!');
+      } else {
+        // Create new account
+        await axios.post(`${API}/accounts`, accountData);
+        toast.success('Conta criada com sucesso!');
+      }
       await loadDashboard();
       setShowAccountModal(false);
       setEditingItem(null);
-      toast.success('Conta criada com sucesso!');
     } catch (error) {
-      toast.error('Erro ao criar conta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+      toast.error('Erro ao salvar conta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteAccount = async (accountId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta conta? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/accounts/${accountId}`);
+      await loadDashboard();
+      toast.success('Conta excluída com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao excluir conta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
     }
   };
 
   const handleCreateTransaction = async (transactionData) => {
     try {
-      await axios.post(`${API}/transactions`, transactionData);
+      if (editingItem && editingItem.id) {
+        // Update existing transaction
+        await axios.put(`${API}/transactions/${editingItem.id}`, transactionData);
+        toast.success('Transação atualizada com sucesso!');
+      } else {
+        // Create new transaction
+        await axios.post(`${API}/transactions`, transactionData);
+        toast.success('Transação adicionada com sucesso!');
+      }
       await loadDashboard();
       setShowTransactionModal(false);
       setEditingItem(null);
-      toast.success('Transação adicionada com sucesso!');
     } catch (error) {
-      toast.error('Erro ao criar transação: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+      toast.error('Erro ao salvar transação: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/transactions/${transactionId}`);
+      await loadDashboard();
+      toast.success('Transação excluída com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao excluir transação: ' + (error.response?.data?.detail || 'Erro desconhecido'));
     }
   };
 
@@ -382,12 +424,44 @@ const Dashboard = () => {
 
   const handleCreateBudget = async (budgetData) => {
     try {
-      await axios.post(`${API}/budgets`, budgetData);
+      if (editingItem && editingItem.id) {
+        // Update existing budget
+        await axios.put(`${API}/budgets/${editingItem.id}`, budgetData);
+        toast.success('Orçamento atualizado com sucesso!');
+      } else {
+        // Create new budget
+        await axios.post(`${API}/budgets`, budgetData);
+        toast.success('Orçamento definido com sucesso!');
+      }
       await loadDashboard();
       setShowBudgetModal(false);
-      toast.success('Orçamento definido com sucesso!');
+      setEditingItem(null);
     } catch (error) {
-      toast.error('Erro ao definir orçamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+      toast.error('Erro ao salvar orçamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteBudget = async (budgetId) => {
+    if (!window.confirm('Tem certeza que deseja excluir este orçamento?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/budgets/${budgetId}`);
+      await loadDashboard();
+      toast.success('Orçamento excluído com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao excluir orçamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleMarkTransactionPaid = async (transactionId) => {
+    try {
+      await axios.put(`${API}/transactions/${transactionId}`, { status: 'Pago' });
+      await loadDashboard();
+      toast.success('Transação marcada como paga!');
+    } catch (error) {
+      toast.error('Erro ao atualizar transação');
     }
   };
 
