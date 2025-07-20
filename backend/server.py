@@ -381,6 +381,10 @@ async def login(user_data: UserLogin):
     if not user:
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
     
+    # Check if email is verified
+    if not user.get('email_verified', False):
+        raise HTTPException(status_code=401, detail="Email não verificado. Verifique sua caixa de entrada.")
+    
     # Verify password
     password_bytes = user_data.password.encode('utf-8')
     stored_hash = user['password_hash'].encode('utf-8')
@@ -397,6 +401,98 @@ async def login(user_data: UserLogin):
         "expires_in": ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600, 
         "user": {"id": user['id'], "name": user['name'], "email": user['email']}
     }
+
+@api_router.post("/auth/verify-email")
+async def verify_email(verification_data: EmailConfirmation):
+    """Verify user email with token"""
+    user = await db.users.find_one({"email_verification_token": verification_data.token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Token de verificação inválido ou expirado")
+    
+    # Update user as verified
+    await db.users.update_one(
+        {"id": user["id"]}, 
+        {
+            "$set": {
+                "email_verified": True,
+                "email_verification_token": None
+            }
+        }
+    )
+    
+    # Create access token for immediate login
+    token = create_access_token({"sub": user['id'], "email": user['email'], "name": user['name']})
+    
+    return {
+        "message": "Email verificado com sucesso!",
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        "user": {"id": user['id'], "name": user['name'], "email": user['email']}
+    }
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request_data: PasswordResetRequest):
+    """Request password reset"""
+    user = await db.users.find_one({"email": request_data.email})
+    if not user:
+        # Don't reveal if email exists for security
+        return {"message": "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha."}
+    
+    # Generate reset token and expiry
+    reset_token = generate_verification_token()
+    reset_expires = datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
+    
+    # Update user with reset token
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$set": {
+                "password_reset_token": reset_token,
+                "password_reset_expires": reset_expires
+            }
+        }
+    )
+    
+    # Send password reset email
+    await send_password_reset_email(user["email"], reset_token)
+    
+    return {"message": "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha."}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(reset_data: PasswordReset):
+    """Reset password with token"""
+    if reset_data.new_password != reset_data.confirm_password:
+        raise HTTPException(status_code=400, detail="Senhas não coincidem")
+    
+    user = await db.users.find_one({
+        "password_reset_token": reset_data.token,
+        "password_reset_expires": {"$gt": datetime.utcnow()}
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Token de redefinição inválido ou expirado")
+    
+    # Hash new password
+    password_bytes = reset_data.new_password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    new_password_hash = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+    
+    # Update user with new password and clear reset token
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$set": {
+                "password_hash": new_password_hash
+            },
+            "$unset": {
+                "password_reset_token": "",
+                "password_reset_expires": ""
+            }
+        }
+    )
+    
+    return {"message": "Senha redefinida com sucesso!"}
 
 @api_router.post("/auth/refresh")
 async def refresh_token(current_user: User = Depends(get_current_user)):
