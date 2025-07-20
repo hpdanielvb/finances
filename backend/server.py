@@ -14,6 +14,10 @@ import io
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
+import smtplib
+from email.mime.text import MimeText
+from email.mime.multipart import MimeMultipart
+import secrets
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
