@@ -294,17 +294,43 @@ const LoginForm = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg transition-all shadow-lg hover:shadow-xl"
           >
-            {loading ? 'Carregando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
+            {loading ? 'Carregando...' : 
+              showForgotPassword ? 'Enviar Instruções' :
+              isLogin ? 'Entrar' : 'Criar Conta'
+            }
           </button>
         </form>
 
-        {isLogin && (
-          <div className="text-center mt-4">
-            <button className="text-blue-600 hover:text-blue-800 text-sm">
+        <div className="text-center mt-4 space-y-2">
+          {isLogin && !showForgotPassword && (
+            <button 
+              type="button"
+              className="text-blue-600 hover:text-blue-800 text-sm transition-colors"
+              onClick={() => {
+                setShowForgotPassword(true);
+                setError('');
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+              }}
+            >
               Esqueci minha senha
             </button>
-          </div>
-        )}
+          )}
+          
+          {showForgotPassword && (
+            <button 
+              type="button"
+              className="text-gray-600 hover:text-gray-800 text-sm transition-colors"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setIsLogin(true);
+                setError('');
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+              }}
+            >
+              ← Voltar ao login
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
