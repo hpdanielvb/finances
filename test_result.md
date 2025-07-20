@@ -407,14 +407,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Enhanced JWT Authentication System with Session Persistence"
-    - "Comprehensive User Registration and Login API"
-    - "Advanced Account Management with Credit Card Support"
-    - "Advanced Transaction Management with Recurrence"
-    - "Transfer Between Accounts System"
-    - "Enhanced Dashboard API with Analytics"
-    - "Premium Dashboard with Interactive Charts"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
