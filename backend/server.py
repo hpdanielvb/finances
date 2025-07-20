@@ -1354,10 +1354,11 @@ async def get_cash_flow_report(
 
 # Helper function to create comprehensive default categories
 async def create_default_categories(user_id: str):
-    print(f"[DEBUG] Starting category creation for user: {user_id}")
+    print(f"[DEBUG] Starting COMPLETE Brazilian categories creation for user: {user_id}")
     
+    # COMPLETE BRAZILIAN CATEGORIES AS REQUESTED BY USER
     default_categories = [
-        # RECEITAS DETALHADAS
+        # RECEITAS COMPLETAS
         {"name": "Salário", "type": "Receita"},
         {"name": "Freelance/PJ", "type": "Receita"},
         {"name": "Pró-Labore", "type": "Receita"},
@@ -1372,25 +1373,47 @@ async def create_default_categories(user_id: str):
         {"name": "Bônus", "type": "Receita"},
         {"name": "Outras Receitas", "type": "Receita"},
         
-        # DESPESAS - MORADIA (Principal)
-        {"name": "Moradia", "type": "Despesa"},
-        {"name": "Aluguel", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Condomínio", "type": "Despesa", "parent": "Moradia"},
-        {"name": "IPTU", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Água", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Luz", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Gás", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Internet", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Telefone Fixo", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Manutenção e Reparos", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Financiamento Imobiliário", "type": "Despesa", "parent": "Moradia"},
-        {"name": "Seguro Residencial", "type": "Despesa", "parent": "Moradia"},
+        # CATEGORIAS PRINCIPAIS BRASILEIRAS CONFORME SOLICITADO
+        {"name": "Alimentação", "type": "Despesa"},
+        {"name": "Supermercado", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Feira", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Hortifrúti", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Açougue/Padaria", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Restaurantes", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Lanches", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Delivery", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Bares/Cafés", "type": "Despesa", "parent": "Alimentação"},
+        {"name": "Suplementos Alimentares", "type": "Despesa", "parent": "Alimentação"},
         
-        # DESPESAS - TRANSPORTE (Principal)
+        {"name": "Pets", "type": "Despesa"},
+        {"name": "Ração", "type": "Despesa", "parent": "Pets"},
+        {"name": "Veterinário", "type": "Despesa", "parent": "Pets"},
+        {"name": "Acessórios para Pets", "type": "Despesa", "parent": "Pets"},
+        {"name": "Banho e Tosa", "type": "Despesa", "parent": "Pets"},
+        {"name": "Medicamentos Pet", "type": "Despesa", "parent": "Pets"},
+        
+        {"name": "Vestuário", "type": "Despesa"},
+        {"name": "Roupas", "type": "Despesa", "parent": "Vestuário"},
+        {"name": "Calçados", "type": "Despesa", "parent": "Vestuário"},
+        {"name": "Acessórios", "type": "Despesa", "parent": "Vestuário"},
+        {"name": "Roupas Íntimas", "type": "Despesa", "parent": "Vestuário"},
+        {"name": "Roupas de Trabalho", "type": "Despesa", "parent": "Vestuário"},
+        
+        {"name": "Saúde", "type": "Despesa"},
+        {"name": "Plano de Saúde", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Consultas Médicas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Especialistas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Exames", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Remédios", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Óculos/Lentes", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Odontologia", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Fisioterapia", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Terapias", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Vacinas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Plano Odontológico", "type": "Despesa", "parent": "Saúde"},
+        
         {"name": "Transporte", "type": "Despesa"},
-        {"name": "Combustível (Gasolina)", "type": "Despesa", "parent": "Transporte"},
-        {"name": "Combustível (Etanol)", "type": "Despesa", "parent": "Transporte"},
-        {"name": "Combustível (GNV)", "type": "Despesa", "parent": "Transporte"},
+        {"name": "Combustível", "type": "Despesa", "parent": "Transporte"},
         {"name": "Estacionamento", "type": "Despesa", "parent": "Transporte"},
         {"name": "Pedágio", "type": "Despesa", "parent": "Transporte"},
         {"name": "Transporte Público", "type": "Despesa", "parent": "Transporte"},
@@ -1403,70 +1426,129 @@ async def create_default_categories(user_id: str):
         {"name": "Lavagem de Carro", "type": "Despesa", "parent": "Transporte"},
         {"name": "Revisões", "type": "Despesa", "parent": "Transporte"},
         
-        # DESPESAS - ALIMENTAÇÃO (Principal)
-        {"name": "Alimentação", "type": "Despesa"},
-        {"name": "Supermercado", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Feira", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Hortifrúti", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Açougue/Padaria", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Restaurantes", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Lanches", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Delivery", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Bares/Cafés", "type": "Despesa", "parent": "Alimentação"},
-        {"name": "Suplementos Alimentares", "type": "Despesa", "parent": "Alimentação"},
-        
-        # DESPESAS - EDUCAÇÃO (Principal)
         {"name": "Educação", "type": "Despesa"},
         {"name": "Mensalidade Escolar", "type": "Despesa", "parent": "Educação"},
         {"name": "Mensalidade Universitária", "type": "Despesa", "parent": "Educação"},
+        {"name": "Faculdade", "type": "Despesa", "parent": "Educação"},
         {"name": "Cursos Livres/Idiomas", "type": "Despesa", "parent": "Educação"},
+        {"name": "Cursos", "type": "Despesa", "parent": "Educação"},
         {"name": "Material Escolar", "type": "Despesa", "parent": "Educação"},
         {"name": "Livros", "type": "Despesa", "parent": "Educação"},
         {"name": "Pós-graduação", "type": "Despesa", "parent": "Educação"},
+        {"name": "Seminário", "type": "Despesa", "parent": "Educação"},
+        {"name": "ETAAD", "type": "Despesa", "parent": "Educação"},
         
-        # DESPESAS - SAÚDE (Principal)
-        {"name": "Saúde", "type": "Despesa"},
-        {"name": "Plano de Saúde", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Consultas Médicas", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Especialistas", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Exames", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Remédios", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Óculos/Lentes", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Odontologia", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Fisioterapia", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Terapias", "type": "Despesa", "parent": "Saúde"},
-        {"name": "Vacinas", "type": "Despesa", "parent": "Saúde"},
+        {"name": "Trabalho", "type": "Despesa"},
+        {"name": "Material de Escritório", "type": "Despesa", "parent": "Trabalho"},
+        {"name": "Software/Licenças", "type": "Despesa", "parent": "Trabalho"},
+        {"name": "Equipamentos de Trabalho", "type": "Despesa", "parent": "Trabalho"},
+        {"name": "Cursos Profissionais", "type": "Despesa", "parent": "Trabalho"},
+        {"name": "Hospedagem Trabalho", "type": "Despesa", "parent": "Trabalho"},
         
-        # DESPESAS - LAZER E ENTRETENIMENTO (Principal)
-        {"name": "Lazer e Entretenimento", "type": "Despesa"},
-        {"name": "Cinema", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Teatro", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Shows", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Eventos Esportivos", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Viagens (Passagens)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Viagens (Hospedagem)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Viagens (Passeios)", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Netflix", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Spotify", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Prime Video", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Globoplay", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Jogos", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Hobbies", "type": "Despesa", "parent": "Lazer e Entretenimento"},
-        {"name": "Festas/Eventos Sociais", "type": "Despesa", "parent": "Lazer e Entretenimento"},
+        {"name": "Lazer", "type": "Despesa"},
+        {"name": "Cinema", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Teatro", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Shows", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Eventos Esportivos", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Viagens (Passagens)", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Viagens (Hospedagem)", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Viagens (Passeios)", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Jogos", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Hobbies", "type": "Despesa", "parent": "Lazer"},
+        {"name": "Festas/Eventos Sociais", "type": "Despesa", "parent": "Lazer"},
         
-        # DESPESAS - COMPRAS/VESTUÁRIO (Principal)
-        {"name": "Compras/Vestuário", "type": "Despesa"},
-        {"name": "Roupas", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Calçados", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Acessórios", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Eletrônicos", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Eletrodomésticos", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Móveis", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Utensílios Domésticos", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Presentes", "type": "Despesa", "parent": "Compras/Vestuário"},
-        {"name": "Artigos de Decoração", "type": "Despesa", "parent": "Compras/Vestuário"},
+        {"name": "Doações", "type": "Despesa"},
+        {"name": "Caridade", "type": "Despesa", "parent": "Doações"},
+        {"name": "Dízimo", "type": "Despesa", "parent": "Doações"},
+        {"name": "Contribuições", "type": "Despesa", "parent": "Doações"},
         
-        # DESPESAS - SERVIÇOS PESSOAIS (Principal)
+        {"name": "Eletrodomésticos", "type": "Despesa"},
+        {"name": "Geladeira", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Fogão", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Micro-ondas", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Máquina de Lavar", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Ar Condicionado", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Ventilador", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "TV", "type": "Despesa", "parent": "Eletrodomésticos"},
+        {"name": "Eletrônicos", "type": "Despesa", "parent": "Eletrodomésticos"},
+        
+        {"name": "Assinaturas", "type": "Despesa"},
+        {"name": "Netflix", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Spotify", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Prime Video", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Globoplay", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Microsoft", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "CapCut", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Google One", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "Adobe", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "YouTube Premium", "type": "Despesa", "parent": "Assinaturas"},
+        {"name": "iCloud", "type": "Despesa", "parent": "Assinaturas"},
+        
+        {"name": "Investimentos", "type": "Despesa"},
+        {"name": "Aplicações Financeiras", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Compra de Ações", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Fundos de Investimento", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Poupança Programada", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Custos de Corretagem", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "CDB/LCI/LCA", "type": "Despesa", "parent": "Investimentos"},
+        {"name": "Tesouro Direto", "type": "Despesa", "parent": "Investimentos"},
+        
+        {"name": "Cartão", "type": "Despesa"},
+        {"name": "Fatura do Cartão de Crédito", "type": "Despesa", "parent": "Cartão"},
+        {"name": "Anuidade Cartão", "type": "Despesa", "parent": "Cartão"},
+        {"name": "Juros do Cartão", "type": "Despesa", "parent": "Cartão"},
+        {"name": "IOF Cartão", "type": "Despesa", "parent": "Cartão"},
+        
+        {"name": "Dívidas", "type": "Despesa"},
+        {"name": "Empréstimos Pessoais", "type": "Despesa", "parent": "Dívidas"},
+        {"name": "Financiamento de Veículo", "type": "Despesa", "parent": "Dívidas"},
+        {"name": "Financiamento Imobiliário", "type": "Despesa", "parent": "Dívidas"},
+        {"name": "Juros de Dívidas", "type": "Despesa", "parent": "Dívidas"},
+        {"name": "Cheque Especial", "type": "Despesa", "parent": "Dívidas"},
+        {"name": "Crediário", "type": "Despesa", "parent": "Dívidas"},
+        
+        {"name": "Energia", "type": "Despesa"},
+        {"name": "Luz", "type": "Despesa", "parent": "Energia"},
+        {"name": "Taxa de Iluminação Pública", "type": "Despesa", "parent": "Energia"},
+        {"name": "Bandeira Tarifária", "type": "Despesa", "parent": "Energia"},
+        
+        {"name": "Água", "type": "Despesa"},
+        {"name": "Conta de Água", "type": "Despesa", "parent": "Água"},
+        {"name": "Taxa de Esgoto", "type": "Despesa", "parent": "Água"},
+        
+        {"name": "Internet", "type": "Despesa"},
+        {"name": "Internet Residencial", "type": "Despesa", "parent": "Internet"},
+        {"name": "Internet Móvel", "type": "Despesa", "parent": "Internet"},
+        {"name": "Wi-Fi", "type": "Despesa", "parent": "Internet"},
+        
+        {"name": "Celular", "type": "Despesa"},
+        {"name": "Conta do Celular", "type": "Despesa", "parent": "Celular"},
+        {"name": "Recarga", "type": "Despesa", "parent": "Celular"},
+        {"name": "Aparelho Celular", "type": "Despesa", "parent": "Celular"},
+        {"name": "Capas e Acessórios", "type": "Despesa", "parent": "Celular"},
+        
+        {"name": "Seguro", "type": "Despesa"},
+        {"name": "Seguro Residencial", "type": "Despesa", "parent": "Seguro"},
+        {"name": "Seguro de Vida", "type": "Despesa", "parent": "Seguro"},
+        {"name": "Seguro Celular", "type": "Despesa", "parent": "Seguro"},
+        {"name": "Seguro Viagem", "type": "Despesa", "parent": "Seguro"},
+        
+        {"name": "Agropecuária", "type": "Despesa"},
+        {"name": "Sementes", "type": "Despesa", "parent": "Agropecuária"},
+        {"name": "Fertilizantes", "type": "Despesa", "parent": "Agropecuária"},
+        {"name": "Defensivos", "type": "Despesa", "parent": "Agropecuária"},
+        {"name": "Equipamentos Agrícolas", "type": "Despesa", "parent": "Agropecuária"},
+        {"name": "Ração Animal", "type": "Despesa", "parent": "Agropecuária"},
+        
+        # CATEGORIAS GERAIS COMPLEMENTARES
+        {"name": "Moradia", "type": "Despesa"},
+        {"name": "Aluguel", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Condomínio", "type": "Despesa", "parent": "Moradia"},
+        {"name": "IPTU", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Gás", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Telefone Fixo", "type": "Despesa", "parent": "Moradia"},
+        {"name": "Manutenção e Reparos", "type": "Despesa", "parent": "Moradia"},
+        
         {"name": "Serviços Pessoais", "type": "Despesa"},
         {"name": "Salão de Beleza", "type": "Despesa", "parent": "Serviços Pessoais"},
         {"name": "Cabeleireiro", "type": "Despesa", "parent": "Serviços Pessoais"},
@@ -1478,46 +1560,19 @@ async def create_default_categories(user_id: str):
         {"name": "Massagem", "type": "Despesa", "parent": "Serviços Pessoais"},
         {"name": "Lavanderia", "type": "Despesa", "parent": "Serviços Pessoais"},
         
-        # DESPESAS - DÍVIDAS E EMPRÉSTIMOS (Principal)
-        {"name": "Dívidas e Empréstimos", "type": "Despesa"},
-        {"name": "Empréstimos Pessoais", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
-        {"name": "Financiamento de Veículo", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
-        {"name": "Fatura do Cartão de Crédito", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
-        {"name": "Juros de Dívidas", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
-        {"name": "Cheque Especial", "type": "Despesa", "parent": "Dívidas e Empréstimos"},
-        
-        # DESPESAS - IMPOSTOS E TAXAS (Principal)
         {"name": "Impostos e Taxas", "type": "Despesa"},
         {"name": "Imposto de Renda", "type": "Despesa", "parent": "Impostos e Taxas"},
         {"name": "Taxas Bancárias", "type": "Despesa", "parent": "Impostos e Taxas"},
         {"name": "Contribuição Sindical", "type": "Despesa", "parent": "Impostos e Taxas"},
         {"name": "Taxas de Condomínio Extras", "type": "Despesa", "parent": "Impostos e Taxas"},
+        {"name": "ISS", "type": "Despesa", "parent": "Impostos e Taxas"},
+        {"name": "COFINS", "type": "Despesa", "parent": "Impostos e Taxas"},
         
-        # DESPESAS - INVESTIMENTOS (Principal)
-        {"name": "Investimentos", "type": "Despesa"},
-        {"name": "Aplicações Financeiras", "type": "Despesa", "parent": "Investimentos"},
-        {"name": "Compra de Ações", "type": "Despesa", "parent": "Investimentos"},
-        {"name": "Fundos de Investimento", "type": "Despesa", "parent": "Investimentos"},
-        {"name": "Poupança Programada", "type": "Despesa", "parent": "Investimentos"},
-        {"name": "Custos de Corretagem", "type": "Despesa", "parent": "Investimentos"},
-        
-        # DESPESAS - DOAÇÕES (Principal)
-        {"name": "Doações", "type": "Despesa"},
-        {"name": "Caridade", "type": "Despesa", "parent": "Doações"},
-        {"name": "Dízimo", "type": "Despesa", "parent": "Doações"},
-        
-        # DESPESAS - PETS (Principal)
-        {"name": "Despesas com Pets", "type": "Despesa"},
-        {"name": "Ração", "type": "Despesa", "parent": "Despesas com Pets"},
-        {"name": "Veterinário", "type": "Despesa", "parent": "Despesas com Pets"},
-        {"name": "Acessórios para Pets", "type": "Despesa", "parent": "Despesas com Pets"},
-        {"name": "Banho e Tosa", "type": "Despesa", "parent": "Despesas com Pets"},
-        
-        # OUTRAS DESPESAS
-        {"name": "Outras Despesas", "type": "Despesa"}
+        # CATEGORIA OUTROS PARA FLEXIBILIDADE
+        {"name": "Outros", "type": "Despesa"}
     ]
     
-    print(f"[DEBUG] Total categories defined: {len(default_categories)}")
+    print(f"[DEBUG] Total COMPLETE categories defined: {len(default_categories)}")
     
     try:
         # Create parent categories first
@@ -1537,13 +1592,13 @@ async def create_default_categories(user_id: str):
                 parent_categories[cat_data["name"]] = category.id
                 parent_count += 1
         
-        print(f"[DEBUG] Parent categories to insert: {parent_count}")
+        print(f"[DEBUG] COMPLETE Parent categories to insert: {parent_count}")
         
         # Insert parent categories in batches
         if categories_to_insert:
             try:
                 result = await db.categories.insert_many(categories_to_insert)
-                print(f"[DEBUG] Parent categories inserted successfully: {len(result.inserted_ids)}")
+                print(f"[DEBUG] COMPLETE Parent categories inserted successfully: {len(result.inserted_ids)}")
             except Exception as e:
                 print(f"[ERROR] Failed to insert parent categories: {e}")
                 return False
@@ -1568,22 +1623,22 @@ async def create_default_categories(user_id: str):
                 else:
                     print(f"[WARNING] Parent not found for {cat_data['name']} -> {cat_data['parent']}")
         
-        print(f"[DEBUG] Subcategories to insert: {subcategory_count}")
+        print(f"[DEBUG] COMPLETE Subcategories to insert: {subcategory_count}")
         
         # Insert subcategories in batches
         if subcategories_to_insert:
             try:
                 result = await db.categories.insert_many(subcategories_to_insert)
-                print(f"[DEBUG] Subcategories inserted successfully: {len(result.inserted_ids)}")
+                print(f"[DEBUG] COMPLETE Subcategories inserted successfully: {len(result.inserted_ids)}")
             except Exception as e:
                 print(f"[ERROR] Failed to insert subcategories: {e}")
                 return False
         
-        print(f"[DEBUG] Category creation completed successfully")
+        print(f"[DEBUG] COMPLETE Brazilian categories creation completed successfully")
         return True
         
     except Exception as e:
-        print(f"[ERROR] Category creation failed: {e}")
+        print(f"[ERROR] COMPLETE Category creation failed: {e}")
         return False
 
 # Endpoint to migrate existing users to complete categories
