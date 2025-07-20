@@ -901,6 +901,7 @@ def run_all_tests():
     test_results["accounts"] = test_account_management()
     test_results["transactions"] = test_transaction_management()
     test_results["dashboard"] = test_dashboard_summary()
+    test_results["goals_system"] = test_goals_system()
     
     # Summary
     print("\n" + "="*80)
