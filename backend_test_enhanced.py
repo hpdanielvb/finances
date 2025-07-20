@@ -21,7 +21,7 @@ import base64
 import io
 
 # Configuration
-BACKEND_URL = "https://c432aa88-8ae0-42ae-9224-4ead0f8df479.preview.emergentagent.com/api"
+BACKEND_URL = "https://d760404c-d8e2-4b6c-a73d-a54db14f2378.preview.emergentagent.com/api"
 
 # Test data with Brazilian names and content
 TEST_USER_DATA = {
