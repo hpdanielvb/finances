@@ -1571,6 +1571,394 @@ async def get_cash_flow_report(
         "transactions": [{"id": t['id'], "description": t['description'], "value": t['value'], "type": t['type'], "transaction_date": t['transaction_date']} for t in transactions]
     }
 
+@api_router.get("/reports/expenses-by-category")
+async def get_expenses_by_category_report(
+    start_date: str,
+    end_date: str,
+    account_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Enhanced expenses by category with subcategory drill-down"""
+    # Parse dates
+    start = datetime.fromisoformat(start_date)
+    end = datetime.fromisoformat(end_date)
+    
+    # Build transaction query
+    query = {
+        "user_id": current_user.id,
+        "transaction_date": {"$gte": start, "$lte": end},
+        "type": "Despesa",
+        "status": "Pago"
+    }
+    if account_id:
+        query["account_id"] = account_id
+    if category_id:
+        query["category_id"] = category_id
+    
+    # Get transactions and categories
+    transactions = await db.transactions.find(query).to_list(10000)
+    categories = await db.categories.find({
+        "$or": [
+            {"user_id": current_user.id},
+            {"user_id": None}  # System categories
+        ]
+    }).to_list(1000)
+    
+    # Create category lookup
+    category_lookup = {cat['id']: cat for cat in categories}
+    
+    # Group by categories and subcategories
+    category_data = {}
+    subcategory_data = {}
+    
+    for transaction in transactions:
+        cat_id = transaction.get('category_id')
+        if not cat_id or cat_id not in category_lookup:
+            continue
+            
+        category = category_lookup[cat_id]
+        category_name = category['name']
+        parent_id = category.get('parent_category_id')
+        
+        # Handle parent categories
+        if parent_id and parent_id in category_lookup:
+            parent_name = category_lookup[parent_id]['name']
+            
+            # Initialize parent category data
+            if parent_name not in category_data:
+                category_data[parent_name] = {
+                    'total': 0,
+                    'count': 0,
+                    'subcategories': {}
+                }
+            
+            # Add to parent category
+            category_data[parent_name]['total'] += transaction['value']
+            category_data[parent_name]['count'] += 1
+            
+            # Add to subcategory
+            if category_name not in category_data[parent_name]['subcategories']:
+                category_data[parent_name]['subcategories'][category_name] = {
+                    'total': 0,
+                    'count': 0,
+                    'transactions': []
+                }
+            
+            category_data[parent_name]['subcategories'][category_name]['total'] += transaction['value']
+            category_data[parent_name]['subcategories'][category_name]['count'] += 1
+            category_data[parent_name]['subcategories'][category_name]['transactions'].append({
+                'id': transaction['id'],
+                'description': transaction['description'],
+                'value': transaction['value'],
+                'date': transaction['transaction_date']
+            })
+        else:
+            # Handle standalone categories
+            if category_name not in category_data:
+                category_data[category_name] = {
+                    'total': 0,
+                    'count': 0,
+                    'subcategories': {},
+                    'transactions': []
+                }
+            
+            category_data[category_name]['total'] += transaction['value']
+            category_data[category_name]['count'] += 1
+            if 'transactions' not in category_data[category_name]:
+                category_data[category_name]['transactions'] = []
+            category_data[category_name]['transactions'].append({
+                'id': transaction['id'],
+                'description': transaction['description'],
+                'value': transaction['value'],
+                'date': transaction['transaction_date']
+            })
+    
+    # Calculate totals and percentages
+    total_expenses = sum(cat['total'] for cat in category_data.values())
+    
+    for category in category_data.values():
+        category['percentage'] = (category['total'] / total_expenses * 100) if total_expenses > 0 else 0
+        for subcat in category.get('subcategories', {}).values():
+            subcat['percentage'] = (subcat['total'] / total_expenses * 100) if total_expenses > 0 else 0
+    
+    return {
+        "category_data": category_data,
+        "total_expenses": total_expenses,
+        "date_range": {"start": start_date, "end": end_date},
+        "filters": {"account_id": account_id, "category_id": category_id}
+    }
+
+@api_router.get("/reports/income-by-category")
+async def get_income_by_category_report(
+    start_date: str,
+    end_date: str,
+    account_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Enhanced income by category with subcategory drill-down"""
+    # Parse dates
+    start = datetime.fromisoformat(start_date)
+    end = datetime.fromisoformat(end_date)
+    
+    # Build transaction query
+    query = {
+        "user_id": current_user.id,
+        "transaction_date": {"$gte": start, "$lte": end},
+        "type": "Receita",
+        "status": "Pago"
+    }
+    if account_id:
+        query["account_id"] = account_id
+    if category_id:
+        query["category_id"] = category_id
+    
+    # Get transactions and categories
+    transactions = await db.transactions.find(query).to_list(10000)
+    categories = await db.categories.find({
+        "$or": [
+            {"user_id": current_user.id},
+            {"user_id": None}
+        ]
+    }).to_list(1000)
+    
+    # Create category lookup
+    category_lookup = {cat['id']: cat for cat in categories}
+    
+    # Group by categories
+    category_data = {}
+    
+    for transaction in transactions:
+        cat_id = transaction.get('category_id')
+        if not cat_id or cat_id not in category_lookup:
+            continue
+            
+        category = category_lookup[cat_id]
+        category_name = category['name']
+        
+        if category_name not in category_data:
+            category_data[category_name] = {
+                'total': 0,
+                'count': 0,
+                'transactions': []
+            }
+        
+        category_data[category_name]['total'] += transaction['value']
+        category_data[category_name]['count'] += 1
+        category_data[category_name]['transactions'].append({
+            'id': transaction['id'],
+            'description': transaction['description'],
+            'value': transaction['value'],
+            'date': transaction['transaction_date']
+        })
+    
+    # Calculate percentages
+    total_income = sum(cat['total'] for cat in category_data.values())
+    
+    for category in category_data.values():
+        category['percentage'] = (category['total'] / total_income * 100) if total_income > 0 else 0
+    
+    return {
+        "category_data": category_data,
+        "total_income": total_income,
+        "date_range": {"start": start_date, "end": end_date},
+        "filters": {"account_id": account_id, "category_id": category_id}
+    }
+
+@api_router.get("/reports/detailed-cash-flow")
+async def get_detailed_cash_flow_report(
+    start_date: str,
+    end_date: str,
+    account_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Detailed cash flow with daily, weekly, and monthly breakdowns"""
+    # Parse dates
+    start = datetime.fromisoformat(start_date)
+    end = datetime.fromisoformat(end_date)
+    
+    # Build query
+    query = {
+        "user_id": current_user.id,
+        "transaction_date": {"$gte": start, "$lte": end},
+        "status": "Pago"
+    }
+    if account_id:
+        query["account_id"] = account_id
+    if category_id:
+        query["category_id"] = category_id
+    
+    # Get transactions
+    transactions = await db.transactions.find(query).sort("transaction_date", 1).to_list(10000)
+    
+    # Group by different time periods
+    daily_data = {}
+    weekly_data = {}
+    monthly_data = {}
+    
+    for transaction in transactions:
+        trans_date = transaction['transaction_date']
+        value = transaction['value']
+        trans_type = transaction['type']
+        
+        # Daily grouping
+        day_key = trans_date.strftime("%Y-%m-%d")
+        if day_key not in daily_data:
+            daily_data[day_key] = {"income": 0, "expenses": 0, "net": 0, "transactions": []}
+        
+        # Weekly grouping (ISO week)
+        year, week, _ = trans_date.isocalendar()
+        week_key = f"{year}-W{week:02d}"
+        if week_key not in weekly_data:
+            weekly_data[week_key] = {"income": 0, "expenses": 0, "net": 0, "start_date": None, "end_date": None}
+        
+        # Monthly grouping
+        month_key = trans_date.strftime("%Y-%m")
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {"income": 0, "expenses": 0, "net": 0}
+        
+        # Add values
+        if trans_type == "Receita":
+            daily_data[day_key]["income"] += value
+            weekly_data[week_key]["income"] += value
+            monthly_data[month_key]["income"] += value
+        elif trans_type == "Despesa":
+            daily_data[day_key]["expenses"] += value
+            weekly_data[week_key]["expenses"] += value
+            monthly_data[month_key]["expenses"] += value
+        
+        # Add transaction to daily data
+        daily_data[day_key]["transactions"].append({
+            'id': transaction['id'],
+            'description': transaction['description'],
+            'value': value,
+            'type': trans_type
+        })
+    
+    # Calculate net values
+    for data in daily_data.values():
+        data["net"] = data["income"] - data["expenses"]
+    
+    for data in weekly_data.values():
+        data["net"] = data["income"] - data["expenses"]
+    
+    for data in monthly_data.values():
+        data["net"] = data["income"] - data["expenses"]
+    
+    return {
+        "daily_data": daily_data,
+        "weekly_data": weekly_data,
+        "monthly_data": monthly_data,
+        "summary": {
+            "total_income": sum(data["income"] for data in daily_data.values()),
+            "total_expenses": sum(data["expenses"] for data in daily_data.values()),
+            "net_flow": sum(data["net"] for data in daily_data.values()),
+            "period": {"start": start_date, "end": end_date}
+        }
+    }
+
+@api_router.get("/reports/export-excel")
+async def export_excel_report(
+    report_type: str,  # "transactions", "cash-flow", "expenses-by-category"
+    start_date: str,
+    end_date: str,
+    account_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Export report data in Excel format"""
+    # Parse dates
+    start = datetime.fromisoformat(start_date)
+    end = datetime.fromisoformat(end_date)
+    
+    # Build base query
+    query = {
+        "user_id": current_user.id,
+        "transaction_date": {"$gte": start, "$lte": end}
+    }
+    if account_id:
+        query["account_id"] = account_id
+    if category_id:
+        query["category_id"] = category_id
+    
+    # Get data based on report type
+    if report_type == "transactions":
+        transactions = await db.transactions.find(query).sort("transaction_date", -1).to_list(10000)
+        
+        # Get accounts and categories for lookups
+        accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+        categories = await db.categories.find({
+            "$or": [{"user_id": current_user.id}, {"user_id": None}]
+        }).to_list(1000)
+        
+        account_lookup = {acc['id']: acc['name'] for acc in accounts}
+        category_lookup = {cat['id']: cat['name'] for cat in categories}
+        
+        excel_data = []
+        for trans in transactions:
+            excel_data.append({
+                "Data": trans['transaction_date'].strftime("%d/%m/%Y"),
+                "Descrição": trans['description'],
+                "Tipo": trans['type'],
+                "Valor": trans['value'],
+                "Conta": account_lookup.get(trans['account_id'], 'N/A'),
+                "Categoria": category_lookup.get(trans.get('category_id'), 'N/A'),
+                "Status": trans['status'],
+                "Observação": trans.get('observation', '')
+            })
+    
+    elif report_type == "cash-flow":
+        transactions = await db.transactions.find({
+            **query, "status": "Pago"
+        }).sort("transaction_date", 1).to_list(10000)
+        
+        # Group by month
+        monthly_data = {}
+        for transaction in transactions:
+            month_key = transaction['transaction_date'].strftime("%m/%Y")
+            if month_key not in monthly_data:
+                monthly_data[month_key] = {"Receitas": 0, "Despesas": 0}
+            
+            if transaction['type'] == "Receita":
+                monthly_data[month_key]["Receitas"] += transaction['value']
+            elif transaction['type'] == "Despesa":
+                monthly_data[month_key]["Despesas"] += transaction['value']
+        
+        excel_data = []
+        for month, data in monthly_data.items():
+            excel_data.append({
+                "Mês": month,
+                "Receitas": data["Receitas"],
+                "Despesas": data["Despesas"],
+                "Saldo Líquido": data["Receitas"] - data["Despesas"]
+            })
+    
+    # Convert to CSV format (Excel-compatible)
+    if not excel_data:
+        return {"error": "Nenhum dado encontrado para o período selecionado"}
+    
+    # Create CSV content
+    headers = list(excel_data[0].keys())
+    csv_content = [','.join(headers)]
+    
+    for row in excel_data:
+        csv_row = []
+        for header in headers:
+            value = row[header]
+            if isinstance(value, (int, float)):
+                csv_row.append(str(value).replace('.', ','))  # Brazilian decimal format
+            else:
+                csv_row.append(f'"{str(value)}"')
+        csv_content.append(','.join(csv_row))
+    
+    return {
+        "csv_content": '\n'.join(csv_content),
+        "filename": f"relatorio-{report_type}-{start_date}-{end_date}.csv",
+        "total_records": len(excel_data)
+    }
+
 # Helper function to create comprehensive default categories
 async def create_default_categories(user_id: str):
     print(f"[DEBUG] Starting COMPLETE Brazilian categories creation for user: {user_id}")
