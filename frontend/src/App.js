@@ -4945,6 +4945,333 @@ const ConsortiumView = ({ consortiums, onRefresh, onCreateNew, onViewDetails }) 
   </div>
 );
 
+// ============================================================================
+// 💳 CREDIT CARD INVOICE COMPONENTS
+// ============================================================================
+
+const CreditCardView = ({ invoices, loading, onRefresh, onGenerate, onPay }) => {
+  const [paymentModal, setPaymentModal] = useState(null); // Stores invoice data for payment
+  const [paymentAmount, setPaymentAmount] = useState('');
+
+  const handlePayInvoice = () => {
+    if (paymentModal && paymentAmount) {
+      const amount = parseFloat(paymentAmount.replace(',', '.'));
+      if (amount > 0) {
+        onPay(paymentModal.id, amount);
+        setPaymentModal(null);
+        setPaymentAmount('');
+      }
+    }
+  };
+
+  // Get credit card accounts for display
+  const creditCardAccounts = invoices.reduce((acc, invoice) => {
+    if (!acc[invoice.account_id]) {
+      acc[invoice.account_id] = {
+        name: invoice.account_name,
+        color: invoice.account_color,
+        invoices: []
+      };
+    }
+    acc[invoice.account_id].invoices.push(invoice);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">💳 Gestão de Cartões</h2>
+            <p className="text-orange-100">
+              Controle completo das suas faturas de cartão de crédito
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={onGenerate}
+              className="bg-white text-orange-600 px-4 py-2 rounded-lg hover:bg-orange-50 transition-colors font-medium"
+            >
+              🔄 Gerar Faturas
+            </button>
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-400 transition-colors font-medium disabled:bg-orange-300"
+            >
+              {loading ? 'Carregando...' : '🔍 Atualizar'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Total de Faturas</p>
+              <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <CreditCard className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Pendentes</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {invoices.filter(inv => inv.status === 'Pending').length}
+              </p>
+            </div>
+            <div className="p-3 bg-orange-100 rounded-full">
+              <Clock className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Pagas</p>
+              <p className="text-2xl font-bold text-green-600">
+                {invoices.filter(inv => inv.status === 'Paid').length}
+              </p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Valor Total</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(invoices.reduce((sum, inv) => sum + inv.total_amount, 0))}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-full">
+              <DollarSign className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Credit Card Accounts and Invoices */}
+      {Object.keys(creditCardAccounts).length === 0 ? (
+        <div className="bg-white rounded-xl p-12 text-center shadow-lg">
+          <CreditCard className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma fatura encontrada</h3>
+          <p className="text-gray-600 mb-6">
+            Clique em "Gerar Faturas" para criar as faturas dos seus cartões de crédito.
+          </p>
+          <button
+            onClick={onGenerate}
+            className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+          >
+            🔄 Gerar Faturas Agora
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(creditCardAccounts).map(([accountId, accountData]) => (
+            <div key={accountId} className="bg-white rounded-xl shadow-lg border overflow-hidden">
+              {/* Account Header */}
+              <div className="bg-gray-50 px-6 py-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div 
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: accountData.color }}
+                    ></div>
+                    <h3 className="text-lg font-semibold text-gray-900">{accountData.name}</h3>
+                    <span className="text-sm bg-gray-200 px-2 py-1 rounded">
+                      {accountData.invoices.length} fatura{accountData.invoices.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Total em aberto</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {formatCurrency(
+                        accountData.invoices
+                          .filter(inv => inv.status !== 'Paid')
+                          .reduce((sum, inv) => sum + (inv.total_amount - inv.paid_amount), 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoices List */}
+              <div className="divide-y divide-gray-200">
+                {accountData.invoices
+                  .sort((a, b) => new Date(b.due_date) - new Date(a.due_date))
+                  .map((invoice) => {
+                    const isOverdue = new Date(invoice.due_date) < new Date() && invoice.status !== 'Paid';
+                    const remainingAmount = invoice.total_amount - invoice.paid_amount;
+                    
+                    return (
+                      <div key={invoice.id} className="px-6 py-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className={`p-2 rounded-full ${
+                              invoice.status === 'Paid' ? 'bg-green-100' :
+                              isOverdue ? 'bg-red-100' : 'bg-orange-100'
+                            }`}>
+                              {invoice.status === 'Paid' ? (
+                                <CheckCircle className="w-5 h-5 text-green-600" />
+                              ) : isOverdue ? (
+                                <AlertTriangle className="w-5 h-5 text-red-600" />
+                              ) : (
+                                <Clock className="w-5 h-5 text-orange-600" />
+                              )}
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-medium text-gray-900">
+                                Fatura {invoice.invoice_month}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Vencimento: {formatDate(invoice.due_date)}
+                                {isOverdue && <span className="text-red-600 font-medium ml-2">• Vencida</span>}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-4">
+                            <div className="text-right">
+                              <p className={`font-bold ${
+                                invoice.status === 'Paid' ? 'text-green-600' : 'text-gray-900'
+                              }`}>
+                                {formatCurrency(invoice.total_amount)}
+                              </p>
+                              {invoice.paid_amount > 0 && invoice.status !== 'Paid' && (
+                                <p className="text-sm text-gray-600">
+                                  Pago: {formatCurrency(invoice.paid_amount)}
+                                </p>
+                              )}
+                              {remainingAmount > 0 && invoice.status !== 'Paid' && (
+                                <p className="text-sm text-orange-600 font-medium">
+                                  Restante: {formatCurrency(remainingAmount)}
+                                </p>
+                              )}
+                            </div>
+
+                            {invoice.status !== 'Paid' && (
+                              <button
+                                onClick={() => {
+                                  setPaymentModal(invoice);
+                                  setPaymentAmount(remainingAmount.toFixed(2).replace('.', ','));
+                                }}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                  isOverdue 
+                                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                                }`}
+                              >
+                                💳 Pagar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Transaction count */}
+                        {invoice.transactions.length > 0 && (
+                          <div className="mt-3 ml-12">
+                            <p className="text-sm text-gray-600">
+                              {invoice.transactions.length} transação{invoice.transactions.length !== 1 ? 'ões' : ''} incluída{invoice.transactions.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">💳 Pagar Fatura</h3>
+              <button
+                onClick={() => setPaymentModal(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600">Cartão</p>
+                <p className="font-medium text-gray-900">{paymentModal.account_name}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Fatura</p>
+                <p className="font-medium text-gray-900">
+                  {paymentModal.invoice_month} • Vencimento: {formatDate(paymentModal.due_date)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Valor da Fatura</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {formatCurrency(paymentModal.total_amount)}
+                </p>
+                {paymentModal.paid_amount > 0 && (
+                  <p className="text-sm text-gray-600">
+                    Já pago: {formatCurrency(paymentModal.paid_amount)}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Valor do Pagamento
+                </label>
+                <input
+                  type="text"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setPaymentModal(null)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePayInvoice}
+                className="flex-1 bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Confirmar Pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ConsortiumModal = ({ onClose, onCreate }) => {
   const [formData, setFormData] = useState({
     name: '',
