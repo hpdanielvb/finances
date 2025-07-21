@@ -142,6 +142,69 @@ const formatDateForInput = (date) => {
 };
 
 // Enhanced Login Component
+// Email validation component
+const EmailInput = ({ value, onChange, placeholder = "seu@email.com", required = false, className = "" }) => {
+  const [isValid, setIsValid] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValidFormat = emailRegex.test(email);
+    
+    if (!email && required) {
+      setErrorMessage('Email é obrigatório');
+      setIsValid(false);
+      return false;
+    }
+    
+    if (email && !isValidFormat) {
+      setErrorMessage('Digite um email válido (exemplo@dominio.com)');
+      setIsValid(false);
+      return false;
+    }
+    
+    setErrorMessage('');
+    setIsValid(true);
+    return true;
+  };
+
+  const handleChange = (e) => {
+    const emailValue = e.target.value;
+    onChange(emailValue);
+    
+    // Validate in real time
+    if (emailValue) {
+      validateEmail(emailValue);
+    } else {
+      setIsValid(true);
+      setErrorMessage('');
+    }
+  };
+
+  const handleBlur = () => {
+    if (value) {
+      validateEmail(value);
+    }
+  };
+
+  return (
+    <div>
+      <input
+        type="email"
+        className={`w-full px-3 py-2 border ${isValid ? 'border-gray-300' : 'border-red-500'} rounded-lg focus:outline-none ${isValid ? 'focus:border-blue-500 focus:ring-blue-200' : 'focus:border-red-500 focus:ring-red-200'} focus:ring-2 transition-all ${className}`}
+        placeholder={placeholder}
+        value={value}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        required={required}
+      />
+      {!isValid && errorMessage && (
+        <p className="text-red-500 text-sm mt-1">⚠️ {errorMessage}</p>
+      )}
+    </div>
+  );
+};
+
 // Brazilian Currency Input Component
 const BrazilianCurrencyInput = ({ value, onChange, placeholder = "R$ 0,00", required = false, className = "" }) => {
   const [displayValue, setDisplayValue] = useState('');
