@@ -1821,6 +1821,26 @@ const Dashboard = () => {
             onDelete={handleDeleteBudget}
           />
         )}
+
+        {/* 🧠 AI VIEW */}
+        {activeView === 'ai' && (
+          <AIView
+            insights={aiInsights}
+            onRefreshInsights={loadAIInsights}
+            onOpenChat={() => setShowAIChat(true)}
+            onOpenInsights={() => setShowAIInsights(true)}
+          />
+        )}
+
+        {/* 🏠 CONSORTIUM VIEW */}
+        {activeView === 'consortiums' && (
+          <ConsortiumView
+            consortiums={consortiums}
+            onRefresh={loadDashboard}
+            onCreateNew={() => setShowConsortiumModal(true)}
+            onViewDetails={loadConsortiumSummary}
+          />
+        )}
       </div>
 
       {/* Modals */}
