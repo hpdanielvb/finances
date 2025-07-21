@@ -1886,6 +1886,16 @@ async def test_auth(current_user: User = Depends(get_current_user)):
         "user_name": current_user.name
     }
 
+# Test endpoint for account deletion
+@api_router.delete("/test/delete-account/{account_id}")
+async def test_delete_account(account_id: str, current_user: User = Depends(get_current_user)):
+    """Test delete account endpoint"""
+    return {
+        "message": "Delete endpoint working!",
+        "account_id": account_id,
+        "user_id": current_user.id
+    }
+
 # ============================================================================
 # 🧠 ENDPOINTS DE IA - SISTEMA INTELIGENTE
 # ============================================================================
