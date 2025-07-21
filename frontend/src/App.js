@@ -3910,7 +3910,7 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
       if (selectedCategory) params.append('category_id', selectedCategory);
 
       const response = await fetch(
-        `${import.meta.env.REACT_APP_BACKEND_URL}/reports/export-excel?${params}`,
+        `${process.env.REACT_APP_BACKEND_URL}/api/reports/export-excel?${params}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
