@@ -797,6 +797,81 @@ const Dashboard = () => {
   };
 
   // ============================================================================
+  // 💳 FUNÇÕES DE CARTÃO DE CRÉDITO
+  // ============================================================================
+
+  // Load credit card invoices
+  const loadCreditCardInvoices = async () => {
+    setLoadingInvoices(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL}/credit-cards/invoices`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCreditCardInvoices(data.invoices || []);
+      } else {
+        toast.error('Erro ao carregar faturas do cartão');
+      }
+    } catch (error) {
+      console.error('Error loading credit card invoices:', error);
+      toast.error('Erro ao carregar faturas');
+    }
+    setLoadingInvoices(false);
+  };
+
+  // Generate credit card invoices
+  const generateCreditCardInvoices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL}/credit-cards/generate-invoices`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        loadCreditCardInvoices(); // Reload invoices
+      } else {
+        toast.error('Erro ao gerar faturas');
+      }
+    } catch (error) {
+      console.error('Error generating invoices:', error);
+      toast.error('Erro ao gerar faturas');
+    }
+  };
+
+  // Pay credit card invoice
+  const payCreditCardInvoice = async (invoiceId, paymentAmount) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL}/credit-cards/invoices/${invoiceId}/pay`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ payment_amount: paymentAmount })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        loadCreditCardInvoices(); // Reload invoices
+        loadDashboard(); // Reload dashboard to update balances
+      } else {
+        toast.error('Erro ao pagar fatura');
+      }
+    } catch (error) {
+      console.error('Error paying invoice:', error);
+      toast.error('Erro ao pagar fatura');
+    }
+  };
+
+  // ============================================================================
   // 🏠 FUNÇÕES DE CONSÓRCIO  
   // ============================================================================
 
