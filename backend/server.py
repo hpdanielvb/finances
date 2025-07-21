@@ -1987,6 +1987,277 @@ async def export_excel_report(
         "total_records": len(excel_data)
     }
 
+# ============================================================================
+# 💳 CREDIT CARD INVOICE MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@api_router.post("/credit-cards/generate-invoices")
+async def generate_monthly_invoices(current_user: User = Depends(get_current_user)):
+    """Generate credit card invoices for all credit card accounts"""
+    try:
+        # Get all credit card accounts
+        credit_accounts = await db.accounts.find({
+            "user_id": current_user.id,
+            "type": "Cartão de Crédito",
+            "is_active": True
+        }).to_list(100)
+        
+        generated_invoices = []
+        current_date = datetime.utcnow()
+        
+        for account in credit_accounts:
+            # Get invoice due date (default to 15th if not set)
+            due_day = 15
+            if account.get('invoice_due_date'):
+                try:
+                    due_day = int(account['invoice_due_date'])
+                except:
+                    due_day = 15
+            
+            # Calculate current invoice period
+            if current_date.day <= due_day:
+                # Current month invoice
+                invoice_month = current_date.strftime("%Y-%m")
+                closing_date = datetime(current_date.year, current_date.month, due_day - 7)
+                due_date = datetime(current_date.year, current_date.month, due_day)
+            else:
+                # Next month invoice
+                next_month = current_date.replace(day=1) + timedelta(days=32)
+                next_month = next_month.replace(day=1)  # First day of next month
+                invoice_month = next_month.strftime("%Y-%m")
+                closing_date = datetime(next_month.year, next_month.month, due_day - 7)
+                due_date = datetime(next_month.year, next_month.month, due_day)
+            
+            # Check if invoice already exists
+            existing_invoice = await db.credit_card_invoices.find_one({
+                "account_id": account["id"],
+                "invoice_month": invoice_month
+            })
+            
+            if existing_invoice:
+                continue  # Skip if invoice already exists
+            
+            # Get transactions for this period (previous month transactions for current invoice)
+            period_start = closing_date - timedelta(days=30)
+            transactions = await db.transactions.find({
+                "user_id": current_user.id,
+                "account_id": account["id"],
+                "type": "Despesa",
+                "transaction_date": {"$gte": period_start, "$lte": closing_date},
+                "status": "Pago"
+            }).to_list(1000)
+            
+            # Calculate total amount
+            total_amount = sum(t['value'] for t in transactions)
+            
+            # Create invoice
+            invoice = CreditCardInvoice(
+                user_id=current_user.id,
+                account_id=account["id"],
+                invoice_month=invoice_month,
+                due_date=due_date,
+                closing_date=closing_date,
+                total_amount=total_amount,
+                transactions=[t['id'] for t in transactions]
+            )
+            
+            await db.credit_card_invoices.insert_one(invoice.dict())
+            generated_invoices.append({
+                "account_name": account["name"],
+                "invoice_month": invoice_month,
+                "total_amount": total_amount,
+                "due_date": due_date.isoformat(),
+                "transaction_count": len(transactions)
+            })
+        
+        return {
+            "message": f"Geradas {len(generated_invoices)} faturas de cartão de crédito",
+            "invoices": generated_invoices
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar faturas: {str(e)}")
+
+@api_router.get("/credit-cards/invoices")
+async def get_credit_card_invoices(
+    account_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get credit card invoices"""
+    query = {"user_id": current_user.id}
+    
+    if account_id:
+        query["account_id"] = account_id
+    if status:
+        query["status"] = status
+    
+    invoices = await db.credit_card_invoices.find(query).sort("due_date", -1).to_list(100)
+    
+    # Enrich with account information
+    accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+    account_lookup = {acc['id']: acc for acc in accounts}
+    
+    enriched_invoices = []
+    for invoice in invoices:
+        account = account_lookup.get(invoice['account_id'])
+        enriched_invoice = {
+            **invoice,
+            "account_name": account['name'] if account else 'N/A',
+            "account_color": account['color_hex'] if account else '#6B7280'
+        }
+        enriched_invoices.append(enriched_invoice)
+    
+    return {"invoices": enriched_invoices}
+
+@api_router.patch("/credit-cards/invoices/{invoice_id}/pay")
+async def pay_credit_card_invoice(
+    invoice_id: str,
+    payment_amount: float,
+    current_user: User = Depends(get_current_user)
+):
+    """Mark credit card invoice as paid"""
+    invoice = await db.credit_card_invoices.find_one({
+        "id": invoice_id,
+        "user_id": current_user.id
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura não encontrada")
+    
+    # Update invoice
+    update_data = {
+        "paid_amount": payment_amount,
+        "paid_at": datetime.utcnow(),
+        "status": "Paid" if payment_amount >= invoice['total_amount'] else "Partial"
+    }
+    
+    await db.credit_card_invoices.update_one(
+        {"id": invoice_id},
+        {"$set": update_data}
+    )
+    
+    # Create payment transaction
+    account = await db.accounts.find_one({"id": invoice["account_id"]})
+    if account:
+        payment_transaction = Transaction(
+            user_id=current_user.id,
+            description=f"Pagamento Fatura {account['name']} - {invoice['invoice_month']}",
+            value=payment_amount,
+            type="Despesa",
+            transaction_date=datetime.utcnow(),
+            account_id=invoice["account_id"],
+            status="Pago"
+        )
+        
+        await db.transactions.insert_one(payment_transaction.dict())
+    
+    return {"message": "Fatura paga com sucesso", "payment_amount": payment_amount}
+
+# ============================================================================
+# 🏷️ TRANSACTION TAGS MANAGEMENT
+# ============================================================================
+
+@api_router.post("/tags", response_model=TransactionTag)
+async def create_tag(
+    tag_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new transaction tag"""
+    tag = TransactionTag(
+        user_id=current_user.id,
+        name=tag_data['name'],
+        color=tag_data.get('color', '#6B7280'),
+        description=tag_data.get('description')
+    )
+    
+    await db.transaction_tags.insert_one(tag.dict())
+    return tag
+
+@api_router.get("/tags")
+async def get_tags(current_user: User = Depends(get_current_user)):
+    """Get user's transaction tags"""
+    tags = await db.transaction_tags.find({"user_id": current_user.id}).to_list(100)
+    return {"tags": tags}
+
+@api_router.patch("/transactions/{transaction_id}/tags")
+async def update_transaction_tags(
+    transaction_id: str,
+    tag_ids: List[str],
+    current_user: User = Depends(get_current_user)
+):
+    """Update transaction tags"""
+    transaction = await db.transactions.find_one({
+        "id": transaction_id,
+        "user_id": current_user.id
+    })
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+    
+    await db.transactions.update_one(
+        {"id": transaction_id},
+        {"$set": {"tags": tag_ids}}
+    )
+    
+    return {"message": "Tags atualizadas com sucesso"}
+
+@api_router.get("/reports/by-tags")
+async def get_report_by_tags(
+    start_date: str,
+    end_date: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get transactions grouped by tags"""
+    # Parse dates
+    start = datetime.fromisoformat(start_date)
+    end = datetime.fromisoformat(end_date)
+    
+    # Get transactions with tags
+    transactions = await db.transactions.find({
+        "user_id": current_user.id,
+        "transaction_date": {"$gte": start, "$lte": end},
+        "tags": {"$exists": True, "$ne": []}
+    }).to_list(10000)
+    
+    # Get all tags
+    tags = await db.transaction_tags.find({"user_id": current_user.id}).to_list(100)
+    tag_lookup = {tag['id']: tag for tag in tags}
+    
+    # Group by tags
+    tag_data = {}
+    
+    for transaction in transactions:
+        for tag_id in transaction.get('tags', []):
+            if tag_id in tag_lookup:
+                tag = tag_lookup[tag_id]
+                tag_name = tag['name']
+                
+                if tag_name not in tag_data:
+                    tag_data[tag_name] = {
+                        'total_income': 0,
+                        'total_expenses': 0,
+                        'count': 0,
+                        'color': tag['color'],
+                        'transactions': []
+                    }
+                
+                tag_data[tag_name]['count'] += 1
+                tag_data[tag_name]['transactions'].append({
+                    'id': transaction['id'],
+                    'description': transaction['description'],
+                    'value': transaction['value'],
+                    'type': transaction['type'],
+                    'date': transaction['transaction_date']
+                })
+                
+                if transaction['type'] == 'Receita':
+                    tag_data[tag_name]['total_income'] += transaction['value']
+                else:
+                    tag_data[tag_name]['total_expenses'] += transaction['value']
+    
+    return {"tag_data": tag_data, "date_range": {"start": start_date, "end": end_date}}
+
 # Helper function to create comprehensive default categories
 async def create_default_categories(user_id: str):
     print(f"[DEBUG] Starting COMPLETE Brazilian categories creation for user: {user_id}")
