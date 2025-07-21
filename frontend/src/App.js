@@ -3484,52 +3484,126 @@ const BudgetModal = ({ budget, categories, onClose, onCreate }) => {
   );
 };
 
-// Reports Modal Component
+// Enhanced Reports Modal Component with New Features
 const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
   const [reportType, setReportType] = useState('overview');
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
+  const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const exportToCSV = () => {
-    // Simple CSV export functionality
-    const csvData = transactions.map(t => ({
-      Data: formatDate(t.transaction_date),
-      Descrição: t.description,
-      Valor: t.value,
-      Tipo: t.type,
-      Conta: accounts.find(a => a.id === t.account_id)?.name || 'N/A'
-    }));
+  // Fetch enhanced report data
+  const fetchReportData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      let url = '';
+      let params = new URLSearchParams({
+        start_date: dateRange.start,
+        end_date: dateRange.end
+      });
 
-    const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
-    ].join('\n');
+      if (selectedAccount) params.append('account_id', selectedAccount);
+      if (selectedCategory) params.append('category_id', selectedCategory);
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio-financeiro-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      switch (reportType) {
+        case 'expenses-by-category':
+          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/expenses-by-category?${params}`;
+          break;
+        case 'income-by-category':
+          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/income-by-category?${params}`;
+          break;
+        case 'detailed-cash-flow':
+          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/detailed-cash-flow?${params}`;
+          break;
+        case 'by-tags':
+          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/by-tags?${params}`;
+          break;
+        default:
+          setLoading(false);
+          return;
+      }
 
-    toast.success('Relatório exportado com sucesso!');
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setReportData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+      toast.error('Erro ao carregar dados do relatório');
+    }
+    setLoading(false);
   };
+
+  // Export enhanced CSV with more data
+  const exportEnhancedCSV = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        report_type: reportType === 'overview' ? 'transactions' : reportType.replace('-', '-'),
+        start_date: dateRange.start,
+        end_date: dateRange.end
+      });
+
+      if (selectedAccount) params.append('account_id', selectedAccount);
+      if (selectedCategory) params.append('category_id', selectedCategory);
+
+      const response = await fetch(
+        `${import.meta.env.REACT_APP_BACKEND_URL}/reports/export-excel?${params}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create and download file
+        const blob = new Blob([data.csv_content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', data.filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success(`Relatório exportado: ${data.total_records} registros`);
+      } else {
+        toast.error('Erro ao exportar relatório');
+      }
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Erro ao exportar relatório');
+    }
+  };
+
+  // Load report data when type or filters change
+  useEffect(() => {
+    if (reportType !== 'overview') {
+      fetchReportData();
+    }
+  }, [reportType, dateRange, selectedAccount, selectedCategory]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-semibold text-gray-900">Relatórios Financeiros</h3>
+          <h3 className="text-2xl font-semibold text-gray-900">📊 Relatórios Financeiros Avançados</h3>
           <div className="flex items-center gap-3">
             <button
-              onClick={exportToCSV}
+              onClick={exportEnhancedCSV}
               className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
             >
               <Download size={16} />
-              Exportar CSV
+              Exportar Excel
             </button>
             <button
               onClick={onClose}
@@ -3540,18 +3614,20 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
           </div>
         </div>
 
-        {/* Report Controls */}
-        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+        {/* Enhanced Report Controls */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Relatório</label>
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-full"
             >
               <option value="overview">Visão Geral</option>
-              <option value="cashflow">Fluxo de Caixa</option>
-              <option value="categories">Por Categorias</option>
+              <option value="detailed-cash-flow">Fluxo de Caixa Detalhado</option>
+              <option value="expenses-by-category">Despesas por Categoria</option>
+              <option value="income-by-category">Receitas por Categoria</option>
+              <option value="by-tags">Relatório por Tags</option>
             </select>
           </div>
 
@@ -3561,7 +3637,7 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-full"
             />
           </div>
 
@@ -3571,139 +3647,334 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-full"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por Conta</label>
+            <select
+              value={selectedAccount}
+              onChange={(e) => setSelectedAccount(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-full"
+            >
+              <option value="">Todas as contas</option>
+              {accounts.map(account => (
+                <option key={account.id} value={account.id}>{account.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={fetchReportData}
+              disabled={loading}
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              {loading ? 'Carregando...' : 'Atualizar'}
+            </button>
           </div>
         </div>
 
         {/* Report Content */}
         <div className="space-y-8">
-          {/* Summary Section */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Saldo Total</h4>
-              <p className="text-3xl font-bold text-blue-900">
-                {formatCurrency(summary?.total_balance || 0)}
-              </p>
-            </div>
-            
-            <div className="bg-green-50 p-6 rounded-lg">
-              <h4 className="font-medium text-green-800 mb-2">Receitas Totais</h4>
-              <p className="text-3xl font-bold text-green-900">
-                {formatCurrency(summary?.monthly_income || 0)}
-              </p>
-            </div>
-            
-            <div className="bg-red-50 p-6 rounded-lg">
-              <h4 className="font-medium text-red-800 mb-2">Despesas Totais</h4>
-              <p className="text-3xl font-bold text-red-900">
-                {formatCurrency(summary?.monthly_expenses || 0)}
-              </p>
-            </div>
+          {reportType === 'overview' && (
+            <>
+              {/* Summary Section */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Saldo Total</h4>
+                  <p className="text-3xl font-bold text-blue-900">
+                    {formatCurrency(summary?.total_balance || 0)}
+                  </p>
+                </div>
+                
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h4 className="font-medium text-green-800 mb-2">Receitas Totais</h4>
+                  <p className="text-3xl font-bold text-green-900">
+                    {formatCurrency(summary?.monthly_income || 0)}
+                  </p>
+                </div>
+                
+                <div className="bg-red-50 p-6 rounded-lg">
+                  <h4 className="font-medium text-red-800 mb-2">Despesas Totais</h4>
+                  <p className="text-3xl font-bold text-red-900">
+                    {formatCurrency(summary?.monthly_expenses || 0)}
+                  </p>
+                </div>
 
-            <div className="bg-purple-50 p-6 rounded-lg">
-              <h4 className="font-medium text-purple-800 mb-2">Saldo Líquido</h4>
-              <p className={`text-3xl font-bold ${
-                (summary?.monthly_net || 0) >= 0 ? 'text-green-900' : 'text-red-900'
-              }`}>
-                {formatCurrency(summary?.monthly_net || 0)}
-              </p>
-            </div>
-          </div>
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h4 className="font-medium text-purple-800 mb-2">Saldo Líquido</h4>
+                  <p className={`text-3xl font-bold ${
+                    (summary?.monthly_net || 0) >= 0 ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    {formatCurrency(summary?.monthly_net || 0)}
+                  </p>
+                </div>
+              </div>
 
-          {/* Accounts Section */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Resumo por Conta</h4>
-            <div className="bg-white border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conta</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instituição</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {accounts.map(account => (
-                    <tr key={account.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-4 h-4 rounded-full mr-3"
-                            style={{ backgroundColor: account.color_hex }}
-                          ></div>
-                          <span className="font-medium">{account.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{account.type}</td>
-                      <td className="px-6 py-4 text-gray-600">{account.institution || 'N/A'}</td>
-                      <td className="px-6 py-4 text-right font-bold">
-                        {formatCurrency(account.current_balance)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+              {/* Accounts Section */}
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Resumo por Conta</h4>
+                <div className="bg-white border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conta</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instituição</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {accounts.map(account => (
+                        <tr key={account.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div 
+                                className="w-4 h-4 rounded-full mr-3"
+                                style={{ backgroundColor: account.color_hex }}
+                              ></div>
+                              <span className="font-medium">{account.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">{account.type}</td>
+                          <td className="px-6 py-4 text-gray-600">{account.institution || 'N/A'}</td>
+                          <td className="px-6 py-4 text-right font-bold">
+                            {formatCurrency(account.current_balance)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* Recent Transactions */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Transações Recentes</h4>
-            <div className="bg-white border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {transactions.slice(0, 10).map(transaction => (
-                    <tr key={transaction.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {formatDate(transaction.transaction_date)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="font-medium">{transaction.description}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          transaction.type === 'Receita' ? 
-                            'bg-green-100 text-green-800' : 
-                            'bg-red-100 text-red-800'
-                        }`}>
-                          {transaction.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`font-bold ${
-                          transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.type === 'Receita' ? '+' : '-'}
-                          {formatCurrency(transaction.value)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Enhanced Report Views */}
+          {reportType !== 'overview' && reportData && (
+            <EnhancedReportView reportType={reportType} data={reportData} />
+          )}
+
+          {reportType !== 'overview' && loading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Carregando relatório...</p>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex justify-end mt-8">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Fechar
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Enhanced Report View Component
+const EnhancedReportView = ({ reportType, data }) => {
+  if (reportType === 'expenses-by-category' && data.category_data) {
+    return (
+      <div>
+        <h4 className="text-lg font-semibold mb-4">
+          Despesas por Categoria - Total: {formatCurrency(data.total_expenses)}
+        </h4>
+        <div className="space-y-4">
+          {Object.entries(data.category_data).map(([categoryName, categoryData]) => (
+            <div key={categoryName} className="border rounded-lg p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h5 className="font-medium text-gray-900">{categoryName}</h5>
+                <div className="text-right">
+                  <p className="font-bold text-red-600">{formatCurrency(categoryData.total)}</p>
+                  <p className="text-sm text-gray-500">{categoryData.percentage.toFixed(1)}% do total</p>
+                </div>
+              </div>
+              
+              {/* Subcategories */}
+              {categoryData.subcategories && Object.keys(categoryData.subcategories).length > 0 && (
+                <div className="mt-3 pl-4 border-l-2 border-gray-200">
+                  <h6 className="text-sm font-medium text-gray-700 mb-2">Subcategorias:</h6>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(categoryData.subcategories).map(([subName, subData]) => (
+                      <div key={subName} className="bg-gray-50 rounded p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">{subName}</span>
+                          <div className="text-right">
+                            <p className="font-medium text-red-600">{formatCurrency(subData.total)}</p>
+                            <p className="text-xs text-gray-500">{subData.count} transações</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (reportType === 'income-by-category' && data.category_data) {
+    return (
+      <div>
+        <h4 className="text-lg font-semibold mb-4">
+          Receitas por Categoria - Total: {formatCurrency(data.total_income)}
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(data.category_data).map(([categoryName, categoryData]) => (
+            <div key={categoryName} className="border rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <h5 className="font-medium text-gray-900">{categoryName}</h5>
+                <div className="text-right">
+                  <p className="font-bold text-green-600">{formatCurrency(categoryData.total)}</p>
+                  <p className="text-sm text-gray-500">
+                    {categoryData.percentage.toFixed(1)}% • {categoryData.count} transações
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (reportType === 'detailed-cash-flow' && data.monthly_data) {
+    return (
+      <div>
+        <h4 className="text-lg font-semibold mb-4">Fluxo de Caixa Detalhado</h4>
+        
+        {/* Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h5 className="font-medium text-green-800 mb-1">Total de Receitas</h5>
+            <p className="text-2xl font-bold text-green-900">
+              {formatCurrency(data.summary.total_income)}
+            </p>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h5 className="font-medium text-red-800 mb-1">Total de Despesas</h5>
+            <p className="text-2xl font-bold text-red-900">
+              {formatCurrency(data.summary.total_expenses)}
+            </p>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-1">Fluxo Líquido</h5>
+            <p className={`text-2xl font-bold ${
+              data.summary.net_flow >= 0 ? 'text-green-900' : 'text-red-900'
+            }`}>
+              {formatCurrency(data.summary.net_flow)}
+            </p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h5 className="font-medium text-purple-800 mb-1">Período</h5>
+            <p className="text-sm text-purple-900 font-medium">
+              {formatDate(data.summary.period.start)} até<br/>
+              {formatDate(data.summary.period.end)}
+            </p>
+          </div>
+        </div>
+
+        {/* Monthly Breakdown */}
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mês</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Receitas</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Despesas</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo Líquido</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {Object.entries(data.monthly_data)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([month, monthData]) => (
+                <tr key={month} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium text-gray-900">
+                    {new Date(month + '-01').toLocaleDateString('pt-BR', { 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </td>
+                  <td className="px-6 py-4 text-right font-bold text-green-600">
+                    {formatCurrency(monthData.income)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-bold text-red-600">
+                    {formatCurrency(monthData.expenses)}
+                  </td>
+                  <td className={`px-6 py-4 text-right font-bold ${
+                    monthData.net >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatCurrency(monthData.net)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (reportType === 'by-tags' && data.tag_data) {
+    return (
+      <div>
+        <h4 className="text-lg font-semibold mb-4">Relatório por Tags</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(data.tag_data).map(([tagName, tagData]) => (
+            <div key={tagName} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-3"
+                    style={{ backgroundColor: tagData.color }}
+                  ></div>
+                  <h5 className="font-medium text-gray-900">{tagName}</h5>
+                </div>
+                <span className="text-sm bg-gray-100 px-2 py-1 rounded">
+                  {tagData.count} transações
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                {tagData.total_income > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Receitas:</span>
+                    <span className="font-medium text-green-600">
+                      {formatCurrency(tagData.total_income)}
+                    </span>
+                  </div>
+                )}
+                
+                {tagData.total_expenses > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Despesas:</span>
+                    <span className="font-medium text-red-600">
+                      {formatCurrency(tagData.total_expenses)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center py-8">
+      <p className="text-gray-500">Nenhum dado disponível para este relatório</p>
     </div>
   );
 };
