@@ -3874,7 +3874,7 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
           url = `${process.env.REACT_APP_BACKEND_URL}/api/reports/detailed-cash-flow?${params}`;
           break;
         case 'by-tags':
-          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/by-tags?${params}`;
+          url = `${process.env.REACT_APP_BACKEND_URL}/api/reports/by-tags?${params}`;
           break;
         default:
           setLoading(false);
