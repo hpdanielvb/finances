@@ -142,6 +142,82 @@ const formatDateForInput = (date) => {
 };
 
 // Enhanced Login Component
+// Password validation component
+const PasswordInput = ({ value, onChange, placeholder = "Sua senha", required = false, confirm = false, confirmValue = '', className = "" }) => {
+  const [isValid, setIsValid] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validatePassword = (password) => {
+    if (!password && required) {
+      setErrorMessage('Senha é obrigatória');
+      setIsValid(false);
+      return false;
+    }
+    
+    if (password && password.length < 6) {
+      setErrorMessage('Senha deve ter pelo menos 6 caracteres');
+      setIsValid(false);
+      return false;
+    }
+    
+    if (confirm && password !== confirmValue) {
+      setErrorMessage('Senhas não coincidem');
+      setIsValid(false);
+      return false;
+    }
+    
+    setErrorMessage('');
+    setIsValid(true);
+    return true;
+  };
+
+  const handleChange = (e) => {
+    const passwordValue = e.target.value;
+    onChange(passwordValue);
+    
+    // Validate in real time
+    if (passwordValue || confirm) {
+      validatePassword(passwordValue);
+    } else {
+      setIsValid(true);
+      setErrorMessage('');
+    }
+  };
+
+  const handleBlur = () => {
+    if (value || confirm) {
+      validatePassword(value);
+    }
+  };
+
+  return (
+    <div>
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          className={`w-full px-4 py-3 pr-12 border ${isValid ? 'border-gray-300' : 'border-red-500'} rounded-lg focus:outline-none ${isValid ? 'focus:border-blue-500 focus:ring-blue-200' : 'focus:border-red-500 focus:ring-red-200'} focus:ring-2 transition-all ${className}`}
+          placeholder={placeholder}
+          value={value}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          required={required}
+        />
+        <button
+          type="button"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          onClick={() => setShowPassword(!showPassword)}
+        >
+          {showPassword ? '🙈' : '👁️'}
+        </button>
+      </div>
+      {!isValid && errorMessage && (
+        <p className="text-red-500 text-sm mt-1">⚠️ {errorMessage}</p>
+      )}
+    </div>
+  );
+};
+
 // Email validation component
 const EmailInput = ({ value, onChange, placeholder = "seu@email.com", required = false, className = "" }) => {
   const [isValid, setIsValid] = useState(true);
