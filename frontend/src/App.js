@@ -142,6 +142,43 @@ const formatDateForInput = (date) => {
 };
 
 // Enhanced Login Component
+// Brazilian Currency Input Component
+const BrazilianCurrencyInput = ({ value, onChange, placeholder = "R$ 0,00", required = false, className = "" }) => {
+  const [displayValue, setDisplayValue] = useState('');
+
+  useEffect(() => {
+    if (value && value !== 0) {
+      setDisplayValue(formatBrazilianCurrency(value.toString().replace('.', '')));
+    }
+  }, [value]);
+
+  const handleInputChange = (e) => {
+    const inputValue = e.target.value;
+    
+    // Allow only numbers, commas, and R$ symbols
+    const cleanValue = inputValue.replace(/[^\d,R$\s]/g, '');
+    
+    // Format the display value
+    const formatted = formatBrazilianCurrency(cleanValue);
+    setDisplayValue(formatted);
+    
+    // Parse and send numeric value to parent
+    const numericValue = parseBrazilianCurrency(formatted);
+    onChange(numericValue);
+  };
+
+  return (
+    <input
+      type="text"
+      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all ${className}`}
+      placeholder={placeholder}
+      value={displayValue}
+      onChange={handleInputChange}
+      required={required}
+    />
+  );
+};
+
 const LoginForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
