@@ -547,6 +547,18 @@ const Dashboard = () => {
   const [transactionType, setTransactionType] = useState('');
   const [editingItem, setEditingItem] = useState(null);
 
+  // 🧠 IA States
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [showAIInsights, setShowAIInsights] = useState(false);
+  const [aiInsights, setAIInsights] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  
+  // 🏠 Consortium States
+  const [showConsortiumModal, setShowConsortiumModal] = useState(false);
+  const [showConsortiumDetails, setShowConsortiumDetails] = useState(false);
+  const [consortiums, setConsortiums] = useState([]);
+  const [selectedConsortium, setSelectedConsortium] = useState(null);
+
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
