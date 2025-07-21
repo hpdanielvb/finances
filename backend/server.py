@@ -1870,6 +1870,466 @@ async def update_budget_spent(user_id: str, category_id: str, month_year: str, a
         upsert=False
     )
 
+# ============================================================================
+# 🧠 ENDPOINTS DE IA - SISTEMA INTELIGENTE
+# ============================================================================
+
+@api_router.post("/ai/chat", response_model=Dict[str, Any])
+async def ai_chat(message_data: Dict[str, str], current_user: User = Depends(get_current_user)):
+    """Chatbot conversacional com IA financeira"""
+    try:
+        user_message = message_data.get("message", "").lower()
+        
+        # Sistema de IA básico com respostas inteligentes
+        if any(word in user_message for word in ["saldo", "quanto tenho"]):
+            # Buscar saldo atual
+            accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+            total_balance = sum(acc.get("current_balance", 0) for acc in accounts)
+            response = f"Seu saldo total consolidado é de R$ {total_balance:,.2f}. "
+            
+            if total_balance > 0:
+                response += "Você está com saldo positivo! 👍"
+            else:
+                response += "Cuidado! Seu saldo está negativo. 💡 Que tal revisar seus gastos?"
+            
+        elif any(word in user_message for word in ["gastos", "despesas", "gastei"]):
+            # Analisar gastos do mês
+            month_start = datetime.now().replace(day=1)
+            expenses = await db.transactions.find({
+                "user_id": current_user.id,
+                "type": "Despesa",
+                "transaction_date": {"$gte": month_start.isoformat()}
+            }).to_list(1000)
+            
+            total_expenses = sum(t.get("value", 0) for t in expenses)
+            response = f"Seus gastos este mês totalizam R$ {total_expenses:,.2f}. "
+            
+            if len(expenses) > 0:
+                # Categoria que mais gasta
+                expense_by_category = defaultdict(float)
+                for exp in expenses:
+                    category = await db.categories.find_one({"id": exp.get("category_id")})
+                    if category:
+                        expense_by_category[category["name"]] += exp.get("value", 0)
+                
+                if expense_by_category:
+                    top_category = max(expense_by_category, key=expense_by_category.get)
+                    top_value = expense_by_category[top_category]
+                    response += f"Sua maior despesa é em '{top_category}' (R$ {top_value:,.2f})."
+            
+        elif any(word in user_message for word in ["meta", "objetivo", "economia"]):
+            # Informações sobre metas
+            goals = await db.goals.find({"user_id": current_user.id, "is_active": True}).to_list(100)
+            if goals:
+                response = f"Você tem {len(goals)} meta(s) ativa(s). "
+                for goal in goals[:2]:  # Mostrar até 2 metas
+                    progress = (goal.get("current_amount", 0) / goal.get("target_amount", 1)) * 100
+                    response += f"Meta '{goal['name']}': {progress:.1f}% concluída. "
+            else:
+                response = "Você ainda não tem metas definidas. Que tal criar uma meta de economia? 💰"
+                
+        elif any(word in user_message for word in ["previsão", "futuro", "próximo mês"]):
+            # Previsão de saldo futuro
+            monthly_income = await get_monthly_average_income(current_user.id)
+            monthly_expense = await get_monthly_average_expense(current_user.id)
+            
+            accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+            current_balance = sum(acc.get("current_balance", 0) for acc in accounts)
+            
+            predicted_balance = current_balance + monthly_income - monthly_expense
+            
+            response = f"Baseado no seu histórico, sua previsão para o próximo mês é: "
+            response += f"Saldo atual: R$ {current_balance:,.2f}, "
+            response += f"Entrada média: R$ {monthly_income:,.2f}, "
+            response += f"Gasto médio: R$ {monthly_expense:,.2f}. "
+            response += f"Saldo previsto: R$ {predicted_balance:,.2f}"
+            
+        else:
+            # Resposta padrão inteligente
+            response = "Olá! 🤖 Sou seu assistente financeiro. Posso te ajudar com:\n"
+            response += "• Consultar saldo e transações\n"
+            response += "• Analisar gastos por categoria\n"  
+            response += "• Acompanhar suas metas\n"
+            response += "• Fazer previsões financeiras\n"
+            response += "• Dar dicas de economia\n\n"
+            response += "O que você gostaria de saber?"
+        
+        # Salvar conversa no banco
+        chat_message = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "message": message_data.get("message"),
+            "response": response,
+            "created_at": datetime.utcnow()
+        }
+        await db.chat_messages.insert_one(chat_message)
+        
+        return {"response": response, "success": True}
+        
+    except Exception as e:
+        return {"response": f"Desculpe, ocorreu um erro: {str(e)}", "success": False}
+
+@api_router.get("/ai/insights", response_model=List[Dict[str, Any]])
+async def get_ai_insights(current_user: User = Depends(get_current_user)):
+    """Gerar insights inteligentes baseados nos dados financeiros"""
+    try:
+        insights = []
+        
+        # Insight 1: Análise de gastos anômalos
+        last_30_days = datetime.now() - timedelta(days=30)
+        recent_transactions = await db.transactions.find({
+            "user_id": current_user.id,
+            "transaction_date": {"$gte": last_30_days.isoformat()}
+        }).to_list(1000)
+        
+        if recent_transactions:
+            amounts = [t.get("value", 0) for t in recent_transactions if t.get("type") == "Despesa"]
+            if amounts:
+                avg_expense = statistics.mean(amounts)
+                max_expense = max(amounts)
+                
+                if max_expense > avg_expense * 2:  # Gasto 2x maior que a média
+                    insights.append({
+                        "type": "anomaly",
+                        "category": "spending",
+                        "title": "Gasto Anômalo Detectado",
+                        "description": f"Você teve um gasto de R$ {max_expense:,.2f}, que é {max_expense/avg_expense:.1f}x maior que sua média de R$ {avg_expense:,.2f}",
+                        "confidence": 0.85,
+                        "actionable": True
+                    })
+        
+        # Insight 2: Previsão de fim de mês
+        monthly_income = await get_monthly_average_income(current_user.id)
+        monthly_expense = await get_monthly_average_expense(current_user.id)
+        
+        if monthly_income > 0 and monthly_expense > 0:
+            savings_rate = ((monthly_income - monthly_expense) / monthly_income) * 100
+            
+            if savings_rate < 10:
+                insights.append({
+                    "type": "suggestion",
+                    "category": "savings", 
+                    "title": "Taxa de Economia Baixa",
+                    "description": f"Você está economizando apenas {savings_rate:.1f}% da sua renda. Tente economizar pelo menos 20%!",
+                    "confidence": 0.75,
+                    "actionable": True
+                })
+        
+        # Insight 3: Categorias que mais crescem
+        last_month = datetime.now() - timedelta(days=30)
+        two_months_ago = datetime.now() - timedelta(days=60)
+        
+        current_month_expenses = await get_expenses_by_category(current_user.id, last_month)
+        previous_month_expenses = await get_expenses_by_category(current_user.id, two_months_ago)
+        
+        for category, current_amount in current_month_expenses.items():
+            previous_amount = previous_month_expenses.get(category, 0)
+            if previous_amount > 0 and current_amount > previous_amount * 1.5:
+                growth = ((current_amount - previous_amount) / previous_amount) * 100
+                insights.append({
+                    "type": "prediction",
+                    "category": "spending",
+                    "title": f"Crescimento em {category}",
+                    "description": f"Seus gastos com {category} aumentaram {growth:.0f}% este mês (R$ {current_amount:,.2f})",
+                    "confidence": 0.70,
+                    "actionable": True
+                })
+        
+        return insights[:5]  # Retornar no máximo 5 insights
+        
+    except Exception as e:
+        return []
+
+@api_router.post("/ai/predict-balance")
+async def predict_balance(request: PredictionRequest, current_user: User = Depends(get_current_user)):
+    """Prever saldo futuro baseado no histórico"""
+    try:
+        # Buscar histórico de transações
+        days_back = min(request.days_ahead * 3, 90)  # Usar 3x o período ou máximo 90 dias
+        start_date = datetime.now() - timedelta(days=days_back)
+        
+        transactions = await db.transactions.find({
+            "user_id": current_user.id,
+            "transaction_date": {"$gte": start_date.isoformat()}
+        }).to_list(1000)
+        
+        # Calcular médias
+        daily_income = []
+        daily_expense = []
+        
+        for t in transactions:
+            if t.get("type") == "Receita":
+                daily_income.append(t.get("value", 0))
+            else:
+                daily_expense.append(t.get("value", 0))
+        
+        avg_daily_income = statistics.mean(daily_income) if daily_income else 0
+        avg_daily_expense = statistics.mean(daily_expense) if daily_expense else 0
+        
+        # Saldo atual
+        accounts = await db.accounts.find({"user_id": current_user.id}).to_list(100)
+        current_balance = sum(acc.get("current_balance", 0) for acc in accounts)
+        
+        # Previsão
+        predicted_income = avg_daily_income * request.days_ahead
+        predicted_expense = avg_daily_expense * request.days_ahead
+        predicted_balance = current_balance + predicted_income - predicted_expense
+        
+        return {
+            "current_balance": current_balance,
+            "predicted_balance": predicted_balance,
+            "predicted_income": predicted_income,
+            "predicted_expense": predicted_expense,
+            "confidence": 0.75,
+            "days_ahead": request.days_ahead
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na previsão: {str(e)}")
+
+@api_router.post("/ai/classify-transaction")
+async def classify_transaction(transaction_data: Dict[str, str], current_user: User = Depends(get_current_user)):
+    """Classificar automaticamente categoria baseada na descrição"""
+    try:
+        description = transaction_data.get("description", "").lower()
+        
+        # Buscar categorias do usuário
+        categories = await db.categories.find({"user_id": current_user.id}).to_list(200)
+        
+        # Regras de classificação inteligente
+        classification_rules = {
+            "alimentação": ["mercado", "supermercado", "padaria", "açougue", "ifood", "uber eats", "delivery"],
+            "transporte": ["uber", "99", "taxi", "combustível", "gasolina", "posto", "estacionamento"],
+            "saúde": ["farmácia", "droga", "hospital", "médico", "consulta", "exame"],
+            "lazer": ["cinema", "teatro", "bar", "restaurante", "festa", "show"],
+            "moradia": ["aluguel", "condomínio", "água", "luz", "energia", "internet", "telefone"],
+            "netflix": ["netflix"],
+            "spotify": ["spotify", "música"],
+            "educação": ["faculdade", "curso", "escola", "livro", "material escolar"]
+        }
+        
+        suggested_category = None
+        confidence = 0.0
+        
+        for category_key, keywords in classification_rules.items():
+            for keyword in keywords:
+                if keyword in description:
+                    # Encontrar categoria correspondente
+                    matching_category = next((c for c in categories if category_key.lower() in c["name"].lower()), None)
+                    if matching_category:
+                        suggested_category = matching_category
+                        confidence = 0.8
+                        break
+            if suggested_category:
+                break
+        
+        return {
+            "suggested_category": suggested_category,
+            "confidence": confidence,
+            "description_analyzed": transaction_data.get("description")
+        }
+        
+    except Exception as e:
+        return {"suggested_category": None, "confidence": 0.0, "error": str(e)}
+
+# ============================================================================  
+# 🏠 ENDPOINTS DE CONSÓRCIO
+# ============================================================================
+
+@api_router.post("/consortiums", response_model=Consortium)
+async def create_consortium(consortium_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
+    """Criar novo consórcio"""
+    try:
+        # Calcular valores automáticos
+        total_value = consortium_data.get("total_value", 0)
+        installment_count = consortium_data.get("installment_count", 1)
+        monthly_installment = total_value / installment_count if installment_count > 0 else 0
+        
+        consortium = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "name": consortium_data.get("name"),
+            "type": consortium_data.get("type"),
+            "total_value": total_value,
+            "installment_count": installment_count,
+            "paid_installments": consortium_data.get("paid_installments", 0),
+            "monthly_installment": monthly_installment,
+            "remaining_balance": total_value - (consortium_data.get("paid_installments", 0) * monthly_installment),
+            "contemplated": consortium_data.get("contemplated", False),
+            "contemplation_date": consortium_data.get("contemplation_date"),
+            "bid_value": consortium_data.get("bid_value"),
+            "status": consortium_data.get("status", "Ativo"),
+            "due_day": consortium_data.get("due_day", 15),
+            "start_date": datetime.fromisoformat(consortium_data.get("start_date")),
+            "administrator": consortium_data.get("administrator"),
+            "group_number": consortium_data.get("group_number"),
+            "quota_number": consortium_data.get("quota_number"),
+            "notes": consortium_data.get("notes"),
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.consortiums.insert_one(consortium)
+        return Consortium(**consortium)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar consórcio: {str(e)}")
+
+@api_router.get("/consortiums", response_model=List[Consortium])
+async def get_consortiums(current_user: User = Depends(get_current_user)):
+    """Listar todos os consórcios do usuário"""
+    consortiums = await db.consortiums.find({"user_id": current_user.id}).to_list(100)
+    return [Consortium(**consortium) for consortium in consortiums]
+
+@api_router.post("/consortiums/{consortium_id}/payment")
+async def add_consortium_payment(consortium_id: str, payment_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
+    """Adicionar pagamento de parcela do consórcio"""
+    try:
+        # Verificar se consórcio existe
+        consortium = await db.consortiums.find_one({"id": consortium_id, "user_id": current_user.id})
+        if not consortium:
+            raise HTTPException(status_code=404, detail="Consórcio não encontrado")
+        
+        # Criar registro de pagamento
+        payment = {
+            "id": str(uuid.uuid4()),
+            "consortium_id": consortium_id,
+            "user_id": current_user.id,
+            "installment_number": payment_data.get("installment_number"),
+            "payment_date": datetime.fromisoformat(payment_data.get("payment_date")),
+            "amount_paid": payment_data.get("amount_paid"),
+            "payment_type": payment_data.get("payment_type", "Regular"),
+            "notes": payment_data.get("notes"),
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.consortium_payments.insert_one(payment)
+        
+        # Atualizar consórcio
+        paid_installments = consortium["paid_installments"] + 1
+        remaining_balance = consortium["remaining_balance"] - payment_data.get("amount_paid", 0)
+        
+        await db.consortiums.update_one(
+            {"id": consortium_id},
+            {"$set": {
+                "paid_installments": paid_installments,
+                "remaining_balance": max(0, remaining_balance)
+            }}
+        )
+        
+        return {"message": "Pagamento registrado com sucesso", "payment_id": payment["id"]}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao registrar pagamento: {str(e)}")
+
+@api_router.post("/consortiums/{consortium_id}/contemplation")
+async def mark_contemplation(consortium_id: str, contemplation_data: ConsortiumContemplation, current_user: User = Depends(get_current_user)):
+    """Marcar consórcio como contemplado"""
+    try:
+        # Verificar se consórcio existe
+        consortium = await db.consortiums.find_one({"id": consortium_id, "user_id": current_user.id})
+        if not consortium:
+            raise HTTPException(status_code=404, detail="Consórcio não encontrado")
+        
+        # Atualizar consórcio
+        await db.consortiums.update_one(
+            {"id": consortium_id},
+            {"$set": {
+                "contemplated": True,
+                "contemplation_date": contemplation_data.contemplation_date,
+                "status": "Contemplado"
+            }}
+        )
+        
+        return {"message": "Consórcio marcado como contemplado com sucesso"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao marcar contemplação: {str(e)}")
+
+@api_router.get("/consortiums/{consortium_id}/summary")
+async def get_consortium_summary(consortium_id: str, current_user: User = Depends(get_current_user)):
+    """Obter resumo completo do consórcio"""
+    try:
+        # Buscar consórcio
+        consortium = await db.consortiums.find_one({"id": consortium_id, "user_id": current_user.id})
+        if not consortium:
+            raise HTTPException(status_code=404, detail="Consórcio não encontrado")
+        
+        # Buscar pagamentos
+        payments = await db.consortium_payments.find({"consortium_id": consortium_id}).to_list(1000)
+        
+        # Calcular estatísticas
+        total_paid = sum(p.get("amount_paid", 0) for p in payments)
+        progress_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
+        
+        return {
+            "consortium": Consortium(**consortium),
+            "payments": payments,
+            "statistics": {
+                "total_paid": total_paid,
+                "progress_percentage": progress_percentage,
+                "remaining_installments": consortium["installment_count"] - consortium["paid_installments"],
+                "next_due_date": calculate_next_due_date(consortium)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar resumo: {str(e)}")
+
+# Helper functions for AI
+async def get_monthly_average_income(user_id: str) -> float:
+    """Calcular média mensal de receitas"""
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    income_transactions = await db.transactions.find({
+        "user_id": user_id,
+        "type": "Receita",
+        "transaction_date": {"$gte": thirty_days_ago.isoformat()}
+    }).to_list(1000)
+    
+    total_income = sum(t.get("value", 0) for t in income_transactions)
+    return total_income
+
+async def get_monthly_average_expense(user_id: str) -> float:
+    """Calcular média mensal de despesas"""
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    expense_transactions = await db.transactions.find({
+        "user_id": user_id,
+        "type": "Despesa", 
+        "transaction_date": {"$gte": thirty_days_ago.isoformat()}
+    }).to_list(1000)
+    
+    total_expense = sum(t.get("value", 0) for t in expense_transactions)
+    return total_expense
+
+async def get_expenses_by_category(user_id: str, since_date: datetime) -> Dict[str, float]:
+    """Agrupar despesas por categoria"""
+    expenses = await db.transactions.find({
+        "user_id": user_id,
+        "type": "Despesa",
+        "transaction_date": {"$gte": since_date.isoformat()}
+    }).to_list(1000)
+    
+    expense_by_category = defaultdict(float)
+    
+    for exp in expenses:
+        category = await db.categories.find_one({"id": exp.get("category_id")})
+        if category:
+            expense_by_category[category["name"]] += exp.get("value", 0)
+    
+    return dict(expense_by_category)
+
+def calculate_next_due_date(consortium: Dict[str, Any]) -> str:
+    """Calcular próxima data de vencimento"""
+    try:
+        next_month = datetime.now().replace(day=consortium.get("due_day", 15))
+        if next_month <= datetime.now():
+            if next_month.month == 12:
+                next_month = next_month.replace(year=next_month.year + 1, month=1)
+            else:
+                next_month = next_month.replace(month=next_month.month + 1)
+        return next_month.strftime("%Y-%m-%d")
+    except:
+        return "N/A"
+
 # Include router
 app.include_router(api_router)
 
