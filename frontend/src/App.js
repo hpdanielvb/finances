@@ -104,11 +104,20 @@ const AuthProvider = ({ children }) => {
 // Brazilian currency formatting functions
 const formatBrazilianCurrency = (value) => {
   // Remove all non-digit characters
-  const cleanValue = value.replace(/\D/g, '');
+  let cleanValue = value.toString().replace(/\D/g, '');
   if (!cleanValue) return '';
   
-  // Convert to number and format with Brazilian locale
-  const numericValue = parseFloat(cleanValue) / 100;
+  // Add leading zeros if necessary to handle cents
+  while (cleanValue.length < 3) {
+    cleanValue = '0' + cleanValue;
+  }
+  
+  // Insert decimal separator
+  const integerPart = cleanValue.slice(0, -2) || '0';
+  const decimalPart = cleanValue.slice(-2);
+  
+  // Format as currency
+  const numericValue = parseFloat(`${integerPart}.${decimalPart}`);
   return numericValue.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
