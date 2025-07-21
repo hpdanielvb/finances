@@ -849,7 +849,7 @@ const Dashboard = () => {
   const payCreditCardInvoice = async (invoiceId, paymentAmount) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL}/credit-cards/invoices/${invoiceId}/pay`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/credit-cards/invoices/${invoiceId}/pay`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
