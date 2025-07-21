@@ -72,7 +72,7 @@ def test_critical_corrections_review():
     # Credenciais do usuário conforme solicitado
     user_login = {
         "email": "hpdanielvb@gmail.com",
-        "password": "TestPassword123"  # Senha atualizada conforme test_result.md
+        "password": "123456"  # Senha conforme review request original
     }
     
     test_results = {
