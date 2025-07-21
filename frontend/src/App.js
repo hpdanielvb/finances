@@ -624,23 +624,31 @@ const Dashboard = () => {
         setGoalsStats(null);
       }
       
-      // 🧠 Load AI Insights
-      try {
-        const aiInsightsRes = await axios.get(`${API}/ai/insights`);
-        setAIInsights(aiInsightsRes.data);
-      } catch (aiError) {
-        console.log('AI Insights loading failed, continuing without AI');
-        setAIInsights([]);
-      }
+  // 🧠 Load AI Insights
+  try {
+    const aiInsightsRes = await axios.get(`${API}/ai/insights`);
+    setAIInsights(aiInsightsRes.data);
+  } catch (aiError) {
+    console.log('AI Insights loading failed, continuing without AI');
+    setAIInsights([]);
+  }
 
-      // 🏠 Load Consortiums  
-      try {
-        const consortiumsRes = await axios.get(`${API}/consortiums`);
-        setConsortiums(consortiumsRes.data);
-      } catch (consortiumError) {
-        console.log('Consortiums loading failed, continuing without consortiums');
-        setConsortiums([]);
-      }
+  // 🏠 Load Consortiums  
+  try {
+    const consortiumsRes = await axios.get(`${API}/consortiums`);
+    setConsortiums(consortiumsRes.data);
+  } catch (consortiumError) {
+    console.log('Consortiums loading failed, continuing without consortiums');
+    setConsortiums([]);
+  }
+
+  // 📊 Load Hierarchical Categories
+  try {
+    const hierarchicalCategoriesRes = await axios.get(`${API}/categories/hierarchical`);
+    setCategories(hierarchicalCategoriesRes.data);
+  } catch (categoryError) {
+    console.log('Hierarchical categories loading failed, using simple categories');
+  }
       
   const generateNotifications = () => {
     const newNotifications = [];
