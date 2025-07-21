@@ -261,19 +261,22 @@ def test_new_enhanced_features():
             if len(invoices_list) > 0:
                 print("   Testing PATCH /api/credit-cards/invoices/{invoice_id}/pay...")
                 
-                invoice_id = invoices_list[0].get('id')
-                if invoice_id:
-                    pay_invoice_response = requests.patch(f"{BACKEND_URL}/credit-cards/invoices/{invoice_id}/pay", headers=headers)
-                    
-                    if pay_invoice_response.status_code == 200:
-                        print_test_result("PAY CREDIT CARD INVOICE", True, "✅ Invoice payment processed")
-                        test_results["credit_card_invoices"]["pay_invoice"] = True
+                try:
+                    invoice_id = invoices_list[0].get('id')
+                    if invoice_id:
+                        pay_invoice_response = requests.patch(f"{BACKEND_URL}/credit-cards/invoices/{invoice_id}/pay", headers=headers)
+                        
+                        if pay_invoice_response.status_code == 200:
+                            print_test_result("PAY CREDIT CARD INVOICE", True, "✅ Invoice payment processed")
+                            test_results["credit_card_invoices"]["pay_invoice"] = True
+                        else:
+                            print_test_result("PAY CREDIT CARD INVOICE", False, 
+                                            f"❌ Failed: {pay_invoice_response.status_code}")
                     else:
-                        print_test_result("PAY CREDIT CARD INVOICE", False, 
-                                        f"❌ Failed: {pay_invoice_response.status_code}")
-                else:
-                    print_test_result("PAY CREDIT CARD INVOICE", True, "✅ No valid invoice ID found")
-                    test_results["credit_card_invoices"]["pay_invoice"] = True
+                        print_test_result("PAY CREDIT CARD INVOICE", True, "✅ No valid invoice ID found")
+                        test_results["credit_card_invoices"]["pay_invoice"] = True
+                except Exception as e:
+                    print_test_result("PAY CREDIT CARD INVOICE", False, f"❌ Exception: {str(e)}")
             else:
                 print_test_result("PAY CREDIT CARD INVOICE", True, "✅ No invoices to pay (expected)")
                 test_results["credit_card_invoices"]["pay_invoice"] = True
