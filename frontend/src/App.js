@@ -3865,7 +3865,7 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
 
       switch (reportType) {
         case 'expenses-by-category':
-          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/expenses-by-category?${params}`;
+          url = `${process.env.REACT_APP_BACKEND_URL}/api/reports/expenses-by-category?${params}`;
           break;
         case 'income-by-category':
           url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/income-by-category?${params}`;
