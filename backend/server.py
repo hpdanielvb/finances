@@ -109,6 +109,9 @@ class CategoryCreate(BaseModel):
     name: str
     type: str  # "Receita" or "Despesa"
     parent_category_id: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    keywords: Optional[List[str]] = []  # Keywords for AI classification
 
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -116,7 +119,13 @@ class Category(BaseModel):
     name: str
     type: str
     parent_category_id: Optional[str] = None
+    parent_category_name: Optional[str] = None  # For easier display
+    icon: Optional[str] = None  # Emoji or icon name
+    color: Optional[str] = "#6B7280"  # Default gray
+    keywords: List[str] = []  # Keywords for AI matching
     is_custom: bool = False
+    is_active: bool = True
+    usage_count: int = 0  # Track usage for smart suggestions
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class TransactionCreate(BaseModel):
