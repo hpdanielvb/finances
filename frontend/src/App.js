@@ -1318,6 +1318,18 @@ const Dashboard = () => {
                 >
                   🏠 Consórcios
                 </button>
+
+                <button
+                  onClick={() => {
+                    setActiveView('credit-cards');
+                    loadCreditCardInvoices();
+                  }}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeView === 'credit-cards' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  💳 Cartões
+                </button>
               </div>
             </div>
             
