@@ -1880,6 +1880,46 @@ const Dashboard = () => {
         />
       )}
 
+      {/* 🧠 IA Modals */}
+      {showAIChat && (
+        <AIChatModal
+          messages={chatMessages}
+          onClose={() => setShowAIChat(false)}
+          onSendMessage={sendChatMessage}
+        />
+      )}
+
+      {showAIInsights && (
+        <AIInsightsModal
+          insights={aiInsights}
+          onClose={() => setShowAIInsights(false)}
+          onRefresh={loadAIInsights}
+        />
+      )}
+
+      {/* 🏠 Consortium Modals */}
+      {showConsortiumModal && (
+        <ConsortiumModal
+          onClose={() => {
+            setShowConsortiumModal(false);
+            setEditingItem(null);
+          }}
+          onCreate={handleCreateConsortium}
+        />
+      )}
+
+      {showConsortiumDetails && (
+        <ConsortiumDetailsModal
+          consortium={selectedConsortium}
+          onClose={() => {
+            setShowConsortiumDetails(false);
+            setSelectedConsortium(null);
+          }}
+          onPayment={handleConsortiumPayment}
+          onMarkContemplation={handleMarkContemplation}
+        />
+      )}
+
       <Toaster position="top-right" />
     </div>
   );
