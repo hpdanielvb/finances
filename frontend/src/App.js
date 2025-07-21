@@ -717,6 +717,94 @@ const Dashboard = () => {
     loadDashboard();
   }, []);
 
+  // ============================================================================
+  // 🧠 FUNÇÕES DE IA
+  // ============================================================================
+
+  const sendChatMessage = async (message) => {
+    try {
+      const response = await axios.post(`${API}/ai/chat`, { message });
+      const aiResponse = response.data.response;
+      
+      setChatMessages(prev => [...prev, 
+        { type: 'user', message, timestamp: new Date() },
+        { type: 'ai', message: aiResponse, timestamp: new Date() }
+      ]);
+      
+      return aiResponse;
+    } catch (error) {
+      toast.error('Erro ao comunicar com IA: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+      return 'Desculpe, ocorreu um erro. Tente novamente.';
+    }
+  };
+
+  const loadAIInsights = async () => {
+    try {
+      const response = await axios.get(`${API}/ai/insights`);
+      setAIInsights(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar insights de IA:', error);
+    }
+  };
+
+  const classifyTransaction = async (description) => {
+    try {
+      const response = await axios.post(`${API}/ai/classify-transaction`, { description });
+      return response.data;
+    } catch (error) {
+      console.error('Erro na classificação automática:', error);
+      return null;
+    }
+  };
+
+  // ============================================================================
+  // 🏠 FUNÇÕES DE CONSÓRCIO  
+  // ============================================================================
+
+  const handleCreateConsortium = async (formData) => {
+    try {
+      const response = await axios.post(`${API}/consortiums`, formData);
+      await loadDashboard();
+      toast.success('Consórcio criado com sucesso!');
+      setShowConsortiumModal(false);
+    } catch (error) {
+      toast.error('Erro ao criar consórcio: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleConsortiumPayment = async (consortiumId, paymentData) => {
+    try {
+      await axios.post(`${API}/consortiums/${consortiumId}/payment`, paymentData);
+      await loadDashboard();
+      toast.success('Pagamento registrado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao registrar pagamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleMarkContemplation = async (consortiumId) => {
+    try {
+      await axios.post(`${API}/consortiums/${consortiumId}/contemplation`, {
+        contemplation_type: "Sorteio",
+        contemplation_date: new Date().toISOString()
+      });
+      await loadDashboard();
+      toast.success('Consórcio marcado como contemplado!');
+    } catch (error) {
+      toast.error('Erro ao marcar contemplação: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const loadConsortiumSummary = async (consortiumId) => {
+    try {
+      const response = await axios.get(`${API}/consortiums/${consortiumId}/summary`);
+      setSelectedConsortium(response.data);
+      setShowConsortiumDetails(true);
+    } catch (error) {
+      toast.error('Erro ao carregar detalhes do consórcio: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
