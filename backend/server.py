@@ -762,17 +762,26 @@ async def update_account(account_id: str, account_data: AccountCreate, current_u
 
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, current_user: User = Depends(get_current_user)):
-    # Check if account has transactions
+    # Check if account exists and belongs to user
+    account = await db.accounts.find_one({"id": account_id, "user_id": current_user.id})
+    if not account:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    # Count transactions associated with this account
     transaction_count = await db.transactions.count_documents({"account_id": account_id})
+    
+    # Delete all transactions associated with this account
     if transaction_count > 0:
-        raise HTTPException(status_code=400, detail="Não é possível excluir conta com transações")
+        await db.transactions.delete_many({"account_id": account_id})
     
     # Delete account
     result = await db.accounts.delete_one({"id": account_id, "user_id": current_user.id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
     
-    return {"message": "Conta excluída com sucesso"}
+    return {
+        "message": "Conta excluída com sucesso",
+        "transactions_deleted": transaction_count,
+        "account_name": account["name"]
+    }
 
 # Enhanced Transaction endpoints
 @api_router.post("/transactions", response_model=Transaction)
