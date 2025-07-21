@@ -2194,10 +2194,12 @@ async def get_tags(current_user: User = Depends(get_current_user)):
 @api_router.patch("/transactions/{transaction_id}/tags")
 async def update_transaction_tags(
     transaction_id: str,
-    tag_ids: List[str],
+    tags_data: dict,  # {"tag_ids": List[str]}
     current_user: User = Depends(get_current_user)
 ):
     """Update transaction tags"""
+    tag_ids = tags_data.get('tag_ids', [])
+    
     transaction = await db.transactions.find_one({
         "id": transaction_id,
         "user_id": current_user.id
@@ -2211,7 +2213,7 @@ async def update_transaction_tags(
         {"$set": {"tags": tag_ids}}
     )
     
-    return {"message": "Tags atualizadas com sucesso"}
+    return {"message": "Tags atualizadas com sucesso", "tag_ids": tag_ids}
 
 @api_router.get("/reports/by-tags")
 async def get_report_by_tags(
