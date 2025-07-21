@@ -964,7 +964,8 @@ async def create_transaction(transaction_data: TransactionCreate, current_user: 
         recurrence_interval=transaction_data.recurrence_interval,
         recurrence_start_date=transaction_data.recurrence_start_date,
         recurrence_end_date=transaction_data.recurrence_end_date,
-        status=transaction_data.status
+        status=transaction_data.status,
+        tags=transaction_data.tags or []
     )
     
     await db.transactions.insert_one(transaction.dict())
