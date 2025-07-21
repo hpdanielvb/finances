@@ -3938,6 +3938,908 @@ const ContributeModal = ({ goal, onClose, onContribute }) => {
   );
 };
 
+// ============================================================================
+// 🧠 COMPONENTES DE IA - SISTEMA INTELIGENTE
+// ============================================================================
+
+const AIView = ({ insights, onRefreshInsights, onOpenChat, onOpenInsights }) => {
+  const [prediction, setPrediction] = useState(null);
+  
+  useEffect(() => {
+    // Carregar previsão de saldo
+    const loadPrediction = async () => {
+      try {
+        const response = await axios.post(`${API}/ai/predict-balance`, { days_ahead: 30 });
+        setPrediction(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar previsão:', error);
+      }
+    };
+    loadPrediction();
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white">
+        <h2 className="text-2xl font-bold mb-2">🧠 Inteligência Artificial Financeira</h2>
+        <p className="text-purple-100">Insights inteligentes e previsões para suas finanças</p>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div 
+          onClick={onOpenChat}
+          className="bg-white rounded-xl p-6 shadow-lg border hover:shadow-xl transition-all cursor-pointer"
+        >
+          <div className="text-4xl mb-4">🤖</div>
+          <h3 className="text-lg font-semibold mb-2">Assistente Virtual</h3>
+          <p className="text-gray-600 text-sm">Converse com nossa IA sobre suas finanças</p>
+        </div>
+
+        <div 
+          onClick={onOpenInsights}
+          className="bg-white rounded-xl p-6 shadow-lg border hover:shadow-xl transition-all cursor-pointer"
+        >
+          <div className="text-4xl mb-4">📊</div>
+          <h3 className="text-lg font-semibold mb-2">Insights Inteligentes</h3>
+          <p className="text-gray-600 text-sm">Análises automáticas dos seus gastos</p>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border">
+          <div className="text-4xl mb-4">🔮</div>
+          <h3 className="text-lg font-semibold mb-2">Previsão de Saldo</h3>
+          <p className="text-gray-600 text-sm mb-4">Próximo mês</p>
+          {prediction && (
+            <div className={`text-2xl font-bold ${prediction.predicted_balance > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(prediction.predicted_balance)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Insights */}
+      <div className="bg-white rounded-2xl p-6 shadow-lg border">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold">Insights Recentes</h3>
+          <button 
+            onClick={onRefreshInsights}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Atualizar
+          </button>
+        </div>
+        
+        {insights.length > 0 ? (
+          <div className="space-y-4">
+            {insights.slice(0, 5).map((insight, index) => (
+              <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-800 mb-1">{insight.title}</h4>
+                    <p className="text-gray-600 text-sm mb-2">{insight.description}</p>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <span className={`px-2 py-1 rounded ${
+                        insight.confidence > 0.8 ? 'bg-green-100 text-green-800' :
+                        insight.confidence > 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {(insight.confidence * 100).toFixed(0)}% confiança
+                      </span>
+                    </div>
+                  </div>
+                  {insight.actionable && (
+                    <div className="ml-4">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                        Ação recomendada
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-4xl mb-4">🤖</div>
+            <p>Nenhum insight disponível no momento.</p>
+            <p className="text-sm">Use o sistema por alguns dias para gerar análises.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const AIChatModal = ({ messages, onClose, onSendMessage }) => {
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!inputMessage.trim()) return;
+    
+    setIsLoading(true);
+    await onSendMessage(inputMessage);
+    setInputMessage('');
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">🤖 Assistente Financeiro IA</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-200">✕</button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                <div className="text-4xl mb-4">🤖</div>
+                <p>Olá! Como posso te ajudar hoje?</p>
+                <p className="text-sm mt-2">Pergunte sobre seu saldo, gastos, metas ou previsões!</p>
+              </div>
+            )}
+            
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  msg.type === 'user' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="p-6 border-t">
+          <div className="flex items-center space-x-4">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Digite sua pergunta..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSend}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? '...' : 'Enviar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AIInsightsModal = ({ insights, onClose, onRefresh }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Header */}
+      <div className="p-6 border-b bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">📊 Insights Inteligentes</h2>
+          <div className="flex items-center space-x-4">
+            <button onClick={onRefresh} className="text-white hover:text-gray-200">🔄 Atualizar</button>
+            <button onClick={onClose} className="text-white hover:text-gray-200">✕</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
+        {insights.length > 0 ? (
+          <div className="space-y-6">
+            {insights.map((insight, index) => (
+              <div key={index} className="border rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className={`w-4 h-4 rounded-full mr-3 ${
+                      insight.type === 'prediction' ? 'bg-blue-500' :
+                      insight.type === 'anomaly' ? 'bg-red-500' :
+                      insight.type === 'suggestion' ? 'bg-yellow-500' :
+                      'bg-green-500'
+                    }`}></div>
+                    <div>
+                      <h3 className="text-lg font-semibold">{insight.title}</h3>
+                      <span className="text-sm text-gray-500 capitalize">{insight.type}</span>
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded text-sm ${
+                    insight.confidence > 0.8 ? 'bg-green-100 text-green-800' :
+                    insight.confidence > 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {(insight.confidence * 100).toFixed(0)}% confiança
+                  </div>
+                </div>
+                
+                <p className="text-gray-700 mb-4">{insight.description}</p>
+                
+                {insight.actionable && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-blue-800 font-medium">💡 Ação Recomendada</p>
+                    <p className="text-blue-700 text-sm mt-1">
+                      Considere revisar este padrão e ajustar seus hábitos financeiros.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <div className="text-6xl mb-4">🤖</div>
+            <h3 className="text-xl mb-2">Nenhum insight disponível</h3>
+            <p>Continue usando o sistema para gerar análises inteligentes!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================================================
+// 🏠 COMPONENTES DE CONSÓRCIO
+// ============================================================================
+
+const ConsortiumView = ({ consortiums, onRefresh, onCreateNew, onViewDetails }) => (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 text-white">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">🏠 Controle de Consórcios</h2>
+          <p className="text-green-100">Gerencie seus consórcios de imóveis e veículos</p>
+        </div>
+        <button
+          onClick={onCreateNew}
+          className="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+        >
+          + Novo Consórcio
+        </button>
+      </div>
+    </div>
+
+    {/* Statistics Cards */}
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-600 text-sm">Total de Consórcios</p>
+            <p className="text-2xl font-bold text-gray-800">{consortiums.length}</p>
+          </div>
+          <div className="text-3xl">🏠</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-6 shadow-lg border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-600 text-sm">Ativos</p>
+            <p className="text-2xl font-bold text-green-600">
+              {consortiums.filter(c => c.status === 'Ativo').length}
+            </p>
+          </div>
+          <div className="text-3xl">✅</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-6 shadow-lg border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-600 text-sm">Contemplados</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {consortiums.filter(c => c.contemplated).length}
+            </p>
+          </div>
+          <div className="text-3xl">🎉</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-6 shadow-lg border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-600 text-sm">Valor Total</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {formatCurrency(consortiums.reduce((sum, c) => sum + c.total_value, 0))}
+            </p>
+          </div>
+          <div className="text-3xl">💰</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Consortiums List */}
+    <div className="bg-white rounded-2xl shadow-lg border">
+      <div className="p-6 border-b">
+        <h3 className="text-xl font-semibold">Meus Consórcios</h3>
+      </div>
+      
+      <div className="p-6">
+        {consortiums.length > 0 ? (
+          <div className="space-y-4">
+            {consortiums.map((consortium) => {
+              const progress = (consortium.paid_installments / consortium.installment_count) * 100;
+              
+              return (
+                <div key={consortium.id} className="border rounded-lg p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className={`text-3xl ${
+                        consortium.type === 'Imóvel' ? '🏠' :
+                        consortium.type === 'Veículo' ? '🚗' : '🏍️'
+                      }`}>
+                        {consortium.type === 'Imóvel' ? '🏠' :
+                         consortium.type === 'Veículo' ? '🚗' : '🏍️'}
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold">{consortium.name}</h4>
+                        <p className="text-gray-600 text-sm">
+                          {consortium.type} • {consortium.administrator}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <div className={`px-3 py-1 rounded-full text-sm ${
+                        consortium.contemplated ? 'bg-green-100 text-green-800' :
+                        consortium.status === 'Ativo' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {consortium.contemplated ? 'Contemplado' : consortium.status}
+                      </div>
+                      <button
+                        onClick={() => onViewDetails(consortium.id)}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Ver Detalhes
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-gray-600 text-sm">Valor da Carta</p>
+                      <p className="font-semibold">{formatCurrency(consortium.total_value)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Parcelas Pagas</p>
+                      <p className="font-semibold">
+                        {consortium.paid_installments} / {consortium.installment_count}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Saldo Devedor</p>
+                      <p className="font-semibold text-red-600">
+                        {formatCurrency(consortium.remaining_balance)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm">Parcela Mensal</p>
+                      <p className="font-semibold">{formatCurrency(consortium.monthly_installment)}</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-600">Progresso</span>
+                      <span className="font-medium">{progress.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <div className="text-6xl mb-4">🏠</div>
+            <h3 className="text-xl mb-2">Nenhum consórcio cadastrado</h3>
+            <p className="mb-6">Comece adicionando seus consórcios para acompanhar o progresso</p>
+            <button
+              onClick={onCreateNew}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+            >
+              + Adicionar Primeiro Consórcio
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+const ConsortiumModal = ({ onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'Imóvel',
+    total_value: 0,
+    installment_count: 240,
+    paid_installments: 0,
+    due_day: 15,
+    start_date: new Date().toISOString().split('T')[0],
+    administrator: '',
+    group_number: '',
+    quota_number: '',
+    bid_value: 0,
+    notes: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onCreate(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="p-6 border-b bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">🏠 Novo Consórcio</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-200">✕</button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Nome */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Consórcio *</label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Ex: Consórcio Casa Própria"
+              />
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo *</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.type}
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+              >
+                <option value="Imóvel">🏠 Imóvel</option>
+                <option value="Veículo">🚗 Veículo</option>
+                <option value="Moto">🏍️ Moto</option>
+              </select>
+            </div>
+
+            {/* Valor da Carta */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Carta *</label>
+              <BrazilianCurrencyInput
+                value={formData.total_value}
+                onChange={(value) => setFormData({...formData, total_value: value})}
+                placeholder="R$ 300.000,00"
+                required
+              />
+            </div>
+
+            {/* Parcelas Totais */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Parcelas Totais *</label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="300"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.installment_count}
+                onChange={(e) => setFormData({...formData, installment_count: parseInt(e.target.value)})}
+              />
+            </div>
+
+            {/* Parcelas Já Pagas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Parcelas Já Pagas</label>
+              <input
+                type="number"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.paid_installments}
+                onChange={(e) => setFormData({...formData, paid_installments: parseInt(e.target.value)})}
+              />
+            </div>
+
+            {/* Administradora */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Administradora *</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.administrator}
+                onChange={(e) => setFormData({...formData, administrator: e.target.value})}
+              >
+                <option value="">Selecione...</option>
+                <option value="Bradesco">Bradesco Consórcios</option>
+                <option value="Santander">Santander Consórcios</option>
+                <option value="Itaú">Itaú Consórcios</option>
+                <option value="Caixa">Caixa Consórcios</option>
+                <option value="Banco do Brasil">BB Consórcios</option>
+                <option value="Honda">Honda Consórcios</option>
+                <option value="Volkswagen">Volkswagen Consórcios</option>
+                <option value="Rodobens">Rodobens Consórcios</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+
+            {/* Grupo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Número do Grupo</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.group_number}
+                onChange={(e) => setFormData({...formData, group_number: e.target.value})}
+                placeholder="Ex: 001"
+              />
+            </div>
+
+            {/* Cota */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Número da Cota</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.quota_number}
+                onChange={(e) => setFormData({...formData, quota_number: e.target.value})}
+                placeholder="Ex: 025"
+              />
+            </div>
+
+            {/* Data de Início */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data de Início *</label>
+              <input
+                type="date"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.start_date}
+                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+              />
+            </div>
+
+            {/* Dia do Vencimento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Dia do Vencimento</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                value={formData.due_day}
+                onChange={(e) => setFormData({...formData, due_day: parseInt(e.target.value)})}
+              />
+            </div>
+
+            {/* Valor do Lance */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor do Lance (opcional)</label>
+              <BrazilianCurrencyInput
+                value={formData.bid_value}
+                onChange={(value) => setFormData({...formData, bid_value: value})}
+                placeholder="R$ 0,00"
+              />
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+              rows="3"
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              placeholder="Observações adicionais sobre o consórcio..."
+            ></textarea>
+          </div>
+
+          {/* Botões */}
+          <div className="flex justify-end space-x-4 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Criar Consórcio
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const ConsortiumDetailsModal = ({ consortium, onClose, onPayment, onMarkContemplation }) => {
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+
+  if (!consortium) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="p-6 border-b bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">🏠 Detalhes do Consórcio</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-200">✕</button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* Consortium Info */}
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h3 className="text-xl font-bold mb-4">{consortium.consortium?.name}</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <p className="text-gray-600 text-sm">Tipo</p>
+                <p className="font-semibold">{consortium.consortium?.type}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Status</p>
+                <p className={`font-semibold ${
+                  consortium.consortium?.contemplated ? 'text-green-600' : 'text-blue-600'
+                }`}>
+                  {consortium.consortium?.contemplated ? 'Contemplado' : consortium.consortium?.status}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Administradora</p>
+                <p className="font-semibold">{consortium.consortium?.administrator}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Grupo/Cota</p>
+                <p className="font-semibold">
+                  {consortium.consortium?.group_number} / {consortium.consortium?.quota_number}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <div className="mt-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Progresso do Pagamento</span>
+                <span className="font-medium">
+                  {consortium.statistics?.progress_percentage?.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4">
+                <div
+                  className="bg-gradient-to-r from-green-400 to-green-600 h-4 rounded-full"
+                  style={{ width: `${Math.min(consortium.statistics?.progress_percentage || 0, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white border rounded-lg p-4">
+              <p className="text-gray-600 text-sm">Valor da Carta</p>
+              <p className="text-xl font-bold text-green-600">
+                {formatCurrency(consortium.consortium?.total_value || 0)}
+              </p>
+            </div>
+            <div className="bg-white border rounded-lg p-4">
+              <p className="text-gray-600 text-sm">Total Pago</p>
+              <p className="text-xl font-bold text-blue-600">
+                {formatCurrency(consortium.statistics?.total_paid || 0)}
+              </p>
+            </div>
+            <div className="bg-white border rounded-lg p-4">
+              <p className="text-gray-600 text-sm">Saldo Devedor</p>
+              <p className="text-xl font-bold text-red-600">
+                {formatCurrency(consortium.consortium?.remaining_balance || 0)}
+              </p>
+            </div>
+            <div className="bg-white border rounded-lg p-4">
+              <p className="text-gray-600 text-sm">Parcelas Restantes</p>
+              <p className="text-xl font-bold text-purple-600">
+                {consortium.statistics?.remaining_installments || 0}
+              </p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={() => setShowPaymentForm(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+            >
+              💳 Registrar Pagamento
+            </button>
+            
+            {!consortium.consortium?.contemplated && (
+              <button
+                onClick={() => onMarkContemplation(consortium.consortium?.id)}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+              >
+                🎉 Marcar como Contemplado
+              </button>
+            )}
+          </div>
+
+          {/* Payment History */}
+          <div className="bg-white border rounded-lg p-6">
+            <h4 className="text-lg font-semibold mb-4">Histórico de Pagamentos</h4>
+            
+            {consortium.payments && consortium.payments.length > 0 ? (
+              <div className="space-y-3">
+                {consortium.payments.map((payment, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-green-600">✅</div>
+                      <div>
+                        <p className="font-medium">Parcela #{payment.installment_number}</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(payment.payment_date).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{formatCurrency(payment.amount_paid)}</p>
+                      <p className="text-sm text-gray-600">{payment.payment_type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Nenhum pagamento registrado</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Form Modal */}
+      {showPaymentForm && (
+        <PaymentFormModal
+          consortiumId={consortium.consortium?.id}
+          onClose={() => setShowPaymentForm(false)}
+          onSubmit={onPayment}
+        />
+      )}
+    </div>
+  );
+};
+
+const PaymentFormModal = ({ consortiumId, onClose, onSubmit }) => {
+  const [paymentData, setPaymentData] = useState({
+    installment_number: 1,
+    payment_date: new Date().toISOString().split('T')[0],
+    amount_paid: 0,
+    payment_type: 'Regular',
+    notes: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(consortiumId, paymentData);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="p-6 border-b">
+          <h3 className="text-lg font-semibold">💳 Registrar Pagamento</h3>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Número da Parcela</label>
+            <input
+              type="number"
+              min="1"
+              required
+              className="w-full px-3 py-2 border rounded-lg"
+              value={paymentData.installment_number}
+              onChange={(e) => setPaymentData({...paymentData, installment_number: parseInt(e.target.value)})}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Data do Pagamento</label>
+            <input
+              type="date"
+              required
+              className="w-full px-3 py-2 border rounded-lg"
+              value={paymentData.payment_date}
+              onChange={(e) => setPaymentData({...paymentData, payment_date: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Valor Pago</label>
+            <BrazilianCurrencyInput
+              value={paymentData.amount_paid}
+              onChange={(value) => setPaymentData({...paymentData, amount_paid: value})}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Tipo de Pagamento</label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={paymentData.payment_type}
+              onChange={(e) => setPaymentData({...paymentData, payment_type: e.target.value})}
+            >
+              <option value="Regular">Regular</option>
+              <option value="Antecipado">Antecipado</option>
+              <option value="Lance">Lance</option>
+              <option value="Quitação">Quitação</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Observações</label>
+            <textarea
+              className="w-full px-3 py-2 border rounded-lg"
+              rows="2"
+              value={paymentData.notes}
+              onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})}
+            />
+          </div>
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Registrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Main App Component
 function App() {
   const { user, loading } = useAuth();
