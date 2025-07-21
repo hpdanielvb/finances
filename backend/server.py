@@ -320,24 +320,24 @@ def verify_token(token: str):
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        print(f"[DEBUG] Received token: {credentials.credentials[:50]}...")
-        user_id = verify_token(credentials.credentials)
-        print(f"[DEBUG] Decoded user_id: {user_id}")
-        if not user_id:
-            print("[DEBUG] Token verification failed")
-            raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
         
         user = await db.users.find_one({"id": user_id})
-        print(f"[DEBUG] Found user: {user['email'] if user else 'None'}")
         if not user:
-            print("[DEBUG] User not found in database")
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
         
         return User(**user)
-    except HTTPException:
-        raise
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
     except Exception as e:
-        print(f"[DEBUG] Auth error: {e}")
+        print(f"Auth error: {e}")
         raise HTTPException(status_code=401, detail="Erro de autenticação")
 
 # Email utility functions
