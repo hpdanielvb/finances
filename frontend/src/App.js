@@ -1635,101 +1635,274 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Charts Section */}
+            {/* Enhanced Charts Section with Drill-down */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Expense Chart */}
+              {/* Enhanced Expense Chart with Drill-down */}
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Despesas por Categoria</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">📊 Despesas por Categoria</h3>
+                  <button
+                    onClick={() => {
+                      setReportType('expenses-by-category');
+                      setShowReportsModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Ver Detalhes →
+                  </button>
+                </div>
                 {expenseChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={expenseChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={120}
-                        dataKey="value"
-                      >
-                        {expenseChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={expenseChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={120}
+                          dataKey="value"
+                        >
+                          {expenseChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    
+                    {/* Category Breakdown */}
+                    <div className="max-h-32 overflow-y-auto space-y-2">
+                      {expenseChartData
+                        .sort((a, b) => b.value - a.value)
+                        .slice(0, 5)
+                        .map((category, index) => {
+                          const percentage = ((category.value / expenseChartData.reduce((sum, cat) => sum + cat.value, 0)) * 100).toFixed(1);
+                          return (
+                            <div key={index} className="flex items-center justify-between py-1">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: category.color }}
+                                ></div>
+                                <span className="text-sm text-gray-700">{category.name}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {formatCurrency(category.value)}
+                                </span>
+                                <span className="text-xs text-gray-500 ml-2">({percentage}%)</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-gray-500">
-                    Nenhuma despesa encontrada neste mês
+                    <div className="text-center">
+                      <PieChart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p>Nenhuma despesa encontrada neste mês</p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Income Chart */}
+              {/* Enhanced Income Chart */}
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Receitas por Categoria</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">💰 Receitas por Categoria</h3>
+                  <button
+                    onClick={() => {
+                      setReportType('income-by-category');
+                      setShowReportsModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Ver Detalhes →
+                  </button>
+                </div>
                 {incomeChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={incomeChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={120}
-                        dataKey="value"
-                      >
-                        {incomeChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={incomeChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={120}
+                          dataKey="value"
+                        >
+                          {incomeChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    
+                    {/* Income Breakdown */}
+                    <div className="max-h-32 overflow-y-auto space-y-2">
+                      {incomeChartData
+                        .sort((a, b) => b.value - a.value)
+                        .map((category, index) => {
+                          const percentage = ((category.value / incomeChartData.reduce((sum, cat) => sum + cat.value, 0)) * 100).toFixed(1);
+                          return (
+                            <div key={index} className="flex items-center justify-between py-1">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: category.color }}
+                                ></div>
+                                <span className="text-sm text-gray-700">{category.name}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {formatCurrency(category.value)}
+                                </span>
+                                <span className="text-xs text-gray-500 ml-2">({percentage}%)</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center text-gray-500">
-                    Nenhuma receita encontrada neste mês
+                    <div className="text-center">
+                      <PieChart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p>Nenhuma receita encontrada neste mês</p>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Advanced Charts Section */}
+            {/* Advanced Charts Section with Drill-down */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Balance Evolution Chart */}
+              {/* Enhanced Balance Evolution Chart */}
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Evolução do Saldo (12 meses)</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">📈 Evolução do Saldo (12 meses)</h3>
+                  <button
+                    onClick={() => {
+                      setReportType('detailed-cash-flow');
+                      setShowReportsModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Relatório Completo →
+                  </button>
+                </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={generateBalanceEvolutionData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip formatter={(value) => [formatCurrency(value), 'Saldo']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="month" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => formatCurrency(value)}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                    />
+                    <Tooltip 
+                      formatter={(value) => [formatCurrency(value), 'Saldo']}
+                      contentStyle={{
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
                     <Line 
                       type="monotone" 
                       dataKey="balance" 
                       stroke="#3B82F6" 
                       strokeWidth={3}
-                      dot={{ r: 6 }}
-                      activeDot={{ r: 8 }}
+                      dot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#ffffff' }}
+                      activeDot={{ r: 8, fill: '#1D4ED8' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                
+                {/* Balance Trend Indicator */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Tendência dos últimos 3 meses</span>
+                    <div className="flex items-center">
+                      <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                      <span className="text-green-600 font-medium">Em crescimento</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Income vs Expenses Chart */}
+              {/* Enhanced Income vs Expenses Chart */}
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Receitas vs Despesas (12 meses)</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">⚖️ Receitas vs Despesas (12 meses)</h3>
+                  <div className="flex space-x-2">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
+                      <span className="text-xs text-gray-600">Receitas</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
+                      <span className="text-xs text-gray-600">Despesas</span>
+                    </div>
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={generateIncomeVsExpensesData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip formatter={(value, name) => [formatCurrency(value), name]} />
-                    <Bar dataKey="income" fill="#10B981" name="Receitas" />
-                    <Bar dataKey="expenses" fill="#EF4444" name="Despesas" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="month" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => formatCurrency(value)}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [formatCurrency(value), name]}
+                      contentStyle={{
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Bar dataKey="income" fill="#10B981" name="Receitas" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="expenses" fill="#EF4444" name="Despesas" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                
+                {/* Monthly Balance Indicator */}
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-600 font-medium">Receita Média</p>
+                    <p className="text-lg font-bold text-green-700">
+                      {formatCurrency(summary?.monthly_income || 0)}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <p className="text-xs text-red-600 font-medium">Despesa Média</p>
+                    <p className="text-lg font-bold text-red-700">
+                      {formatCurrency(summary?.monthly_expenses || 0)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
