@@ -1967,6 +1967,17 @@ const Dashboard = () => {
             onViewDetails={loadConsortiumSummary}
           />
         )}
+
+        {/* 💳 CREDIT CARD VIEW */}
+        {activeView === 'credit-cards' && (
+          <CreditCardView
+            invoices={creditCardInvoices}
+            loading={loadingInvoices}
+            onRefresh={loadCreditCardInvoices}
+            onGenerate={generateCreditCardInvoices}
+            onPay={payCreditCardInvoice}
+          />
+        )}
       </div>
 
       {/* Modals */}
