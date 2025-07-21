@@ -845,9 +845,24 @@ async def update_account(account_id: str, account_data: AccountCreate, current_u
     if not account:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
-    # Update account
+    # Update account data
     update_data = account_data.dict()
     update_data["updated_at"] = datetime.utcnow()
+    
+    # 🔧 CORREÇÃO: Se initial_balance mudou, atualizar current_balance também
+    old_initial_balance = account.get("initial_balance", 0)
+    new_initial_balance = account_data.initial_balance
+    
+    if old_initial_balance != new_initial_balance:
+        # Calcular diferença
+        difference = new_initial_balance - old_initial_balance
+        new_current_balance = account.get("current_balance", 0) + difference
+        
+        update_data["current_balance"] = new_current_balance
+        
+        print(f"[BALANCE UPDATE] Account {account['name']}: "
+              f"Initial {old_initial_balance} → {new_initial_balance}, "
+              f"Current {account.get('current_balance', 0)} → {new_current_balance}")
     
     await db.accounts.update_one({"id": account_id}, {"$set": update_data})
     
