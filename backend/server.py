@@ -194,6 +194,92 @@ class GoalContribution(BaseModel):
     description: Optional[str] = None
     transaction_id: Optional[str] = None  # Link to transaction if applicable
 
+# ============================================================================
+# 🧠 MODELOS DE IA - SISTEMA INTELIGENTE
+# ============================================================================
+
+class AIInsight(BaseModel):
+    type: str  # "prediction", "anomaly", "suggestion", "classification"
+    category: str  # "spending", "income", "savings", "budget"
+    title: str
+    description: str
+    confidence: float  # 0.0 to 1.0
+    actionable: bool
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    data: Optional[Dict[str, Any]] = {}
+
+class ChatMessage(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    message: str
+    response: str
+    intent: Optional[str] = None  # "balance_inquiry", "expense_analysis", "budget_help"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PredictionRequest(BaseModel):
+    days_ahead: int = 30
+    category: Optional[str] = None
+
+class AnomalyAlert(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    transaction_id: str
+    anomaly_type: str  # "unusual_amount", "unusual_category", "unusual_frequency"
+    severity: str  # "low", "medium", "high"
+    description: str
+    suggested_action: str
+    is_resolved: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# ============================================================================
+# 🏠 MODELOS DE CONSÓRCIO
+# ============================================================================
+
+class Consortium(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    type: str  # "Imóvel", "Veículo", "Moto"
+    total_value: float  # Valor da carta
+    installment_count: int  # Parcelas totais
+    paid_installments: int = 0  # Parcelas pagas
+    monthly_installment: float  # Valor da parcela
+    remaining_balance: float  # Saldo devedor
+    contemplated: bool = False  # Contemplado
+    contemplation_date: Optional[datetime] = None
+    bid_value: Optional[float] = None  # Valor do lance
+    status: str = "Ativo"  # "Ativo", "Pago", "Contemplado", "Suspenso"
+    due_day: int = 15  # Dia do vencimento
+    start_date: datetime
+    administrator: str  # Administradora do consórcio
+    group_number: Optional[str] = None
+    quota_number: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ConsortiumPayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    consortium_id: str
+    user_id: str
+    installment_number: int
+    payment_date: datetime
+    amount_paid: float
+    payment_type: str = "Regular"  # "Regular", "Antecipado", "Lance", "Quitação"
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ConsortiumBid(BaseModel):
+    consortium_id: str
+    bid_value: float
+    bid_date: datetime
+    notes: Optional[str] = None
+
+class ConsortiumContemplation(BaseModel):
+    consortium_id: str
+    contemplation_type: str  # "Sorteio", "Lance"
+    contemplation_date: datetime
+    notes: Optional[str] = None
+
 class BudgetCreate(BaseModel):
     category_id: str
     budget_amount: float
