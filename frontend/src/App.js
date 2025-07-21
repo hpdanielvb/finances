@@ -295,23 +295,40 @@ const BrazilianCurrencyInput = ({ value, onChange, placeholder = "R$ 0,00", requ
   const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
-    if (value && value !== 0) {
-      setDisplayValue(formatBrazilianCurrency(value.toString().replace('.', '')));
+    if (value && value > 0) {
+      // Format existing value for display
+      const formatted = value.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+      setDisplayValue(formatted);
+    } else {
+      setDisplayValue('');
     }
   }, [value]);
 
   const handleInputChange = (e) => {
-    const inputValue = e.target.value;
+    let inputValue = e.target.value;
     
-    // Allow only numbers, commas, and R$ symbols
-    const cleanValue = inputValue.replace(/[^\d,R$\s]/g, '');
+    // Remove all non-digit characters
+    const digitsOnly = inputValue.replace(/\D/g, '');
     
-    // Format the display value
-    const formatted = formatBrazilianCurrency(cleanValue);
+    if (!digitsOnly) {
+      setDisplayValue('');
+      onChange(0);
+      return;
+    }
+    
+    // Convert digits to number (treating as cents)
+    const numericValue = parseFloat(digitsOnly) / 100;
+    
+    // Format for display
+    const formatted = numericValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+    
     setDisplayValue(formatted);
-    
-    // Parse and send numeric value to parent
-    const numericValue = parseBrazilianCurrency(formatted);
     onChange(numericValue);
   };
 
