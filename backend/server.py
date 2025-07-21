@@ -1934,8 +1934,308 @@ async def test_delete_account(account_id: str, current_user: User = Depends(get_
     }
 
 # ============================================================================
-# 🧠 ENDPOINTS DE IA - SISTEMA INTELIGENTE
+# 🧠 SISTEMA DE CATEGORIZAÇÃO INTELIGENTE HIERÁRQUICA
 # ============================================================================
+
+@api_router.post("/categories/upgrade-hierarchical")
+async def upgrade_to_hierarchical_categories(current_user: User = Depends(get_current_user)):
+    """Upgrade user's categories to hierarchical Brazilian standard"""
+    try:
+        # Clear existing categories
+        await db.categories.delete_many({"user_id": current_user.id})
+        
+        # Create new hierarchical categories
+        await create_brazilian_hierarchical_categories(current_user.id)
+        
+        return {"message": "Categorias hierárquicas criadas com sucesso", "success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar categorias: {str(e)}")
+
+@api_router.get("/categories/hierarchical", response_model=List[Dict[str, Any]])
+async def get_hierarchical_categories(current_user: User = Depends(get_current_user)):
+    """Get categories organized hierarchically"""
+    try:
+        # Get all categories
+        categories = await db.categories.find({"user_id": current_user.id}).to_list(1000)
+        
+        # Organize into hierarchy
+        main_categories = []
+        subcategories_map = defaultdict(list)
+        
+        for cat in categories:
+            if not cat.get("parent_category_id"):
+                main_categories.append(cat)
+            else:
+                subcategories_map[cat["parent_category_id"]].append(cat)
+        
+        # Build hierarchical structure
+        hierarchical = []
+        for main_cat in main_categories:
+            cat_data = {
+                **main_cat,
+                "subcategories": subcategories_map.get(main_cat["id"], [])
+            }
+            hierarchical.append(cat_data)
+        
+        return hierarchical
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar categorias: {str(e)}")
+
+@api_router.post("/categories/ai-classify")
+async def ai_classify_transaction_category(
+    transaction_data: Dict[str, str], 
+    current_user: User = Depends(get_current_user)
+):
+    """AI-powered category classification"""
+    try:
+        description = transaction_data.get("description", "").lower()
+        amount = transaction_data.get("amount", 0)
+        
+        # Get user's categories
+        categories = await db.categories.find({"user_id": current_user.id}).to_list(1000)
+        
+        # Advanced AI classification logic
+        best_match = None
+        highest_score = 0
+        
+        for category in categories:
+            score = 0
+            keywords = category.get("keywords", [])
+            
+            # Keyword matching
+            for keyword in keywords:
+                if keyword.lower() in description:
+                    score += 10
+                    
+            # Partial matching
+            for keyword in keywords:
+                if any(word in keyword.lower() for word in description.split()):
+                    score += 5
+            
+            # Usage frequency bonus
+            score += category.get("usage_count", 0) * 0.1
+            
+            if score > highest_score:
+                highest_score = score
+                best_match = category
+        
+        # Confidence calculation
+        confidence = min(highest_score / 10, 1.0)  # Cap at 100%
+        
+        return {
+            "suggested_category": best_match,
+            "confidence": confidence,
+            "explanation": f"Baseado em palavras-chave e histórico de uso"
+        }
+        
+    except Exception as e:
+        return {"error": str(e), "suggested_category": None, "confidence": 0.0}
+
+@api_router.post("/categories/custom")
+async def create_custom_category(
+    category_data: Dict[str, Any], 
+    current_user: User = Depends(get_current_user)
+):
+    """Create custom user category"""
+    try:
+        category = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "name": category_data["name"],
+            "type": category_data["type"],
+            "parent_category_id": category_data.get("parent_category_id"),
+            "parent_category_name": category_data.get("parent_category_name"),
+            "icon": category_data.get("icon", "📁"),
+            "color": category_data.get("color", "#6B7280"),
+            "keywords": category_data.get("keywords", []),
+            "is_custom": True,
+            "is_active": True,
+            "usage_count": 0,
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.categories.insert_one(category)
+        
+        return {"message": "Categoria personalizada criada", "category": Category(**category)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar categoria: {str(e)}")
+
+async def create_brazilian_hierarchical_categories(user_id: str):
+    """Create comprehensive Brazilian hierarchical categories"""
+    
+    # Check if categories already exist
+    existing_count = await db.categories.count_documents({"user_id": user_id})
+    if existing_count > 0:
+        return False  # Categories already exist
+    
+    categories_data = [
+        # 🏠 1. MORADIA / CASA
+        {"name": "Moradia", "type": "Despesa", "icon": "🏠", "color": "#10B981", "keywords": ["casa", "moradia", "lar", "residencia"]},
+        {"name": "Aluguel", "type": "Despesa", "parent": "Moradia", "keywords": ["aluguel", "locação", "imobiliaria"]},
+        {"name": "Condomínio", "type": "Despesa", "parent": "Moradia", "keywords": ["condominio", "administração", "taxa condominial"]},
+        {"name": "Financiamento Imobiliário", "type": "Despesa", "parent": "Moradia", "keywords": ["financiamento", "casa propria", "habitação", "sac", "price"]},
+        {"name": "Energia Elétrica", "type": "Despesa", "parent": "Moradia", "keywords": ["energia", "eletrica", "luz", "cepe", "cpfl", "cemig"]},
+        {"name": "Água / Esgoto", "type": "Despesa", "parent": "Moradia", "keywords": ["agua", "esgoto", "sabesp", "saneamento"]},
+        {"name": "Gás", "type": "Despesa", "parent": "Moradia", "keywords": ["gas", "butano", "comgas", "botijão"]},
+        {"name": "IPTU", "type": "Despesa", "parent": "Moradia", "keywords": ["iptu", "imposto territorial", "prefeitura"]},
+        {"name": "Reforma / Manutenção", "type": "Despesa", "parent": "Moradia", "keywords": ["reforma", "manutenção", "conserto", "pintura", "eletricista", "encanador"]},
+        {"name": "Seguro Residencial", "type": "Despesa", "parent": "Moradia", "keywords": ["seguro residencial", "seguro casa", "proteção residencial"]},
+        
+        # 🚗 2. TRANSPORTE
+        {"name": "Transporte", "type": "Despesa", "icon": "🚗", "color": "#3B82F6", "keywords": ["transporte", "veiculo", "carro", "moto"]},
+        {"name": "Combustível", "type": "Despesa", "parent": "Transporte", "keywords": ["combustivel", "gasolina", "alcool", "etanol", "diesel", "posto", "shell", "petrobras"]},
+        {"name": "Manutenção do veículo", "type": "Despesa", "parent": "Transporte", "keywords": ["manutenção", "mecanico", "oficina", "revisão", "pneu", "oleo"]},
+        {"name": "Financiamento de carro", "type": "Despesa", "parent": "Transporte", "keywords": ["financiamento", "prestação", "carro", "veiculo"]},
+        {"name": "IPVA / DPVAT", "type": "Despesa", "parent": "Transporte", "keywords": ["ipva", "dpvat", "imposto veiculo", "licenciamento"]},
+        {"name": "Transporte público", "type": "Despesa", "parent": "Transporte", "keywords": ["onibus", "metro", "trem", "passagem", "bilhete unico", "cartão transporte"]},
+        {"name": "Pedágios / Estacionamentos", "type": "Despesa", "parent": "Transporte", "keywords": ["pedagio", "estacionamento", "sem parar", "conectcar"]},
+        {"name": "Seguro de automóvel", "type": "Despesa", "parent": "Transporte", "keywords": ["seguro auto", "seguro carro", "seguro veiculo"]},
+        {"name": "Consórcio de veículo", "type": "Despesa", "parent": "Transporte", "keywords": ["consorcio", "carro", "veiculo", "moto"]},
+        
+        # 🍕 3. ALIMENTAÇÃO
+        {"name": "Alimentação", "type": "Despesa", "icon": "🍕", "color": "#F59E0B", "keywords": ["alimentação", "comida", "refeição"]},
+        {"name": "Supermercado", "type": "Despesa", "parent": "Alimentação", "keywords": ["supermercado", "mercado", "compras", "carrefour", "extra", "pao acucar"]},
+        {"name": "Feira", "type": "Despesa", "parent": "Alimentação", "keywords": ["feira", "verduras", "frutas", "legumes", "sacolão"]},
+        {"name": "Restaurante / Lanchonete", "type": "Despesa", "parent": "Alimentação", "keywords": ["restaurante", "lanchonete", "ifood", "uber eats", "delivery"]},
+        {"name": "Marmita", "type": "Despesa", "parent": "Alimentação", "keywords": ["marmita", "quentinha", "almoço", "janta"]},
+        
+        # 🏥 4. SAÚDE
+        {"name": "Saúde", "type": "Despesa", "icon": "🏥", "color": "#EF4444", "keywords": ["saude", "medico", "hospital", "clinica"]},
+        {"name": "Plano de Saúde", "type": "Despesa", "parent": "Saúde", "keywords": ["plano saude", "convenio", "unimed", "sulamerica", "bradesco saude"]},
+        {"name": "Medicamentos", "type": "Despesa", "parent": "Saúde", "keywords": ["medicamento", "remedio", "farmacia", "drogaria", "droga raia"]},
+        {"name": "Consultas / Exames", "type": "Despesa", "parent": "Saúde", "keywords": ["consulta", "exame", "medico", "laboratorio"]},
+        {"name": "Terapias / Psicólogo", "type": "Despesa", "parent": "Saúde", "keywords": ["terapia", "psicologo", "fisioterapia", "psicanalise"]},
+        {"name": "Odontologia", "type": "Despesa", "parent": "Saúde", "keywords": ["dentista", "odontologia", "ortodontia", "aparelho"]},
+        
+        # 🎓 5. EDUCAÇÃO
+        {"name": "Educação", "type": "Despesa", "icon": "🎓", "color": "#8B5CF6", "keywords": ["educação", "escola", "faculdade", "curso"]},
+        {"name": "Mensalidade Escolar / Faculdade", "type": "Despesa", "parent": "Educação", "keywords": ["mensalidade", "escola", "faculdade", "universidade", "colegio"]},
+        {"name": "Cursos Livres", "type": "Despesa", "parent": "Educação", "keywords": ["curso", "treinamento", "certificação", "idioma", "ingles"]},
+        {"name": "Livros / Material Didático", "type": "Despesa", "parent": "Educação", "keywords": ["livro", "material escolar", "caderno", "apostila"]},
+        {"name": "Seminário / ETAAD", "type": "Despesa", "parent": "Educação", "keywords": ["seminario", "etaad", "congresso", "evento"]},
+        {"name": "Crianças", "type": "Despesa", "parent": "Educação", "keywords": ["creche", "reforço", "babá", "cuidador"]},
+        
+        # 🐕 6. PETS
+        {"name": "Pets", "type": "Despesa", "icon": "🐕", "color": "#06B6D4", "keywords": ["pet", "animal", "cachorro", "gato"]},
+        {"name": "Ração", "type": "Despesa", "parent": "Pets", "keywords": ["ração", "comida pet", "alimento animal"]},
+        {"name": "Banho e Tosa", "type": "Despesa", "parent": "Pets", "keywords": ["banho", "tosa", "pet shop", "grooming"]},
+        {"name": "Veterinário", "type": "Despesa", "parent": "Pets", "keywords": ["veterinario", "vacina", "consulta pet", "clinica veterinaria"]},
+        {"name": "Acessórios", "type": "Despesa", "parent": "Pets", "keywords": ["coleira", "brinquedo", "caminha", "acessorio pet"]},
+        
+        # 💼 7. TRABALHO / PROFISSIONAL
+        {"name": "Trabalho", "type": "Despesa", "icon": "💼", "color": "#374151", "keywords": ["trabalho", "profissional", "carreira"]},
+        {"name": "Assinaturas", "type": "Despesa", "parent": "Trabalho", "keywords": ["capcut", "canva", "microsoft", "adobe", "assinatura"]},
+        {"name": "Cursos / Certificados", "type": "Despesa", "parent": "Trabalho", "keywords": ["certificação", "curso profissional", "especialização"]},
+        {"name": "Equipamentos de trabalho", "type": "Despesa", "parent": "Trabalho", "keywords": ["equipamento", "ferramenta", "notebook", "impressora"]},
+        {"name": "Marketing / Publicidade", "type": "Despesa", "parent": "Trabalho", "keywords": ["marketing", "publicidade", "ads", "propaganda"]},
+        
+        # 🛍️ 8. DESPESAS PESSOAIS
+        {"name": "Despesas Pessoais", "type": "Despesa", "icon": "🛍️", "color": "#EC4899", "keywords": ["pessoal", "individual", "proprio"]},
+        {"name": "Celular", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["celular", "telefone", "vivo", "claro", "tim", "oi"]},
+        {"name": "Internet", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["internet", "banda larga", "wifi", "net", "claro", "vivo fibra"]},
+        {"name": "Streaming", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["netflix", "spotify", "amazon prime", "disney", "streaming"]},
+        {"name": "Vestuário / Calçados", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["roupa", "calçado", "sapato", "vestido", "camisa"]},
+        {"name": "Cabelo / Barbeiro / Estética", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["cabelo", "barbeiro", "salão", "estetica", "manicure"]},
+        {"name": "Presentes", "type": "Despesa", "parent": "Despesas Pessoais", "keywords": ["presente", "gift", "aniversario", "natal"]},
+        
+        # 🎪 9. LAZER
+        {"name": "Lazer", "type": "Despesa", "icon": "🎪", "color": "#F97316", "keywords": ["lazer", "entretenimento", "diversão"]},
+        {"name": "Viagens", "type": "Despesa", "parent": "Lazer", "keywords": ["viagem", "hotel", "passagem", "turismo", "ferias"]},
+        {"name": "Passeios", "type": "Despesa", "parent": "Lazer", "keywords": ["passeio", "parque", "zoologico", "shopping"]},
+        {"name": "Cinema / Teatro / Shows", "type": "Despesa", "parent": "Lazer", "keywords": ["cinema", "teatro", "show", "concerto", "ingresso"]},
+        {"name": "Hobbies / Games", "type": "Despesa", "parent": "Lazer", "keywords": ["hobby", "game", "jogo", "playstation", "xbox"]},
+        
+        # ❤️ 10. DOAÇÕES / AJUDA
+        {"name": "Doações", "type": "Despesa", "icon": "❤️", "color": "#DC2626", "keywords": ["doação", "ajuda", "caridade", "solidariedade"]},
+        {"name": "Ofertas / Dízimos", "type": "Despesa", "parent": "Doações", "keywords": ["oferta", "dizimo", "igreja", "religioso"]},
+        {"name": "Doações a pessoas", "type": "Despesa", "parent": "Doações", "keywords": ["doação", "ajuda", "pessoa", "familia"]},
+        {"name": "Ajuda emergencial", "type": "Despesa", "parent": "Doações", "keywords": ["emergencia", "urgente", "socorro", "ajuda"]},
+        
+        # 📈 11. INVESTIMENTOS / PATRIMÔNIO
+        {"name": "Investimentos", "type": "Despesa", "icon": "📈", "color": "#059669", "keywords": ["investimento", "patrimonio", "aplicação"]},
+        {"name": "Poupança", "type": "Despesa", "parent": "Investimentos", "keywords": ["poupança", "caderneta", "savings"]},
+        {"name": "Tesouro Direto / Renda Fixa", "type": "Despesa", "parent": "Investimentos", "keywords": ["tesouro", "renda fixa", "cdb", "lci"]},
+        {"name": "Ações / Fundos", "type": "Despesa", "parent": "Investimentos", "keywords": ["ação", "fundo", "bolsa", "b3", "stock"]},
+        {"name": "Compra de imóvel", "type": "Despesa", "parent": "Investimentos", "keywords": ["imovel", "casa", "apartamento", "terreno"]},
+        {"name": "Compra de veículo", "type": "Despesa", "parent": "Investimentos", "keywords": ["carro", "veiculo", "moto", "compra"]},
+        {"name": "Consórcio Imobiliário", "type": "Despesa", "parent": "Investimentos", "keywords": ["consorcio", "imovel", "casa", "apartamento"]},
+        {"name": "Aportes em Consórcios", "type": "Despesa", "parent": "Investimentos", "keywords": ["aporte", "consorcio", "lance"]},
+        
+        # 💸 12. IMPOSTOS / ENCARGOS
+        {"name": "Impostos", "type": "Despesa", "icon": "💸", "color": "#991B1B", "keywords": ["imposto", "taxa", "encargo", "governo"]},
+        {"name": "INSS / GPS", "type": "Despesa", "parent": "Impostos", "keywords": ["inss", "gps", "previdencia", "contribuição"]},
+        {"name": "IRPF", "type": "Despesa", "parent": "Impostos", "keywords": ["irpf", "imposto renda", "receita federal"]},
+        {"name": "Tarifas bancárias", "type": "Despesa", "parent": "Impostos", "keywords": ["tarifa", "banco", "manutenção conta", "anuidade"]},
+        {"name": "Multas", "type": "Despesa", "parent": "Impostos", "keywords": ["multa", "infração", "transito"]},
+        
+        # 💳 13. DÍVIDAS / PARCELAMENTOS
+        {"name": "Dívidas", "type": "Despesa", "icon": "💳", "color": "#7C2D12", "keywords": ["divida", "debito", "parcelamento", "pagamento"]},
+        {"name": "Cartão de Crédito", "type": "Despesa", "parent": "Dívidas", "keywords": ["cartão", "credito", "fatura", "visa", "master"]},
+        {"name": "Renegociação / Acordo", "type": "Despesa", "parent": "Dívidas", "keywords": ["renegociação", "acordo", "quitação", "divida"]},
+        {"name": "Empréstimo Pessoal", "type": "Despesa", "parent": "Dívidas", "keywords": ["emprestimo", "financeira", "crediario"]},
+        {"name": "Parcelamentos diversos", "type": "Despesa", "parent": "Dívidas", "keywords": ["parcelamento", "prestação", "carnê"]},
+        
+        # 💰 14. RECEITAS
+        {"name": "Receitas", "type": "Receita", "icon": "💰", "color": "#047857", "keywords": ["receita", "renda", "ganho", "entrada"]},
+        {"name": "Salário", "type": "Receita", "parent": "Receitas", "keywords": ["salario", "ordenado", "vencimento", "pagamento"]},
+        {"name": "Bicos / Freelance", "type": "Receita", "parent": "Receitas", "keywords": ["bico", "freelance", "extra", "trabalho extra"]},
+        {"name": "13º salário", "type": "Receita", "parent": "Receitas", "keywords": ["13", "decimo terceiro", "gratificação"]},
+        {"name": "Férias", "type": "Receita", "parent": "Receitas", "keywords": ["ferias", "terço constitucional"]},
+        {"name": "Recebimentos de clientes", "type": "Receita", "parent": "Receitas", "keywords": ["cliente", "recebimento", "cobrança", "fatura"]},
+        {"name": "Reembolsos", "type": "Receita", "parent": "Receitas", "keywords": ["reembolso", "estorno", "devolução"]},
+        {"name": "Rendimentos financeiros", "type": "Receita", "parent": "Receitas", "keywords": ["rendimento", "juros", "dividendo", "yield"]},
+    ]
+    
+    # Create categories with hierarchy
+    category_map = {}  # Store category IDs by name for parent linking
+    
+    for cat_data in categories_data:
+        # Create main categories first (those without parent)
+        if "parent" not in cat_data:
+            category = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "name": cat_data["name"],
+                "type": cat_data["type"],
+                "parent_category_id": None,
+                "parent_category_name": None,
+                "icon": cat_data.get("icon", "📁"),
+                "color": cat_data.get("color", "#6B7280"),
+                "keywords": cat_data.get("keywords", []),
+                "is_custom": False,
+                "is_active": True,
+                "usage_count": 0,
+                "created_at": datetime.utcnow()
+            }
+            
+            await db.categories.insert_one(category)
+            category_map[cat_data["name"]] = category["id"]
+    
+    # Now create subcategories
+    for cat_data in categories_data:
+        if "parent" in cat_data:
+            parent_id = category_map.get(cat_data["parent"])
+            if parent_id:
+                category = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "name": cat_data["name"],
+                    "type": cat_data["type"],
+                    "parent_category_id": parent_id,
+                    "parent_category_name": cat_data["parent"],
+                    "icon": cat_data.get("icon", "📁"),
+                    "color": cat_data.get("color", "#9CA3AF"),
+                    "keywords": cat_data.get("keywords", []),
+                    "is_custom": False,
+                    "is_active": True,
+                    "usage_count": 0,
+                    "created_at": datetime.utcnow()
+                }
+                
+                await db.categories.insert_one(category)
+    
+    return True
 
 @api_router.post("/ai/chat", response_model=Dict[str, Any])
 async def ai_chat(message_data: Dict[str, str], current_user: User = Depends(get_current_user)):
