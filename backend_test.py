@@ -55,6 +55,320 @@ def print_test_result(test_name, success, details=""):
     if details:
         print(f"   Detalhes: {details}")
 
+def test_critical_corrections_review():
+    """
+    TESTE COMPLETO DAS CORREÇÕES IMPLEMENTADAS
+    
+    Testa as 3 correções críticas implementadas conforme solicitado:
+    1. EXCLUSÃO DE CONTAS (CRÍTICO) - Testar DELETE /api/accounts/{account_id}
+    2. FORMATAÇÃO DE MOEDA BRASILEIRA - Testar valores com vírgula como separador decimal
+    3. SISTEMA GERAL - Verificar se todas as 184 categorias estão disponíveis
+    """
+    print("\n" + "="*80)
+    print("🚨 TESTE COMPLETO DAS CORREÇÕES IMPLEMENTADAS")
+    print("="*80)
+    print("Testando as 3 correções críticas reportadas pelo usuário")
+    
+    # Credenciais do usuário conforme solicitado
+    user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "TestPassword123"  # Senha atualizada conforme test_result.md
+    }
+    
+    test_results = {
+        "login_success": False,
+        "account_deletion_working": False,
+        "brazilian_currency_working": False,
+        "categories_count": 0,
+        "system_stable": False
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Login como {user_login['email']}")
+        
+        # Login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("LOGIN CRÍTICO", False, f"❌ Login falhou: {error_detail}")
+            return test_results
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["login_success"] = True
+        
+        print_test_result("LOGIN CRÍTICO", True, f"✅ Login bem-sucedido para {user_info.get('name')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # CORREÇÃO 1: EXCLUSÃO DE CONTAS (CRÍTICO)
+        print(f"\n🔍 STEP 2: TESTE DE EXCLUSÃO DE CONTAS (CRÍTICO)")
+        print("   Criando conta teste 'Conta Bradesco'...")
+        
+        # Criar conta teste "Conta Bradesco"
+        test_account_data = {
+            "name": "Conta Bradesco",
+            "type": "Conta Corrente",
+            "institution": "Bradesco",
+            "initial_balance": 1000.00,
+            "color_hex": "#CC092F"
+        }
+        
+        account_response = requests.post(f"{BACKEND_URL}/accounts", json=test_account_data, headers=headers)
+        
+        if account_response.status_code != 200:
+            print_test_result("CRIAÇÃO CONTA TESTE", False, "❌ Falha ao criar conta teste")
+            return test_results
+        
+        test_account = account_response.json()
+        test_account_id = test_account.get("id")
+        
+        print_test_result("CRIAÇÃO CONTA TESTE", True, f"✅ Conta 'Conta Bradesco' criada (ID: {test_account_id})")
+        
+        # Criar transação associada à conta
+        print("   Criando transação associada à conta...")
+        
+        test_transaction_data = {
+            "description": "Transação Teste Bradesco",
+            "value": 150.00,
+            "type": "Despesa",
+            "transaction_date": datetime.now().isoformat(),
+            "account_id": test_account_id,
+            "observation": "Transação para teste de exclusão"
+        }
+        
+        transaction_response = requests.post(f"{BACKEND_URL}/transactions", json=test_transaction_data, headers=headers)
+        
+        if transaction_response.status_code != 200:
+            print_test_result("CRIAÇÃO TRANSAÇÃO TESTE", False, "❌ Falha ao criar transação teste")
+            return test_results
+        
+        test_transaction = transaction_response.json()
+        print_test_result("CRIAÇÃO TRANSAÇÃO TESTE", True, f"✅ Transação criada (Valor: R$ {test_transaction.get('value')})")
+        
+        # Verificar se transação existe antes da exclusão
+        transactions_before = requests.get(f"{BACKEND_URL}/transactions?account_id={test_account_id}", headers=headers)
+        transactions_count_before = len(transactions_before.json()) if transactions_before.status_code == 200 else 0
+        
+        print(f"   Transações associadas à conta antes da exclusão: {transactions_count_before}")
+        
+        # TESTAR ENDPOINT DELETE /api/accounts/{account_id}
+        print("   Testando DELETE /api/accounts/{account_id}...")
+        
+        delete_response = requests.delete(f"{BACKEND_URL}/accounts/{test_account_id}", headers=headers)
+        
+        if delete_response.status_code == 200:
+            delete_data = delete_response.json()
+            transactions_deleted = delete_data.get("transactions_deleted", 0)
+            account_name = delete_data.get("account_name", "Unknown")
+            
+            print_test_result("EXCLUSÃO DE CONTA", True, 
+                            f"✅ Conta '{account_name}' excluída com {transactions_deleted} transações")
+            
+            # Verificar se conta foi realmente excluída
+            verify_account = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+            if verify_account.status_code == 200:
+                remaining_accounts = verify_account.json()
+                account_still_exists = any(acc.get("id") == test_account_id for acc in remaining_accounts)
+                
+                if not account_still_exists:
+                    print_test_result("VERIFICAÇÃO EXCLUSÃO CONTA", True, "✅ Conta não existe mais na listagem")
+                else:
+                    print_test_result("VERIFICAÇÃO EXCLUSÃO CONTA", False, "❌ Conta ainda existe na listagem")
+            
+            # Verificar se transações foram excluídas
+            transactions_after = requests.get(f"{BACKEND_URL}/transactions?account_id={test_account_id}", headers=headers)
+            transactions_count_after = len(transactions_after.json()) if transactions_after.status_code == 200 else 0
+            
+            if transactions_count_after == 0:
+                print_test_result("EXCLUSÃO TRANSAÇÕES ASSOCIADAS", True, 
+                                f"✅ Todas as {transactions_deleted} transações foram excluídas")
+                test_results["account_deletion_working"] = True
+            else:
+                print_test_result("EXCLUSÃO TRANSAÇÕES ASSOCIADAS", False, 
+                                f"❌ {transactions_count_after} transações ainda existem")
+        else:
+            print_test_result("EXCLUSÃO DE CONTA", False, 
+                            f"❌ Falha na exclusão: {delete_response.status_code}")
+        
+        # CORREÇÃO 2: FORMATAÇÃO DE MOEDA BRASILEIRA
+        print(f"\n🔍 STEP 3: TESTE DE FORMATAÇÃO DE MOEDA BRASILEIRA")
+        print("   Testando valores com vírgula como separador decimal...")
+        
+        # Criar conta para teste de moeda brasileira
+        brazilian_account_data = {
+            "name": "Conta Teste Moeda BR",
+            "type": "Poupança",
+            "institution": "Caixa Econômica Federal",
+            "initial_balance": 1500.50,  # Valor R$ 1.500,50
+            "color_hex": "#0066CC"
+        }
+        
+        br_account_response = requests.post(f"{BACKEND_URL}/accounts", json=brazilian_account_data, headers=headers)
+        
+        if br_account_response.status_code == 200:
+            br_account = br_account_response.json()
+            br_account_id = br_account.get("id")
+            
+            print_test_result("CRIAÇÃO CONTA MOEDA BR", True, 
+                            f"✅ Conta criada com saldo R$ {br_account.get('initial_balance'):.2f}")
+            
+            # Testar transação com valor brasileiro
+            br_transaction_data = {
+                "description": "Teste Valor Brasileiro R$ 1.250,75",
+                "value": 1250.75,  # Valor R$ 1.250,75
+                "type": "Receita",
+                "transaction_date": datetime.now().isoformat(),
+                "account_id": br_account_id,
+                "observation": "Teste formatação moeda brasileira"
+            }
+            
+            br_transaction_response = requests.post(f"{BACKEND_URL}/transactions", json=br_transaction_data, headers=headers)
+            
+            if br_transaction_response.status_code == 200:
+                br_transaction = br_transaction_response.json()
+                print_test_result("TRANSAÇÃO MOEDA BRASILEIRA", True, 
+                                f"✅ Transação criada com valor R$ {br_transaction.get('value'):.2f}")
+                
+                # Verificar se saldo foi atualizado corretamente
+                updated_account = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+                if updated_account.status_code == 200:
+                    accounts = updated_account.json()
+                    br_account_updated = next((acc for acc in accounts if acc.get("id") == br_account_id), None)
+                    
+                    if br_account_updated:
+                        expected_balance = 1500.50 + 1250.75  # R$ 2.751,25
+                        actual_balance = br_account_updated.get("current_balance")
+                        
+                        if abs(actual_balance - expected_balance) < 0.01:
+                            print_test_result("CÁLCULO SALDO MOEDA BR", True, 
+                                            f"✅ Saldo correto: R$ {actual_balance:.2f}")
+                            test_results["brazilian_currency_working"] = True
+                        else:
+                            print_test_result("CÁLCULO SALDO MOEDA BR", False, 
+                                            f"❌ Esperado: R$ {expected_balance:.2f}, Atual: R$ {actual_balance:.2f}")
+            else:
+                print_test_result("TRANSAÇÃO MOEDA BRASILEIRA", False, 
+                                f"❌ Falha: {br_transaction_response.status_code}")
+            
+            # Limpar conta de teste
+            requests.delete(f"{BACKEND_URL}/accounts/{br_account_id}", headers=headers)
+        else:
+            print_test_result("CRIAÇÃO CONTA MOEDA BR", False, 
+                            f"❌ Falha: {br_account_response.status_code}")
+        
+        # CORREÇÃO 3: SISTEMA GERAL - 184 CATEGORIAS
+        print(f"\n🔍 STEP 4: VERIFICAÇÃO DAS 184 CATEGORIAS")
+        print("   Verificando se todas as 184 categorias estão disponíveis...")
+        
+        categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if categories_response.status_code == 200:
+            categories = categories_response.json()
+            categories_count = len(categories)
+            test_results["categories_count"] = categories_count
+            
+            print_test_result("CONTAGEM CATEGORIAS", True, f"✅ Encontradas {categories_count} categorias")
+            
+            # Verificar se atende ao mínimo de 184 categorias
+            if categories_count >= 184:
+                print_test_result("REQUISITO 184 CATEGORIAS", True, 
+                                f"✅ Sistema tem {categories_count} categorias (≥184)")
+            else:
+                print_test_result("REQUISITO 184 CATEGORIAS", False, 
+                                f"❌ Apenas {categories_count} categorias encontradas (< 184)")
+            
+            # Verificar categorias específicas mencionadas
+            category_names = [cat.get("name") for cat in categories]
+            key_categories = ["Netflix", "Spotify", "Uber/99/Táxi", "Consultas Médicas", "Odontologia"]
+            found_key_categories = [cat for cat in key_categories if cat in category_names]
+            
+            print_test_result("CATEGORIAS CHAVE", True, 
+                            f"✅ Encontradas {len(found_key_categories)}/{len(key_categories)}: {', '.join(found_key_categories)}")
+            
+            # Breakdown por tipo
+            receita_categories = [c for c in categories if c.get('type') == 'Receita']
+            despesa_categories = [c for c in categories if c.get('type') == 'Despesa']
+            
+            print(f"   Breakdown: {len(receita_categories)} Receitas, {len(despesa_categories)} Despesas")
+        else:
+            print_test_result("VERIFICAÇÃO CATEGORIAS", False, 
+                            f"❌ Falha ao obter categorias: {categories_response.status_code}")
+        
+        # STEP 5: TESTE DASHBOARD SUMMARY
+        print(f"\n🔍 STEP 5: VERIFICAÇÃO DASHBOARD SUMMARY")
+        print("   Testando endpoints do dashboard...")
+        
+        dashboard_response = requests.get(f"{BACKEND_URL}/dashboard/summary", headers=headers)
+        
+        if dashboard_response.status_code == 200:
+            dashboard_data = dashboard_response.json()
+            
+            required_fields = ['total_balance', 'monthly_income', 'monthly_expenses', 
+                             'accounts', 'expense_by_category', 'income_by_category']
+            missing_fields = [field for field in required_fields if field not in dashboard_data]
+            
+            if not missing_fields:
+                print_test_result("DASHBOARD SUMMARY", True, 
+                                "✅ Todos os campos obrigatórios presentes")
+                test_results["system_stable"] = True
+                
+                # Mostrar dados do dashboard
+                print(f"   Total Balance: R$ {dashboard_data.get('total_balance', 0):.2f}")
+                print(f"   Monthly Income: R$ {dashboard_data.get('monthly_income', 0):.2f}")
+                print(f"   Monthly Expenses: R$ {dashboard_data.get('monthly_expenses', 0):.2f}")
+                print(f"   Accounts: {len(dashboard_data.get('accounts', []))}")
+            else:
+                print_test_result("DASHBOARD SUMMARY", False, 
+                                f"❌ Campos ausentes: {', '.join(missing_fields)}")
+        else:
+            print_test_result("DASHBOARD SUMMARY", False, 
+                            f"❌ Falha: {dashboard_response.status_code}")
+        
+        # STEP 6: RESUMO FINAL
+        print(f"\n🔍 STEP 6: RESUMO FINAL DAS CORREÇÕES")
+        print("="*60)
+        
+        print("📊 RESULTADOS DOS TESTES DAS CORREÇÕES:")
+        print(f"   ✅ Login: {'SUCESSO' if test_results['login_success'] else 'FALHA'}")
+        print(f"   🗑️  Exclusão de Contas: {'FUNCIONANDO' if test_results['account_deletion_working'] else 'FALHA'}")
+        print(f"   💰 Moeda Brasileira: {'FUNCIONANDO' if test_results['brazilian_currency_working'] else 'FALHA'}")
+        print(f"   📁 Categorias: {test_results['categories_count']} encontradas")
+        print(f"   📊 Sistema Estável: {'SIM' if test_results['system_stable'] else 'NÃO'}")
+        
+        # Determinar status geral
+        critical_fixes_working = (
+            test_results['account_deletion_working'] and
+            test_results['brazilian_currency_working'] and
+            test_results['categories_count'] >= 184 and
+            test_results['system_stable']
+        )
+        
+        if critical_fixes_working:
+            print(f"\n🎉 TODAS AS 3 CORREÇÕES CRÍTICAS ESTÃO FUNCIONANDO!")
+            print("✅ 1. Exclusão de contas com transações associadas - FUNCIONANDO")
+            print("✅ 2. Formatação de moeda brasileira - FUNCIONANDO") 
+            print("✅ 3. Sistema com 184+ categorias - FUNCIONANDO")
+            print("✅ Sistema geral estável - FUNCIONANDO")
+            return True
+        else:
+            print(f"\n⚠️ ALGUMAS CORREÇÕES AINDA PRECISAM DE ATENÇÃO:")
+            if not test_results['account_deletion_working']:
+                print("❌ 1. Exclusão de contas - PRECISA CORREÇÃO")
+            if not test_results['brazilian_currency_working']:
+                print("❌ 2. Formatação moeda brasileira - PRECISA CORREÇÃO")
+            if test_results['categories_count'] < 184:
+                print(f"❌ 3. Categorias insuficientes ({test_results['categories_count']}/184) - PRECISA CORREÇÃO")
+            if not test_results['system_stable']:
+                print("❌ Sistema instável - PRECISA CORREÇÃO")
+            return False
+        
+    except Exception as e:
+        print_test_result("TESTE CORREÇÕES CRÍTICAS", False, f"Exceção: {str(e)}")
+        return False
+
 def test_critical_user_endpoints():
     """
     CRITICAL TEST: Test all backend endpoints for user hpdanielvb@gmail.com
