@@ -445,35 +445,24 @@ const LoginForm = () => {
           {!showForgotPassword && (
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Senha</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all pr-12"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  placeholder="Sua senha"
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              <PasswordInput
+                value={formData.password}
+                onChange={(password) => setFormData({...formData, password: password})}
+                placeholder="Sua senha"
+                required
+              />
             </div>
           )}
 
           {!isLogin && !showForgotPassword && (
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Confirmar Senha</label>
-              <input
-                type="password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              <PasswordInput
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                onChange={(password) => setFormData({...formData, confirmPassword: password})}
                 placeholder="Confirme sua senha"
+                confirm={true}
+                confirmValue={formData.password}
                 required
               />
             </div>
