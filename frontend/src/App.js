@@ -547,15 +547,24 @@ const Dashboard = () => {
   };
 
   const handleDeleteAccount = async (accountId) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta conta? Esta ação não pode ser desfeita.')) {
+    const account = accounts.find(acc => acc.id === accountId);
+    const accountName = account ? account.name : 'esta conta';
+    
+    if (!window.confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a conta "${accountName}"?\n\n🗑️ Esta ação irá:\n• Excluir a conta permanentemente\n• Remover TODAS as transações associadas\n• Esta operação NÃO pode ser desfeita\n\nDigite OK para confirmar a exclusão.`)) {
       return;
     }
     
     try {
-      await axios.delete(`${API}/accounts/${accountId}`);
+      const response = await axios.delete(`${API}/accounts/${accountId}`);
       await loadDashboard();
-      toast.success('Conta excluída com sucesso!');
+      
+      const message = response.data.transactions_deleted > 0 
+        ? `Conta "${accountName}" excluída com sucesso! ${response.data.transactions_deleted} transações também foram removidas.`
+        : `Conta "${accountName}" excluída com sucesso!`;
+        
+      toast.success(message);
     } catch (error) {
+      console.error('Delete account error:', error);
       toast.error('Erro ao excluir conta: ' + (error.response?.data?.detail || 'Erro desconhecido'));
     }
   };
