@@ -424,6 +424,9 @@ def test_new_enhanced_features():
                     total_features += 1
                     if status:
                         working_features += 1
+            elif category == True:  # Handle login_success and sample_data_created
+                total_features += 1
+                working_features += 1
         
         success_rate = (working_features / total_features * 100) if total_features > 0 else 0
         
