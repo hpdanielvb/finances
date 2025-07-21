@@ -101,6 +101,31 @@ const AuthProvider = ({ children }) => {
 };
 
 // Utility functions
+// Brazilian currency formatting functions
+const formatBrazilianCurrency = (value) => {
+  // Remove all non-digit characters
+  const cleanValue = value.replace(/\D/g, '');
+  if (!cleanValue) return '';
+  
+  // Convert to number and format with Brazilian locale
+  const numericValue = parseFloat(cleanValue) / 100;
+  return numericValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+};
+
+const parseBrazilianCurrency = (formattedValue) => {
+  // Remove currency symbol and convert comma to dot
+  const cleanValue = formattedValue
+    .replace(/R\$\s?/, '')
+    .replace(/\./g, '')  // Remove thousands separator
+    .replace(',', '.');   // Convert decimal separator
+  
+  const numericValue = parseFloat(cleanValue);
+  return isNaN(numericValue) ? 0 : numericValue;
+};
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
