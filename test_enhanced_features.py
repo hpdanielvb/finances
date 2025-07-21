@@ -224,6 +224,8 @@ def test_new_enhanced_features():
             else:
                 print_test_result("EXCEL EXPORT", True, "✅ Export endpoint responding (format may vary)")
                 test_results["enhanced_reports"]["export_excel"] = True
+        elif excel_response.status_code == 422:
+            print_test_result("EXCEL EXPORT", False, f"❌ Validation error: {excel_response.status_code} - endpoint needs parameter validation fix")
         else:
             print_test_result("EXCEL EXPORT", False, f"❌ Failed: {excel_response.status_code}")
         
