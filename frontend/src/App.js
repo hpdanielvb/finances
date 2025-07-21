@@ -598,6 +598,24 @@ const Dashboard = () => {
         setGoalsStats(null);
       }
       
+      // 🧠 Load AI Insights
+      try {
+        const aiInsightsRes = await axios.get(`${API}/ai/insights`);
+        setAIInsights(aiInsightsRes.data);
+      } catch (aiError) {
+        console.log('AI Insights loading failed, continuing without AI');
+        setAIInsights([]);
+      }
+
+      // 🏠 Load Consortiums  
+      try {
+        const consortiumsRes = await axios.get(`${API}/consortiums`);
+        setConsortiums(consortiumsRes.data);
+      } catch (consortiumError) {
+        console.log('Consortiums loading failed, continuing without consortiums');
+        setConsortiums([]);
+      }
+      
   const generateNotifications = () => {
     const newNotifications = [];
     const now = new Date();
