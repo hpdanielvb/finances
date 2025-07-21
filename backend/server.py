@@ -2188,8 +2188,13 @@ async def create_tag(
 @api_router.get("/tags")
 async def get_tags(current_user: User = Depends(get_current_user)):
     """Get user's transaction tags"""
-    tags = await db.transaction_tags.find({"user_id": current_user.id}).to_list(100)
-    return {"tags": tags}
+    try:
+        tags = await db.transaction_tags.find({"user_id": current_user.id}).to_list(100)
+        return {"tags": tags}
+    except Exception as e:
+        print(f"Error getting tags: {e}")
+        # Return empty list if collection doesn't exist yet
+        return {"tags": []}
 
 @api_router.patch("/transactions/{transaction_id}/tags")
 async def update_transaction_tags(
