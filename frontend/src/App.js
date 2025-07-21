@@ -3973,6 +3973,171 @@ const ContributeModal = ({ goal, onClose, onContribute }) => {
 };
 
 // ============================================================================
+// 📊 COMPONENTE DE DROPDOWN HIERÁRQUICO DE CATEGORIAS
+// ============================================================================
+
+const HierarchicalCategorySelect = ({ value, onChange, categories, type, placeholder = "Selecione uma categoria" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  useEffect(() => {
+    if (value && categories.length > 0) {
+      // Find selected category by ID
+      for (const mainCat of categories) {
+        if (mainCat.id === value) {
+          setSelectedCategory(mainCat);
+          return;
+        }
+        for (const subCat of mainCat.subcategories || []) {
+          if (subCat.id === value) {
+            setSelectedCategory(subCat);
+            return;
+          }
+        }
+      }
+    }
+  }, [value, categories]);
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    onChange(category.id);
+    setIsOpen(false);
+  };
+
+  // Filter categories by type
+  const filteredCategories = categories.filter(cat => cat.type === type);
+
+  return (
+    <div className="relative">
+      {/* Selected Category Display */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-white text-left flex items-center justify-between"
+      >
+        <div className="flex items-center">
+          {selectedCategory ? (
+            <>
+              <span className="text-lg mr-2">{selectedCategory.icon}</span>
+              <div>
+                <span className="font-medium">{selectedCategory.name}</span>
+                {selectedCategory.parent_category_name && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    ({selectedCategory.parent_category_name})
+                  </span>
+                )}
+              </div>
+            </>
+          ) : (
+            <span className="text-gray-500">{placeholder}</span>
+          )}
+        </div>
+        <div className="text-gray-400">
+          {isOpen ? '▲' : '▼'}
+        </div>
+      </button>
+
+      {/* Dropdown Options */}
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+          {filteredCategories.map((mainCategory) => (
+            <div key={mainCategory.id}>
+              {/* Main Category */}
+              <button
+                type="button"
+                onClick={() => handleCategorySelect(mainCategory)}
+                className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 flex items-center"
+              >
+                <span className="text-lg mr-3">{mainCategory.icon}</span>
+                <div>
+                  <div className="font-semibold text-gray-800">{mainCategory.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {mainCategory.subcategories?.length || 0} subcategorias
+                  </div>
+                </div>
+              </button>
+
+              {/* Subcategories */}
+              {mainCategory.subcategories?.map((subCategory) => (
+                <button
+                  key={subCategory.id}
+                  type="button"
+                  onClick={() => handleCategorySelect(subCategory)}
+                  className="w-full px-8 py-2 text-left hover:bg-gray-50 text-gray-700 flex items-center border-l-2 border-gray-200 ml-4"
+                >
+                  <span className="text-sm mr-2">📁</span>
+                  <span className="text-sm">{subCategory.name}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// AI Category Suggestion Component
+const AICategorySuggestion = ({ description, onSuggestionSelect }) => {
+  const [suggestion, setSuggestion] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (description && description.length > 3) {
+      const debounceTimer = setTimeout(async () => {
+        setLoading(true);
+        try {
+          const response = await axios.post(`${API}/categories/ai-classify`, {
+            description: description
+          });
+          
+          if (response.data.suggested_category && response.data.confidence > 0.3) {
+            setSuggestion(response.data);
+          } else {
+            setSuggestion(null);
+          }
+        } catch (error) {
+          console.error('AI suggestion error:', error);
+          setSuggestion(null);
+        }
+        setLoading(false);
+      }, 1000);
+
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [description]);
+
+  if (!suggestion || loading) return null;
+
+  return (
+    <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <span className="text-purple-600 mr-2">🤖</span>
+          <div>
+            <div className="text-sm font-medium text-purple-800">
+              Sugestão da IA: {suggestion.suggested_category.name}
+            </div>
+            <div className="text-xs text-purple-600">
+              {suggestion.suggested_category.parent_category_name && 
+                `${suggestion.suggested_category.parent_category_name} → `}
+              Confiança: {(suggestion.confidence * 100).toFixed(0)}%
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onSuggestionSelect(suggestion.suggested_category)}
+          className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+        >
+          Usar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // 🧠 COMPONENTES DE IA - SISTEMA INTELIGENTE
 // ============================================================================
 
