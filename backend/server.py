@@ -1875,6 +1875,17 @@ async def update_budget_spent(user_id: str, category_id: str, month_year: str, a
         upsert=False
     )
 
+# Test endpoint for authentication debugging
+@api_router.get("/test/auth", response_model=Dict[str, Any])
+async def test_auth(current_user: User = Depends(get_current_user)):
+    """Test authentication endpoint"""
+    return {
+        "message": "Authentication working!",
+        "user_id": current_user.id,
+        "user_email": current_user.email,
+        "user_name": current_user.name
+    }
+
 # ============================================================================
 # 🧠 ENDPOINTS DE IA - SISTEMA INTELIGENTE
 # ============================================================================
