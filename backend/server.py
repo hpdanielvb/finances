@@ -141,6 +141,7 @@ class TransactionCreate(BaseModel):
     recurrence_start_date: Optional[datetime] = None
     recurrence_end_date: Optional[datetime] = None
     status: str = "Pago"
+    tags: Optional[List[str]] = []  # List of tag IDs
 
 class Transaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -159,6 +160,7 @@ class Transaction(BaseModel):
     status: str = "Pago"
     proof_url: Optional[str] = None
     related_transaction_id: Optional[str] = None
+    tags: List[str] = []  # List of tag IDs
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class TransferCreate(BaseModel):
