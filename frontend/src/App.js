@@ -806,7 +806,7 @@ const Dashboard = () => {
     setLoadingInvoices(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL}/credit-cards/invoices`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/credit-cards/invoices`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
