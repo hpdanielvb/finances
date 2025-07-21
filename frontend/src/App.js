@@ -3098,19 +3098,21 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
-              <select
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              <HierarchicalCategorySelect
                 value={formData.category_id}
-                onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-              >
-                <option value="">Selecione uma categoria</option>
-                {relevantCategories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(categoryId) => setFormData({...formData, category_id: categoryId})}
+                categories={categories}
+                type={transactionType}
+                placeholder="Selecione uma categoria"
+              />
+              
+              {/* AI Category Suggestion */}
+              <AICategorySuggestion
+                description={formData.description}
+                onSuggestionSelect={(category) => {
+                  setFormData({...formData, category_id: category.id});
+                }}
+              />
             </div>
           </div>
 
