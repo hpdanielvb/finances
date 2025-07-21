@@ -1454,62 +1454,138 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* PROGRESSO DA META MENSAL */}
+          {/* PROGRESSO DAS METAS FINANCEIRAS - ENHANCED */}
           <div className="md:col-span-2 lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Progresso da Meta Mensal</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800">🎯 Progresso das Metas Financeiras</h3>
               <Target className="text-blue-600" size={24} />
             </div>
             
-            <div className="space-y-4">
-              {/* Meta de Economia */}
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">Meta de Economia</span>
-                  <span className="font-medium text-gray-800">
-                    {formatCurrency(summary?.monthly_savings_goal || 1000)} / {formatCurrency(5000)}
-                  </span>
+            <div className="space-y-6">
+              {/* Active Goals Summary */}
+              {goalsStats && (
+                <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{goalsStats.active_goals || 0}</p>
+                    <p className="text-xs text-gray-600">Metas Ativas</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{goalsStats.achieved_goals || 0}</p>
+                    <p className="text-xs text-gray-600">Conquistadas</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">
+                      {goalsStats.overall_progress ? `${goalsStats.overall_progress.toFixed(1)}%` : '0%'}
+                    </p>
+                    <p className="text-xs text-gray-600">Progresso Geral</p>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-300"
-                    style={{ 
-                      width: `${Math.min(((summary?.monthly_savings_goal || 1000) / 5000) * 100, 100)}%` 
-                    }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {(((summary?.monthly_savings_goal || 1000) / 5000) * 100).toFixed(1)}% da meta alcançada
-                </p>
-              </div>
+              )}
 
-              {/* Meta de Gastos */}
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600">Limite de Gastos</span>
-                  <span className="font-medium text-gray-800">
-                    {formatCurrency(summary?.monthly_expenses || 0)} / {formatCurrency(3000)}
-                  </span>
+              {/* Individual Goals Progress */}
+              {goals && goals.length > 0 ? (
+                <div className="space-y-4 max-h-64 overflow-y-auto">
+                  {goals.slice(0, 4).map((goal) => {
+                    const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0;
+                    const isCompleted = progress >= 100;
+                    
+                    return (
+                      <div key={goal.id} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                              <span className={`text-sm px-2 py-1 rounded ${
+                                goal.priority === 'Alta' ? 'bg-red-100 text-red-700' :
+                                goal.priority === 'Média' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {goal.priority}
+                              </span>
+                              {goal.name}
+                              {isCompleted && <span className="text-green-600">✅</span>}
+                            </h4>
+                            <p className="text-sm text-gray-500">{goal.category}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900">
+                              {formatCurrency(goal.current_amount)} / {formatCurrency(goal.target_amount)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Faltam: {formatCurrency(Math.max(0, goal.target_amount - goal.current_amount))}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Enhanced Progress Bar */}
+                        <div className="relative">
+                          <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 relative ${
+                                isCompleted 
+                                  ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                                  : progress > 75 
+                                    ? 'bg-gradient-to-r from-blue-400 to-blue-600'
+                                    : progress > 50
+                                      ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                              } ${progress > 0 ? 'animate-pulse' : ''}`}
+                              style={{ 
+                                width: `${Math.min(progress, 100)}%`,
+                                boxShadow: progress > 0 ? 'inset 0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                              }}
+                            >
+                              {progress > 0 && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-bold text-white drop-shadow-lg">
+                              {progress.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Goal Timeline */}
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>
+                            {goal.auto_contribution && `+${formatCurrency(goal.auto_contribution)}/mês`}
+                          </span>
+                          <span>
+                            Meta: {formatDate(goal.target_date)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {goals.length > 4 && (
+                    <button
+                      onClick={() => setActiveView('goals')}
+                      className="w-full py-2 text-center text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      Ver todas as {goals.length} metas →
+                    </button>
+                  )}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className={`h-3 rounded-full transition-all duration-300 ${
-                      (summary?.monthly_expenses || 0) > 3000 
-                        ? 'bg-gradient-to-r from-red-400 to-red-600' 
-                        : 'bg-gradient-to-r from-yellow-400 to-orange-500'
-                    }`}
-                    style={{ 
-                      width: `${Math.min(((summary?.monthly_expenses || 0) / 3000) * 100, 100)}%` 
+              ) : (
+                <div className="text-center py-8">
+                  <Target className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <h4 className="font-medium text-gray-700 mb-2">Nenhuma meta definida</h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Crie suas metas financeiras para acompanhar seu progresso
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveView('goals');
+                      setShowGoalModal(true);
                     }}
-                  ></div>
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    + Criar Meta
+                  </button>
                 </div>
-                <p className={`text-xs mt-1 ${
-                  (summary?.monthly_expenses || 0) > 3000 ? 'text-red-600' : 'text-gray-500'
-                }`}>
-                  {(((summary?.monthly_expenses || 0) / 3000) * 100).toFixed(1)}% do limite utilizado
-                  {(summary?.monthly_expenses || 0) > 3000 && ' - LIMITE EXCEDIDO!'}
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </div>
