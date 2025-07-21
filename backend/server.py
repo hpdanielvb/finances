@@ -289,6 +289,32 @@ class ConsortiumContemplation(BaseModel):
     contemplation_date: datetime
     notes: Optional[str] = None
 
+# ============================================================================
+# 💳 CREDIT CARD INVOICE MODELS
+# ============================================================================
+
+class CreditCardInvoice(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    account_id: str  # Credit card account
+    invoice_month: str  # YYYY-MM format
+    due_date: datetime
+    closing_date: datetime
+    total_amount: float = 0
+    paid_amount: float = 0
+    status: str = "Pending"  # "Pending", "Paid", "Overdue"
+    transactions: List[str] = []  # List of transaction IDs included in this invoice
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    paid_at: Optional[datetime] = None
+
+class TransactionTag(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    color: str = "#6B7280"
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 class BudgetCreate(BaseModel):
     category_id: str
     budget_amount: float
