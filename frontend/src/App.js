@@ -585,6 +585,11 @@ const Dashboard = () => {
   const [consortiums, setConsortiums] = useState([]);
   const [selectedConsortium, setSelectedConsortium] = useState(null);
 
+  // 💳 Credit Card Invoice States
+  const [showCreditCardModal, setShowCreditCardModal] = useState(false);
+  const [creditCardInvoices, setCreditCardInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
