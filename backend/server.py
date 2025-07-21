@@ -857,26 +857,39 @@ async def update_account(account_id: str, account_data: AccountCreate, current_u
 
 @api_router.delete("/accounts/{account_id}")
 async def delete_account(account_id: str, current_user: User = Depends(get_current_user)):
-    # Check if account exists and belongs to user
-    account = await db.accounts.find_one({"id": account_id, "user_id": current_user.id})
-    if not account:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
-    
-    # Count transactions associated with this account
-    transaction_count = await db.transactions.count_documents({"account_id": account_id})
-    
-    # Delete all transactions associated with this account
-    if transaction_count > 0:
-        await db.transactions.delete_many({"account_id": account_id})
-    
-    # Delete account
-    result = await db.accounts.delete_one({"id": account_id, "user_id": current_user.id})
-    
-    return {
-        "message": "Conta excluída com sucesso",
-        "transactions_deleted": transaction_count,
-        "account_name": account["name"]
-    }
+    """Delete account and all associated transactions"""
+    try:
+        # Check if account exists and belongs to user
+        account = await db.accounts.find_one({"id": account_id, "user_id": current_user.id})
+        if not account:
+            raise HTTPException(status_code=404, detail="Conta não encontrada")
+        
+        account_name = account["name"]
+        
+        # Count and delete transactions associated with this account
+        transaction_count = await db.transactions.count_documents({"account_id": account_id})
+        
+        if transaction_count > 0:
+            await db.transactions.delete_many({"account_id": account_id})
+        
+        # Delete account
+        result = await db.accounts.delete_one({"id": account_id, "user_id": current_user.id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Erro ao excluir conta")
+        
+        return {
+            "message": "Conta excluída com sucesso",
+            "transactions_deleted": transaction_count,
+            "account_name": account_name,
+            "success": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Delete account error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 # Enhanced Transaction endpoints
 @api_router.post("/transactions", response_model=Transaction)
