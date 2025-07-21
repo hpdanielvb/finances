@@ -2190,7 +2190,13 @@ async def get_tags(current_user: User = Depends(get_current_user)):
     """Get user's transaction tags"""
     try:
         tags = await db.transaction_tags.find({"user_id": current_user.id}).to_list(100)
-        return {"tags": tags}
+        # Convert to serializable format
+        serialized_tags = []
+        for tag in tags:
+            if '_id' in tag:
+                del tag['_id']  # Remove MongoDB ObjectId
+            serialized_tags.append(tag)
+        return {"tags": serialized_tags}
     except Exception as e:
         print(f"Error getting tags: {e}")
         # Return empty list if collection doesn't exist yet
