@@ -572,6 +572,7 @@ const Dashboard = () => {
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [transactionType, setTransactionType] = useState('');
   const [editingItem, setEditingItem] = useState(null);
+  const [reportType, setReportType] = useState('overview'); // For enhanced reports
 
   // 🧠 IA States
   const [showAIChat, setShowAIChat] = useState(false);
