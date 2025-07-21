@@ -3102,7 +3102,7 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
                 value={formData.category_id}
                 onChange={(categoryId) => setFormData({...formData, category_id: categoryId})}
                 categories={categories}
-                type={transactionType}
+                type={type}
                 placeholder="Selecione uma categoria"
               />
               
