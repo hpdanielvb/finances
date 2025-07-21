@@ -2114,46 +2114,56 @@ async def get_credit_card_invoices(
 @api_router.patch("/credit-cards/invoices/{invoice_id}/pay")
 async def pay_credit_card_invoice(
     invoice_id: str,
-    payment_amount: float,
+    payment_data: dict,  # {"payment_amount": float}
     current_user: User = Depends(get_current_user)
 ):
     """Mark credit card invoice as paid"""
-    invoice = await db.credit_card_invoices.find_one({
-        "id": invoice_id,
-        "user_id": current_user.id
-    })
-    
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Fatura não encontrada")
-    
-    # Update invoice
-    update_data = {
-        "paid_amount": payment_amount,
-        "paid_at": datetime.utcnow(),
-        "status": "Paid" if payment_amount >= invoice['total_amount'] else "Partial"
-    }
-    
-    await db.credit_card_invoices.update_one(
-        {"id": invoice_id},
-        {"$set": update_data}
-    )
-    
-    # Create payment transaction
-    account = await db.accounts.find_one({"id": invoice["account_id"]})
-    if account:
-        payment_transaction = Transaction(
-            user_id=current_user.id,
-            description=f"Pagamento Fatura {account['name']} - {invoice['invoice_month']}",
-            value=payment_amount,
-            type="Despesa",
-            transaction_date=datetime.utcnow(),
-            account_id=invoice["account_id"],
-            status="Pago"
+    try:
+        payment_amount = payment_data.get('payment_amount', 0.0)
+        if payment_amount <= 0:
+            raise HTTPException(status_code=400, detail="Valor do pagamento deve ser maior que zero")
+        
+        invoice = await db.credit_card_invoices.find_one({
+            "id": invoice_id,
+            "user_id": current_user.id
+        })
+        
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Fatura não encontrada")
+        
+        # Update invoice
+        update_data = {
+            "paid_amount": payment_amount,
+            "paid_at": datetime.utcnow(),
+            "status": "Paid" if payment_amount >= invoice['total_amount'] else "Partial"
+        }
+        
+        await db.credit_card_invoices.update_one(
+            {"id": invoice_id},
+            {"$set": update_data}
         )
         
-        await db.transactions.insert_one(payment_transaction.dict())
+        # Create payment transaction
+        account = await db.accounts.find_one({"id": invoice["account_id"]})
+        if account:
+            payment_transaction = Transaction(
+                user_id=current_user.id,
+                description=f"Pagamento Fatura {account['name']} - {invoice['invoice_month']}",
+                value=payment_amount,
+                type="Despesa",
+                transaction_date=datetime.utcnow(),
+                account_id=invoice["account_id"],
+                status="Pago"
+            )
+            
+            await db.transactions.insert_one(payment_transaction.dict())
+        
+        return {"message": "Fatura paga com sucesso", "payment_amount": payment_amount}
     
-    return {"message": "Fatura paga com sucesso", "payment_amount": payment_amount}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar pagamento: {str(e)}")
 
 # ============================================================================
 # 🏷️ TRANSACTION TAGS MANAGEMENT
