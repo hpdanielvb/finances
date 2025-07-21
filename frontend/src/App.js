@@ -3871,7 +3871,7 @@ const ReportsModal = ({ summary, transactions, accounts, onClose }) => {
           url = `${process.env.REACT_APP_BACKEND_URL}/api/reports/income-by-category?${params}`;
           break;
         case 'detailed-cash-flow':
-          url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/detailed-cash-flow?${params}`;
+          url = `${process.env.REACT_APP_BACKEND_URL}/api/reports/detailed-cash-flow?${params}`;
           break;
         case 'by-tags':
           url = `${import.meta.env.REACT_APP_BACKEND_URL}/reports/by-tags?${params}`;
