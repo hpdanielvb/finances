@@ -2465,6 +2465,25 @@ const Dashboard = () => {
         />
       )}
 
+      {/* 👤 User Profile Modals */}
+      {showProfileModal && (
+        <ProfileModal
+          profileData={profileData}
+          onClose={() => setShowProfileModal(false)}
+          onUpdate={handleUpdateProfile}
+          onProfileDataChange={setProfileData}
+        />
+      )}
+
+      {showPasswordModal && (
+        <PasswordModal
+          passwordData={passwordData}
+          onClose={() => setShowPasswordModal(false)}
+          onChange={handleChangePassword}
+          onPasswordDataChange={setPasswordData}
+        />
+      )}
+
       <Toaster position="top-right" />
     </div>
   );
