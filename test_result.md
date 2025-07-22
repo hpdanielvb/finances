@@ -529,20 +529,17 @@ frontend:
         - agent: "main"
         - comment: "Enhanced CSS with premium animations, gradients, hover effects, Brazilian color scheme, responsive design, and accessibility features."
 
-  - task: "Toast Notifications and Error Handling"
+  - task: "HierarchicalCategorySelect Component Implementation"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
     stuck_count: 0
-    priority: "low"
-    needs_retesting: false
+    priority: "high"
+    needs_retesting: true
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "React Hot Toast integration with custom styling for success/error messages."
-        - working: true
-        - agent: "testing"
-        - comment: "✅ TESTED SUCCESSFULLY: Toast notifications working correctly. System shows appropriate success messages during login and other operations. Error handling implemented with proper user feedback."
+        - comment: "CRITICAL BUG FIX: Implemented missing HierarchicalCategorySelect component usage in TransactionModal. The component existed but was not being used - TransactionModal was using basic HTML select instead. Fixed by: (1) Replaced basic select with HierarchicalCategorySelect component in TransactionModal (2) Modified HierarchicalCategorySelect to work with flat category structure by adding buildHierarchicalCategories function (3) Updated component to transform parent_category_id relationships into nested subcategories arrays. This resolves the user-reported issue of category dropdown not displaying hierarchical structure correctly."
 
   - task: "Critical Balance Calculation Investigation"
     implemented: true
