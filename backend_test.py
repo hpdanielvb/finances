@@ -1257,7 +1257,12 @@ def test_fixed_quick_actions_backend_support():
     # Test credentials from review request
     user_login = {
         "email": "hpdanielvb@gmail.com",
-        "password": "123456"
+        "password": "TestPassword123"  # Try this first based on test_result.md
+    }
+    
+    user_login_alt = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"  # Alternative from review request
     }
     
     test_results = {
