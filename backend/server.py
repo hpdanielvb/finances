@@ -176,7 +176,7 @@ class GoalCreate(BaseModel):
     target_amount: float
     current_amount: float = 0
     target_date: datetime
-    category: str  # "Emergência", "Casa Própria", "Viagem", "Aposentadoria", "Outros"
+    category: str  # "Emergência", "Casa Própria", "Viagem", "Aposentadoria", "Lazer", "Outros"
     priority: str = "Média"  # "Alta", "Média", "Baixa"
     auto_contribution: Optional[float] = None  # Valor mensal automático
 
