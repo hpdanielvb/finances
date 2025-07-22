@@ -70,7 +70,7 @@ class PasswordReset(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
-    email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$')
+    email: str = Field(..., pattern=r'^[^@]+@[^@]+\.[^@]+$')
 
 class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., min_length=6)
