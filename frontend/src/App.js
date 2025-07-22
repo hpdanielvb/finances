@@ -2336,6 +2336,16 @@ const Dashboard = () => {
             onPay={payCreditCardInvoice}
           />
         )}
+
+        {/* 👤 USER PROFILE VIEW */}
+        {activeView === 'profile' && (
+          <ProfileView
+            user={user}
+            onRefresh={loadDashboard}
+            onEditProfile={openProfileModal}
+            onChangePassword={openPasswordModal}
+          />
+        )}
       </div>
 
       {/* Modals */}
