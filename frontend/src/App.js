@@ -4428,7 +4428,7 @@ const GoalModal = ({ goal, onClose, onCreate }) => {
     auto_contribution: goal?.auto_contribution || ''
   });
 
-  const goalCategories = ['Emergência', 'Casa Própria', 'Viagem', 'Aposentadoria', 'Outros'];
+  const goalCategories = ['Emergência', 'Casa Própria', 'Viagem', 'Aposentadoria', 'Lazer', 'Outros'];
   const priorities = ['Alta', 'Média', 'Baixa'];
 
   const handleSubmit = (e) => {
