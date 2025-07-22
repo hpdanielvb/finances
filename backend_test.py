@@ -6643,37 +6643,36 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - LAZER CATEGORY GOALS SYSTEM")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - FIXED QUICK ACTIONS FOCUS")
     print("="*80)
-    print("PHASE 2 IMPLEMENTATION: Testing newly added 'Lazer' category in Goals system")
+    print("Testing backend APIs that support the Fixed Quick Actions feature")
+    print("Focus: Login, Dashboard, Transaction Creation, Transfers, Reports")
+    print("="*80)
     
-    # Run the specific Lazer category test as requested in the review
+    # Run the Fixed Quick Actions backend support test
+    print("\n🎯 RUNNING FIXED QUICK ACTIONS BACKEND SUPPORT TEST...")
+    quick_actions_success = test_fixed_quick_actions_backend_support()
+    
+    # Summary
     print("\n" + "="*80)
-    print("🎯 MAIN TEST: LAZER CATEGORY IN GOALS SYSTEM")
-    print("="*80)
-    result = test_lazer_category_goals_system()
-    
-    # Final Summary
-    print("\n" + "="*80)
-    print("🎯 FINAL TEST SUMMARY")
+    print("📊 FIXED QUICK ACTIONS BACKEND TESTING SUMMARY")
     print("="*80)
     
-    if result:
-        print("✅ LAZER CATEGORY GOALS SYSTEM TEST - PASSED")
-        print("🎉 PHASE 2 FEATURE SUCCESSFULLY IMPLEMENTED!")
-        print("   'Lazer' category is now available in Goals system")
-        print("   All required functionality working correctly:")
-        print("   - User authentication ✅")
-        print("   - Goal creation with Lazer category ✅") 
-        print("   - Goal categories validation ✅")
-        print("   - Goal listing and retrieval ✅")
-        print("   - Goal statistics with Lazer category ✅")
-        print("   - All goal operations (CRUD) working ✅")
+    if quick_actions_success:
+        print("🎉 FIXED QUICK ACTIONS BACKEND TESTING COMPLETED SUCCESSFULLY!")
+        print("✅ All backend APIs supporting the Fixed Quick Actions feature are working correctly")
+        print("✅ Ready for frontend Fixed Quick Actions integration")
+        print("\n🚀 BACKEND APIS VERIFIED:")
+        print("   - User authentication (hpdanielvb@gmail.com / 123456)")
+        print("   - Dashboard loading with data")
+        print("   - Income modal API (POST /api/transactions)")
+        print("   - Expense modal API (POST /api/transactions)")
+        print("   - Transfer modal API (POST /api/transfers)")
+        print("   - Reports modal API (GET /api/reports)")
+        print("   - Data integrity and API stability")
     else:
-        print("❌ LAZER CATEGORY GOALS SYSTEM TEST - FAILED")
-        print("⚠️  Issues detected with Lazer category implementation")
-        print("   Check the detailed test output above for specific problems")
+        print("⚠️ FIXED QUICK ACTIONS BACKEND TESTING ISSUES DETECTED!")
+        print("❌ Some backend APIs supporting the Fixed Quick Actions feature have issues")
+        print("❌ Review the detailed test results above for specific problems")
     
     print("\n" + "="*80)
-    print("📋 TEST COMPLETED - Review the results above")
-    print("="*80)
