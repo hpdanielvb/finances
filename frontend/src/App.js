@@ -6397,6 +6397,184 @@ const ProfileView = ({ user, onRefresh, onEditProfile, onChangePassword }) => {
   );
 };
 
+// Profile Modal Component
+const ProfileModal = ({ profileData, onClose, onUpdate, onProfileDataChange }) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onUpdate(e);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900">✏️ Editar Perfil</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nome Completo *
+            </label>
+            <input
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={profileData.name}
+              onChange={(e) => onProfileDataChange({...profileData, name: e.target.value})}
+              placeholder="Digite seu nome completo"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email *
+            </label>
+            <input
+              type="email"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              value={profileData.email}
+              onChange={(e) => onProfileDataChange({...profileData, email: e.target.value})}
+              placeholder="seu@email.com"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Se alterar o email, será necessário verificá-lo novamente
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Password Modal Component
+const PasswordModal = ({ passwordData, onClose, onChange, onPasswordDataChange }) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onChange(e);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900">🔒 Alterar Senha</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Senha Atual *
+            </label>
+            <input
+              type="password"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              value={passwordData.current_password}
+              onChange={(e) => onPasswordDataChange({...passwordData, current_password: e.target.value})}
+              placeholder="Digite sua senha atual"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nova Senha *
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              value={passwordData.new_password}
+              onChange={(e) => onPasswordDataChange({...passwordData, new_password: e.target.value})}
+              placeholder="Digite sua nova senha"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              A senha deve ter pelo menos 6 caracteres
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Confirmar Nova Senha *
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              value={passwordData.confirm_password}
+              onChange={(e) => onPasswordDataChange({...passwordData, confirm_password: e.target.value})}
+              placeholder="Confirme sua nova senha"
+            />
+            {passwordData.new_password && passwordData.confirm_password && 
+             passwordData.new_password !== passwordData.confirm_password && (
+              <p className="text-xs text-red-500 mt-1">
+                As senhas não coincidem
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              disabled={
+                !passwordData.current_password || 
+                !passwordData.new_password || 
+                !passwordData.confirm_password ||
+                passwordData.new_password !== passwordData.confirm_password
+              }
+            >
+              Alterar Senha
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
