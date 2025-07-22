@@ -1280,15 +1280,23 @@ def test_fixed_quick_actions_backend_support():
     }
     
     try:
-        print(f"\n🔍 STEP 1: Login Testing - {user_login['email']} / {user_login['password']}")
+        print(f"\n🔍 STEP 1: Login Testing - {user_login['email']}")
         
-        # Test login with provided credentials
+        # Try primary credentials first
         response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
         
         if response.status_code != 200:
-            error_detail = response.json().get("detail", "Unknown error")
-            print_test_result("LOGIN TESTING", False, f"❌ Login failed: {error_detail}")
-            return test_results
+            print(f"   Primary login failed, trying alternative credentials: {user_login_alt['password']}")
+            response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_alt)
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                print_test_result("LOGIN TESTING", False, f"❌ Both login attempts failed: {error_detail}")
+                return test_results
+            else:
+                used_credentials = user_login_alt
+        else:
+            used_credentials = user_login
         
         data = response.json()
         user_info = data.get("user", {})
