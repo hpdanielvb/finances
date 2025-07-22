@@ -4600,18 +4600,10 @@ const HierarchicalCategorySelect = ({ value, onChange, categories, type, placeho
   
   useEffect(() => {
     if (value && categories.length > 0) {
-      // Find selected category by ID
-      for (const mainCat of categories) {
-        if (mainCat.id === value) {
-          setSelectedCategory(mainCat);
-          return;
-        }
-        for (const subCat of mainCat.subcategories || []) {
-          if (subCat.id === value) {
-            setSelectedCategory(subCat);
-            return;
-          }
-        }
+      // Find selected category by ID in flat structure
+      const selected = categories.find(cat => cat.id === value);
+      if (selected) {
+        setSelectedCategory(selected);
       }
     }
   }, [value, categories]);
@@ -4622,8 +4614,18 @@ const HierarchicalCategorySelect = ({ value, onChange, categories, type, placeho
     setIsOpen(false);
   };
 
-  // Filter categories by type
-  const filteredCategories = categories.filter(cat => cat.type === type);
+  // Transform flat structure to hierarchical structure
+  const buildHierarchicalCategories = (flatCategories) => {
+    const typeFiltered = flatCategories.filter(cat => cat.type === type);
+    const parentCategories = typeFiltered.filter(cat => !cat.parent_category_id);
+    
+    return parentCategories.map(parent => ({
+      ...parent,
+      subcategories: typeFiltered.filter(cat => cat.parent_category_id === parent.id)
+    }));
+  };
+
+  const hierarchicalCategories = buildHierarchicalCategories(categories);
 
   return (
     <div className="relative">
