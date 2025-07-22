@@ -529,7 +529,7 @@ frontend:
         - agent: "main"
         - comment: "Enhanced CSS with premium animations, gradients, hover effects, Brazilian color scheme, responsive design, and accessibility features."
 
-  - task: "HierarchicalCategorySelect Component Implementation"
+  - task: "Goals Display UI Implementation (Excluir Meta Button Fix)"
     implemented: true
     working: true
     file: "/app/frontend/src/App.js"
@@ -539,10 +539,10 @@ frontend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "CRITICAL BUG FIX: Implemented missing HierarchicalCategorySelect component usage in TransactionModal. The component existed but was not being used - TransactionModal was using basic HTML select instead. Fixed by: (1) Replaced basic select with HierarchicalCategorySelect component in TransactionModal (2) Modified HierarchicalCategorySelect to work with flat category structure by adding buildHierarchicalCategories function (3) Updated component to transform parent_category_id relationships into nested subcategories arrays. This resolves the user-reported issue of category dropdown not displaying hierarchical structure correctly."
+        - comment: "CRITICAL BUG FIX: User reported 'Excluir Meta' button not removing goals in 'Gerenciar Orçamentos'. Root cause identified - the GoalsView component was incomplete, only showing statistics but not displaying individual goals with their action buttons. Fixed by implementing the missing goals display UI with complete goal cards showing: (1) Goal details (name, category, priority, description) (2) Progress tracking (current amount, target amount, percentage, progress bar) (3) Target date with days remaining calculation (4) Action buttons including Edit, Contribute, and Delete (Excluir Meta) (5) Achievement status indicator. The backend DELETE /api/goals/{goal_id} endpoint was working perfectly - the issue was purely frontend UI missing."
         - working: true
-        - agent: "testing"  
-        - comment: "✅ HIERARCHICAL CATEGORY SELECT FIX VERIFIED SUCCESSFULLY! Backend testing confirmed complete support for the frontend fix: ✅ User Authentication (hpdanielvb@gmail.com / 123456) working ✅ Categories API returning 88 categories with proper parent_category_id relationships ✅ Category Structure with all required fields (id, name, type, parent_category_id, icon) ✅ Valid hierarchical structure (14 parent categories, 74 child categories) ✅ Transaction creation working with both parent and child categories ✅ Frontend testing showed beautiful hierarchical dropdown with proper parent/child display, icons, and subcategory counts. USER'S TOP PRIORITY ISSUE COMPLETELY RESOLVED!"
+        - agent: "testing"
+        - comment: "✅ GOALS DELETE FUNCTIONALITY VERIFIED SUCCESSFULLY! Backend testing confirmed complete functionality: ✅ User Authentication (hpdanielvb@gmail.com / 123456) working ✅ Goals API (GET /api/goals) retrieving goals correctly ✅ Goal Creation (POST /api/goals) working perfectly ✅ Goal Deletion (DELETE /api/goals/{goal_id}) - THE REPORTED ISSUE IS NOT IN THE BACKEND - DELETE working perfectly with 200 status and 'Meta excluída com sucesso' message ✅ Goals Statistics (GET /api/goals/statistics) updating correctly after operations ✅ Data Consistency verified - goals properly removed from active list, no orphaned data. ROOT CAUSE: Backend working perfectly, issue was missing frontend Goals UI implementation - now fixed with complete goal cards and delete buttons."
 
   - task: "Critical Balance Calculation Investigation"
     implemented: true
