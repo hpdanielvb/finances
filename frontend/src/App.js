@@ -2908,7 +2908,98 @@ const GoalsView = ({ goals, goalsStats, onRefresh, onCreateNew, onEdit, onDelete
               </button>
             </div>
           ) : (
-            <p className="text-gray-500">Metas carregadas: {goals.length}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {goals.map((goal) => {
+                const progress = getGoalProgress(goal);
+                const daysRemaining = getDaysRemaining(goal.target_date);
+                
+                return (
+                  <div key={goal.id} className="border rounded-xl p-6 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{goal.name}</h3>
+                        <p className="text-sm text-gray-500">{goal.category}</p>
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-2 ${getPriorityColor(goal.priority)}`}>
+                          {goal.priority}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => onContribute(goal)}
+                          className="text-green-600 hover:text-green-800"
+                          title="Contribuir para meta"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          onClick={() => onEdit(goal)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Editar meta"
+                        >
+                          <SquarePen size={16} />
+                        </button>
+                        <button
+                          onClick={() => onDelete(goal.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Excluir meta"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {goal.description && (
+                      <p className="text-sm text-gray-600 mb-4">{goal.description}</p>
+                    )}
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Meta:</span>
+                        <span className="font-medium">{formatCurrency(goal.target_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Poupado:</span>
+                        <span className="font-medium text-green-600">{formatCurrency(goal.current_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Restante:</span>
+                        <span className="font-medium">{formatCurrency(goal.target_amount - goal.current_amount)}</span>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-600">Progresso</span>
+                          <span className="text-sm font-medium">{progress.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                            style={{width: `${Math.min(progress, 100)}%`}}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between text-sm pt-2 border-t">
+                        <span className="text-gray-600">Data limite:</span>
+                        <div className="text-right">
+                          <span className="font-medium">{formatDate(goal.target_date)}</span>
+                          <div className={`text-xs ${daysRemaining > 30 ? 'text-green-600' : daysRemaining > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {daysRemaining > 0 ? `${daysRemaining} dias restantes` : 'Meta vencida'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {goal.is_achieved && (
+                        <div className="flex items-center justify-center mt-4 p-3 bg-green-100 rounded-lg">
+                          <Target className="w-5 h-5 text-green-600 mr-2" />
+                          <span className="text-green-800 font-medium">Meta atingida!</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
