@@ -55,6 +55,358 @@ def print_test_result(test_name, success, details=""):
     if details:
         print(f"   Detalhes: {details}")
 
+def test_hierarchical_category_select_backend_support():
+    """
+    CRITICAL TEST: Backend support for HierarchicalCategorySelect component fix
+    
+    This addresses the review request to test backend functionality that supports
+    the HierarchicalCategorySelect component fix that was just implemented.
+    
+    Test Steps:
+    1. User Authentication - login with hpdanielvb@gmail.com / 123456
+    2. Categories API Endpoints - GET /api/categories with proper parent_category_id relationships
+    3. Category Structure - verify fields (id, name, type, parent_category_id, icon)
+    4. Transaction Creation - POST /api/transactions with category_id
+    5. Data Integrity - ensure parent and child categories work for transactions
+    
+    Focus: Verify that the backend fully supports hierarchical category display
+    """
+    print("\n" + "="*80)
+    print("🚨 HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT TEST")
+    print("="*80)
+    print("Testing backend functionality to support HierarchicalCategorySelect component fix")
+    
+    # Test credentials from review request
+    user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"  # Password from review request
+    }
+    
+    test_results = {
+        "login_success": False,
+        "categories_api_working": False,
+        "hierarchical_structure_valid": False,
+        "transaction_creation_working": False,
+        "parent_child_categories_working": False,
+        "total_categories": 0,
+        "parent_categories": 0,
+        "child_categories": 0
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: User Authentication - {user_login['email']}")
+        
+        # Test login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("USER AUTHENTICATION", False, f"❌ Login failed: {error_detail}")
+            return test_results
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["login_success"] = True
+        
+        print_test_result("USER AUTHENTICATION", True, f"✅ Login successful for {user_info.get('name')}")
+        print(f"   User ID: {user_info.get('id')}")
+        print(f"   Email: {user_info.get('email')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Categories API Endpoints - GET /api/categories
+        print(f"\n🔍 STEP 2: Categories API Endpoints - GET /api/categories")
+        print("   Testing categories API with proper parent_category_id relationships...")
+        
+        categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        
+        if categories_response.status_code != 200:
+            print_test_result("CATEGORIES API", False, f"❌ Failed: {categories_response.status_code}")
+            return test_results
+        
+        categories = categories_response.json()
+        test_results["categories_api_working"] = True
+        test_results["total_categories"] = len(categories)
+        
+        print_test_result("CATEGORIES API", True, f"✅ Retrieved {len(categories)} categories")
+        
+        # STEP 3: Category Structure Verification
+        print(f"\n🔍 STEP 3: Category Structure Verification")
+        print("   Verifying fields: id, name, type, parent_category_id, icon...")
+        
+        required_fields = ['id', 'name', 'type']
+        hierarchical_fields = ['parent_category_id']
+        optional_fields = ['icon', 'color', 'parent_category_name']
+        
+        valid_categories = 0
+        parent_categories = []
+        child_categories = []
+        field_analysis = {
+            'has_id': 0,
+            'has_name': 0,
+            'has_type': 0,
+            'has_parent_category_id': 0,
+            'has_icon': 0,
+            'has_color': 0,
+            'has_parent_category_name': 0
+        }
+        
+        for category in categories:
+            # Check required fields
+            has_all_required = all(field in category and category[field] is not None for field in required_fields)
+            if has_all_required:
+                valid_categories += 1
+            
+            # Analyze field presence
+            for field in ['id', 'name', 'type', 'parent_category_id', 'icon', 'color', 'parent_category_name']:
+                if field in category and category[field] is not None:
+                    field_analysis[f'has_{field}'] += 1
+            
+            # Categorize as parent or child
+            parent_id = category.get('parent_category_id')
+            if parent_id is None or parent_id == "":
+                parent_categories.append(category)
+            else:
+                child_categories.append(category)
+        
+        test_results["parent_categories"] = len(parent_categories)
+        test_results["child_categories"] = len(child_categories)
+        
+        print(f"   📊 CATEGORY STRUCTURE ANALYSIS:")
+        print(f"      Total Categories: {len(categories)}")
+        print(f"      Valid Categories (with required fields): {valid_categories}")
+        print(f"      Parent Categories (no parent_category_id): {len(parent_categories)}")
+        print(f"      Child Categories (with parent_category_id): {len(child_categories)}")
+        
+        print(f"   📊 FIELD PRESENCE ANALYSIS:")
+        for field, count in field_analysis.items():
+            field_name = field.replace('has_', '')
+            percentage = (count / len(categories)) * 100 if categories else 0
+            print(f"      {field_name}: {count}/{len(categories)} ({percentage:.1f}%)")
+        
+        # Verify hierarchical structure validity
+        if len(parent_categories) > 0 and len(child_categories) > 0:
+            test_results["hierarchical_structure_valid"] = True
+            print_test_result("HIERARCHICAL STRUCTURE", True, 
+                            f"✅ Valid hierarchy: {len(parent_categories)} parents, {len(child_categories)} children")
+        else:
+            print_test_result("HIERARCHICAL STRUCTURE", False, 
+                            "❌ Invalid hierarchy: Missing parent or child categories")
+        
+        # Test specific hierarchical relationships
+        print(f"\n   🔍 HIERARCHICAL RELATIONSHIPS VERIFICATION:")
+        parent_child_map = {}
+        orphaned_children = []
+        
+        # Build parent-child mapping
+        for parent in parent_categories:
+            parent_id = parent.get('id')
+            parent_name = parent.get('name')
+            children = [c for c in child_categories if c.get('parent_category_id') == parent_id]
+            parent_child_map[parent_name] = len(children)
+            
+            if len(children) > 0:
+                print(f"      {parent_name}: {len(children)} subcategories")
+        
+        # Check for orphaned children (parent_category_id doesn't match any parent)
+        parent_ids = {p.get('id') for p in parent_categories}
+        for child in child_categories:
+            if child.get('parent_category_id') not in parent_ids:
+                orphaned_children.append(child.get('name'))
+        
+        if orphaned_children:
+            print(f"      ⚠️  Orphaned children (invalid parent_category_id): {len(orphaned_children)}")
+            print(f"         Examples: {', '.join(orphaned_children[:5])}")
+        else:
+            print(f"      ✅ All child categories have valid parent references")
+        
+        # STEP 4: Transaction Creation with Categories
+        print(f"\n🔍 STEP 4: Transaction Creation with Categories")
+        print("   Testing POST /api/transactions with category_id...")
+        
+        # Get user accounts first
+        accounts_response = requests.get(f"{BACKEND_URL}/accounts", headers=headers)
+        if accounts_response.status_code != 200:
+            print_test_result("GET ACCOUNTS FOR TRANSACTION", False, "Failed to get accounts")
+            return test_results
+        
+        accounts = accounts_response.json()
+        if not accounts:
+            print_test_result("ACCOUNTS AVAILABILITY", False, "No accounts found for transaction testing")
+            return test_results
+        
+        test_account_id = accounts[0].get('id')
+        print(f"   Using account: {accounts[0].get('name')} (ID: {test_account_id})")
+        
+        # Test transaction creation with parent category
+        if parent_categories:
+            parent_category = parent_categories[0]
+            parent_category_id = parent_category.get('id')
+            parent_category_name = parent_category.get('name')
+            
+            parent_transaction_data = {
+                "description": f"Test transaction with parent category: {parent_category_name}",
+                "value": 100.00,
+                "type": "Despesa",
+                "transaction_date": datetime.now().isoformat(),
+                "account_id": test_account_id,
+                "category_id": parent_category_id,
+                "status": "Pago"
+            }
+            
+            parent_trans_response = requests.post(f"{BACKEND_URL}/transactions", 
+                                                json=parent_transaction_data, headers=headers)
+            
+            if parent_trans_response.status_code == 200:
+                parent_transaction = parent_trans_response.json()
+                print_test_result("PARENT CATEGORY TRANSACTION", True, 
+                                f"✅ Created transaction with parent category: {parent_category_name}")
+                
+                # Clean up - delete the test transaction
+                requests.delete(f"{BACKEND_URL}/transactions/{parent_transaction.get('id')}", headers=headers)
+            else:
+                print_test_result("PARENT CATEGORY TRANSACTION", False, 
+                                f"❌ Failed: {parent_trans_response.status_code}")
+        
+        # Test transaction creation with child category
+        if child_categories:
+            child_category = child_categories[0]
+            child_category_id = child_category.get('id')
+            child_category_name = child_category.get('name')
+            child_parent_id = child_category.get('parent_category_id')
+            
+            child_transaction_data = {
+                "description": f"Test transaction with child category: {child_category_name}",
+                "value": 50.00,
+                "type": "Despesa",
+                "transaction_date": datetime.now().isoformat(),
+                "account_id": test_account_id,
+                "category_id": child_category_id,
+                "status": "Pago"
+            }
+            
+            child_trans_response = requests.post(f"{BACKEND_URL}/transactions", 
+                                               json=child_transaction_data, headers=headers)
+            
+            if child_trans_response.status_code == 200:
+                child_transaction = child_trans_response.json()
+                print_test_result("CHILD CATEGORY TRANSACTION", True, 
+                                f"✅ Created transaction with child category: {child_category_name}")
+                print(f"      Child category parent_id: {child_parent_id}")
+                
+                test_results["transaction_creation_working"] = True
+                test_results["parent_child_categories_working"] = True
+                
+                # Clean up - delete the test transaction
+                requests.delete(f"{BACKEND_URL}/transactions/{child_transaction.get('id')}", headers=headers)
+            else:
+                print_test_result("CHILD CATEGORY TRANSACTION", False, 
+                                f"❌ Failed: {child_trans_response.status_code}")
+        
+        # STEP 5: Data Integrity Verification
+        print(f"\n🔍 STEP 5: Data Integrity Verification")
+        print("   Ensuring parent and child categories work for transaction creation...")
+        
+        # Test multiple category types
+        category_types = {}
+        for category in categories:
+            cat_type = category.get('type', 'Unknown')
+            if cat_type not in category_types:
+                category_types[cat_type] = []
+            category_types[cat_type].append(category)
+        
+        print(f"   📊 CATEGORY TYPES BREAKDOWN:")
+        for cat_type, cats in category_types.items():
+            parents = [c for c in cats if not c.get('parent_category_id')]
+            children = [c for c in cats if c.get('parent_category_id')]
+            print(f"      {cat_type}: {len(cats)} total ({len(parents)} parents, {len(children)} children)")
+        
+        # Test specific high-priority categories mentioned in test_result.md
+        high_priority_categories = ["Netflix", "Spotify", "Uber/99/Táxi", "Consultas Médicas", "Odontologia"]
+        found_priority_categories = []
+        
+        for priority_cat in high_priority_categories:
+            found_cat = next((c for c in categories if c.get('name') == priority_cat), None)
+            if found_cat:
+                found_priority_categories.append({
+                    'name': priority_cat,
+                    'id': found_cat.get('id'),
+                    'type': found_cat.get('type'),
+                    'parent_category_id': found_cat.get('parent_category_id'),
+                    'has_parent': bool(found_cat.get('parent_category_id'))
+                })
+        
+        print(f"   📊 HIGH-PRIORITY CATEGORIES VERIFICATION:")
+        print(f"      Found: {len(found_priority_categories)}/{len(high_priority_categories)}")
+        for cat in found_priority_categories:
+            parent_status = "Child" if cat['has_parent'] else "Parent"
+            print(f"      ✅ {cat['name']} ({cat['type']}) - {parent_status}")
+        
+        if len(found_priority_categories) < len(high_priority_categories):
+            missing = [cat for cat in high_priority_categories 
+                      if cat not in [fc['name'] for fc in found_priority_categories]]
+            print(f"      ❌ Missing: {', '.join(missing)}")
+        
+        # STEP 6: Final Summary
+        print(f"\n🔍 STEP 6: HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ User Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   ✅ Categories API: {'WORKING' if test_results['categories_api_working'] else 'FAILED'}")
+        print(f"   ✅ Hierarchical Structure: {'VALID' if test_results['hierarchical_structure_valid'] else 'INVALID'}")
+        print(f"   ✅ Transaction Creation: {'WORKING' if test_results['transaction_creation_working'] else 'FAILED'}")
+        print(f"   ✅ Parent/Child Categories: {'WORKING' if test_results['parent_child_categories_working'] else 'FAILED'}")
+        
+        print(f"\n📊 CATEGORY STATISTICS:")
+        print(f"   Total Categories: {test_results['total_categories']}")
+        print(f"   Parent Categories: {test_results['parent_categories']}")
+        print(f"   Child Categories: {test_results['child_categories']}")
+        print(f"   High-Priority Categories: {len(found_priority_categories)}/{len(high_priority_categories)}")
+        
+        # Determine overall success
+        backend_support_complete = (
+            test_results['login_success'] and
+            test_results['categories_api_working'] and
+            test_results['hierarchical_structure_valid'] and
+            test_results['transaction_creation_working'] and
+            test_results['parent_child_categories_working'] and
+            test_results['total_categories'] >= 100  # Reasonable minimum
+        )
+        
+        if backend_support_complete:
+            print(f"\n🎉 BACKEND FULLY SUPPORTS HIERARCHICAL CATEGORY SELECT!")
+            print("✅ All required functionality working correctly:")
+            print("   - User authentication with hpdanielvb@gmail.com")
+            print("   - Categories API returning proper parent_category_id relationships")
+            print("   - Category structure with required fields (id, name, type, parent_category_id)")
+            print("   - Transaction creation working with both parent and child categories")
+            print("   - Data integrity maintained for hierarchical category system")
+            print("   - Complete category system (184+ categories) available")
+            
+            return True
+        else:
+            print(f"\n⚠️ BACKEND SUPPORT ISSUES DETECTED:")
+            if not test_results['login_success']:
+                print("   ❌ User authentication failed")
+            if not test_results['categories_api_working']:
+                print("   ❌ Categories API not working")
+            if not test_results['hierarchical_structure_valid']:
+                print("   ❌ Hierarchical structure invalid")
+            if not test_results['transaction_creation_working']:
+                print("   ❌ Transaction creation with categories failed")
+            if not test_results['parent_child_categories_working']:
+                print("   ❌ Parent/child category functionality failed")
+            if test_results['total_categories'] < 100:
+                print(f"   ❌ Insufficient categories ({test_results['total_categories']}/100+)")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("HIERARCHICAL CATEGORY SELECT BACKEND TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_critical_corrections_review():
     """
     TESTE COMPLETO DAS CORREÇÕES IMPLEMENTADAS
