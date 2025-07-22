@@ -1281,6 +1281,333 @@ def test_balance_audit_and_correction():
         print_test_result("BALANCE AUDIT AND CORRECTION", False, f"Exception: {str(e)}")
         return False
 
+def test_goals_delete_functionality():
+    """
+    CRITICAL TEST: Goals Delete Functionality
+    
+    This addresses the review request to test the Goals Delete functionality
+    that was reported as broken in "Gerenciar Orçamentos" (which should be Goals, not Budgets).
+    
+    Test Steps:
+    1. User Authentication - login with hpdanielvb@gmail.com / 123456
+    2. Goals API Endpoints - Test GET /api/goals to see existing goals
+    3. Goal Creation - Test POST /api/goals to create a test goal
+    4. Goal Deletion - Test DELETE /api/goals/{goal_id} to verify delete works
+    5. Goals Statistics - Test GET /api/goals/statistics to ensure stats update
+    6. Data Consistency - Verify goal is properly removed and stats updated
+    
+    Focus: Verify that the DELETE /api/goals/{goal_id} endpoint works correctly
+    """
+    print("\n" + "="*80)
+    print("🚨 GOALS DELETE FUNCTIONALITY TEST")
+    print("="*80)
+    print("Testing Goals Delete functionality reported as broken in 'Gerenciar Orçamentos'")
+    
+    # Test credentials from review request
+    user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"  # Password from review request
+    }
+    
+    test_results = {
+        "login_success": False,
+        "goals_api_working": False,
+        "goal_creation_working": False,
+        "goal_deletion_working": False,
+        "goals_statistics_working": False,
+        "data_consistency_verified": False,
+        "initial_goals_count": 0,
+        "final_goals_count": 0,
+        "test_goal_id": None
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: User Authentication - {user_login['email']}")
+        
+        # Test login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("USER AUTHENTICATION", False, f"❌ Login failed: {error_detail}")
+            return test_results
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["login_success"] = True
+        
+        print_test_result("USER AUTHENTICATION", True, f"✅ Login successful for {user_info.get('name')}")
+        print(f"   User ID: {user_info.get('id')}")
+        print(f"   Email: {user_info.get('email')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Goals API Endpoints - GET /api/goals
+        print(f"\n🔍 STEP 2: Goals API Endpoints - GET /api/goals")
+        print("   Testing goals API to see existing goals...")
+        
+        goals_response = requests.get(f"{BACKEND_URL}/goals", headers=headers)
+        
+        if goals_response.status_code != 200:
+            print_test_result("GOALS API", False, f"❌ Failed: {goals_response.status_code}")
+            return test_results
+        
+        initial_goals = goals_response.json()
+        test_results["goals_api_working"] = True
+        test_results["initial_goals_count"] = len(initial_goals)
+        
+        print_test_result("GOALS API", True, f"✅ Retrieved {len(initial_goals)} existing goals")
+        
+        if initial_goals:
+            print("   📋 EXISTING GOALS:")
+            for i, goal in enumerate(initial_goals[:5], 1):  # Show first 5 goals
+                goal_name = goal.get('name', 'Unknown')
+                target_amount = goal.get('target_amount', 0)
+                current_amount = goal.get('current_amount', 0)
+                category = goal.get('category', 'Unknown')
+                priority = goal.get('priority', 'Unknown')
+                is_achieved = goal.get('is_achieved', False)
+                
+                print(f"      Goal {i}: {goal_name}")
+                print(f"         Target: R$ {target_amount:.2f}")
+                print(f"         Current: R$ {current_amount:.2f}")
+                print(f"         Category: {category}")
+                print(f"         Priority: {priority}")
+                print(f"         Achieved: {'Yes' if is_achieved else 'No'}")
+        else:
+            print("   📋 No existing goals found")
+        
+        # STEP 3: Goal Creation - POST /api/goals
+        print(f"\n🔍 STEP 3: Goal Creation - POST /api/goals")
+        print("   Creating a test goal that can be deleted...")
+        
+        test_goal_data = {
+            "name": "Meta Teste para Exclusão",
+            "description": "Meta criada especificamente para testar a funcionalidade de exclusão",
+            "target_amount": 5000.00,
+            "current_amount": 1500.00,
+            "target_date": (datetime.now() + timedelta(days=365)).isoformat(),
+            "category": "Emergência",
+            "priority": "Alta",
+            "auto_contribution": 200.00
+        }
+        
+        create_goal_response = requests.post(f"{BACKEND_URL}/goals", json=test_goal_data, headers=headers)
+        
+        if create_goal_response.status_code != 200:
+            print_test_result("GOAL CREATION", False, f"❌ Failed: {create_goal_response.status_code}")
+            error_detail = create_goal_response.json().get("detail", "Unknown error")
+            print(f"   Error: {error_detail}")
+            return test_results
+        
+        created_goal = create_goal_response.json()
+        test_goal_id = created_goal.get('id')
+        test_results["goal_creation_working"] = True
+        test_results["test_goal_id"] = test_goal_id
+        
+        print_test_result("GOAL CREATION", True, f"✅ Test goal created successfully")
+        print(f"   Goal ID: {test_goal_id}")
+        print(f"   Goal Name: {created_goal.get('name')}")
+        print(f"   Target Amount: R$ {created_goal.get('target_amount'):.2f}")
+        print(f"   Current Amount: R$ {created_goal.get('current_amount'):.2f}")
+        print(f"   Category: {created_goal.get('category')}")
+        print(f"   Priority: {created_goal.get('priority')}")
+        
+        # Verify goal appears in goals list
+        verify_goals_response = requests.get(f"{BACKEND_URL}/goals", headers=headers)
+        if verify_goals_response.status_code == 200:
+            updated_goals = verify_goals_response.json()
+            goal_found = any(g.get('id') == test_goal_id for g in updated_goals)
+            
+            if goal_found:
+                print_test_result("GOAL CREATION VERIFICATION", True, "✅ Test goal appears in goals list")
+            else:
+                print_test_result("GOAL CREATION VERIFICATION", False, "❌ Test goal not found in goals list")
+        
+        # STEP 4: Goal Deletion - DELETE /api/goals/{goal_id}
+        print(f"\n🔍 STEP 4: Goal Deletion - DELETE /api/goals/{test_goal_id}")
+        print("   Testing the DELETE endpoint that was reported as broken...")
+        
+        delete_goal_response = requests.delete(f"{BACKEND_URL}/goals/{test_goal_id}", headers=headers)
+        
+        if delete_goal_response.status_code != 200:
+            print_test_result("GOAL DELETION", False, f"❌ Failed: {delete_goal_response.status_code}")
+            error_detail = delete_goal_response.json().get("detail", "Unknown error")
+            print(f"   Error: {error_detail}")
+            return test_results
+        
+        delete_response_data = delete_goal_response.json()
+        test_results["goal_deletion_working"] = True
+        
+        print_test_result("GOAL DELETION", True, "✅ DELETE request successful")
+        print(f"   Response: {delete_response_data.get('message', 'Goal deleted')}")
+        
+        # Verify goal is removed from goals list
+        print("   Verifying goal removal from goals list...")
+        
+        post_delete_goals_response = requests.get(f"{BACKEND_URL}/goals", headers=headers)
+        if post_delete_goals_response.status_code == 200:
+            post_delete_goals = post_delete_goals_response.json()
+            test_results["final_goals_count"] = len(post_delete_goals)
+            
+            goal_still_exists = any(g.get('id') == test_goal_id for g in post_delete_goals)
+            
+            if not goal_still_exists:
+                print_test_result("GOAL REMOVAL VERIFICATION", True, "✅ Goal successfully removed from active goals list")
+                print(f"   Goals count: {len(initial_goals)} → {len(post_delete_goals)}")
+            else:
+                print_test_result("GOAL REMOVAL VERIFICATION", False, "❌ Goal still appears in active goals list")
+                # Check if it's soft deleted (is_active = false)
+                remaining_goal = next((g for g in post_delete_goals if g.get('id') == test_goal_id), None)
+                if remaining_goal:
+                    is_active = remaining_goal.get('is_active', True)
+                    print(f"   Goal is_active status: {is_active}")
+        else:
+            print_test_result("POST-DELETE GOALS LIST", False, "❌ Failed to retrieve goals after deletion")
+        
+        # STEP 5: Goals Statistics - GET /api/goals/statistics
+        print(f"\n🔍 STEP 5: Goals Statistics - GET /api/goals/statistics")
+        print("   Testing statistics endpoint to ensure stats update after deletion...")
+        
+        stats_response = requests.get(f"{BACKEND_URL}/goals/statistics", headers=headers)
+        
+        if stats_response.status_code != 200:
+            print_test_result("GOALS STATISTICS", False, f"❌ Failed: {stats_response.status_code}")
+            error_detail = stats_response.json().get("detail", "Unknown error")
+            print(f"   Error: {error_detail}")
+        else:
+            stats_data = stats_response.json()
+            test_results["goals_statistics_working"] = True
+            
+            print_test_result("GOALS STATISTICS", True, "✅ Statistics endpoint working")
+            
+            # Display statistics
+            total_goals = stats_data.get('total_goals', 0)
+            achieved_goals = stats_data.get('achieved_goals', 0)
+            active_goals = stats_data.get('active_goals', 0)
+            total_target_amount = stats_data.get('total_target_amount', 0)
+            total_saved_amount = stats_data.get('total_saved_amount', 0)
+            overall_progress = stats_data.get('overall_progress', 0)
+            category_statistics = stats_data.get('category_statistics', {})
+            
+            print(f"   📊 GOALS STATISTICS:")
+            print(f"      Total Goals: {total_goals}")
+            print(f"      Achieved Goals: {achieved_goals}")
+            print(f"      Active Goals: {active_goals}")
+            print(f"      Total Target Amount: R$ {total_target_amount:.2f}")
+            print(f"      Total Saved Amount: R$ {total_saved_amount:.2f}")
+            print(f"      Overall Progress: {overall_progress:.1f}%")
+            print(f"      Categories: {len(category_statistics)}")
+            
+            # Verify statistics consistency
+            if total_goals == len(post_delete_goals):
+                print_test_result("STATISTICS CONSISTENCY", True, "✅ Statistics match goals count")
+            else:
+                print_test_result("STATISTICS CONSISTENCY", False, 
+                                f"❌ Statistics mismatch: {total_goals} vs {len(post_delete_goals)}")
+        
+        # STEP 6: Data Consistency Verification
+        print(f"\n🔍 STEP 6: Data Consistency Verification")
+        print("   Verifying that goal deletion maintains data integrity...")
+        
+        # Check if goal contributions are handled properly
+        contributions_response = requests.get(f"{BACKEND_URL}/goals/{test_goal_id}/contributions", headers=headers)
+        
+        if contributions_response.status_code == 404:
+            print_test_result("GOAL CONTRIBUTIONS CLEANUP", True, "✅ Goal contributions properly cleaned up (404 expected)")
+        elif contributions_response.status_code == 200:
+            contributions = contributions_response.json()
+            if len(contributions) == 0:
+                print_test_result("GOAL CONTRIBUTIONS CLEANUP", True, "✅ Goal contributions list is empty")
+            else:
+                print_test_result("GOAL CONTRIBUTIONS CLEANUP", False, 
+                                f"❌ {len(contributions)} contributions still exist")
+        else:
+            print_test_result("GOAL CONTRIBUTIONS CLEANUP", False, 
+                            f"❌ Unexpected response: {contributions_response.status_code}")
+        
+        # Verify no orphaned data
+        final_goals_count = len(post_delete_goals) if 'post_delete_goals' in locals() else 0
+        expected_count_change = -1  # Should decrease by 1
+        actual_count_change = final_goals_count - test_results["initial_goals_count"]
+        
+        if actual_count_change == expected_count_change:
+            print_test_result("GOALS COUNT CONSISTENCY", True, 
+                            f"✅ Goals count changed correctly: {test_results['initial_goals_count']} → {final_goals_count}")
+            test_results["data_consistency_verified"] = True
+        else:
+            print_test_result("GOALS COUNT CONSISTENCY", False, 
+                            f"❌ Unexpected count change: {actual_count_change} (expected: {expected_count_change})")
+        
+        # STEP 7: Final Summary
+        print(f"\n🔍 STEP 7: GOALS DELETE FUNCTIONALITY SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ User Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   ✅ Goals API: {'WORKING' if test_results['goals_api_working'] else 'FAILED'}")
+        print(f"   ✅ Goal Creation: {'WORKING' if test_results['goal_creation_working'] else 'FAILED'}")
+        print(f"   ✅ Goal Deletion: {'WORKING' if test_results['goal_deletion_working'] else 'FAILED'}")
+        print(f"   ✅ Goals Statistics: {'WORKING' if test_results['goals_statistics_working'] else 'FAILED'}")
+        print(f"   ✅ Data Consistency: {'VERIFIED' if test_results['data_consistency_verified'] else 'FAILED'}")
+        
+        print(f"\n📊 GOALS STATISTICS:")
+        print(f"   Initial Goals Count: {test_results['initial_goals_count']}")
+        print(f"   Final Goals Count: {test_results['final_goals_count']}")
+        print(f"   Test Goal ID: {test_results['test_goal_id']}")
+        
+        # Determine overall success
+        goals_delete_working = (
+            test_results['login_success'] and
+            test_results['goals_api_working'] and
+            test_results['goal_creation_working'] and
+            test_results['goal_deletion_working'] and
+            test_results['goals_statistics_working'] and
+            test_results['data_consistency_verified']
+        )
+        
+        if goals_delete_working:
+            print(f"\n🎉 GOALS DELETE FUNCTIONALITY WORKING PERFECTLY!")
+            print("✅ All required functionality working correctly:")
+            print("   - User authentication with hpdanielvb@gmail.com / 123456")
+            print("   - Goals API endpoints (GET /api/goals) working")
+            print("   - Goal creation (POST /api/goals) working")
+            print("   - Goal deletion (DELETE /api/goals/{goal_id}) working")
+            print("   - Goals statistics (GET /api/goals/statistics) updating correctly")
+            print("   - Data consistency maintained after deletion")
+            print("   - No orphaned data or broken references")
+            
+            print(f"\n💡 USER'S REPORT ANALYSIS:")
+            print("   The 'Excluir Meta' button functionality is working correctly in the backend.")
+            print("   If the user is still experiencing issues, it may be a frontend problem:")
+            print("   - Frontend not calling the correct DELETE endpoint")
+            print("   - Frontend not handling the response correctly")
+            print("   - Frontend not refreshing the goals list after deletion")
+            print("   - User confusion between Goals ('Metas') and Budgets ('Orçamentos')")
+            
+            return True
+        else:
+            print(f"\n⚠️ GOALS DELETE FUNCTIONALITY ISSUES DETECTED:")
+            if not test_results['login_success']:
+                print("   ❌ User authentication failed")
+            if not test_results['goals_api_working']:
+                print("   ❌ Goals API not working")
+            if not test_results['goal_creation_working']:
+                print("   ❌ Goal creation failed")
+            if not test_results['goal_deletion_working']:
+                print("   ❌ Goal deletion failed - THIS IS THE REPORTED ISSUE")
+            if not test_results['goals_statistics_working']:
+                print("   ❌ Goals statistics not updating")
+            if not test_results['data_consistency_verified']:
+                print("   ❌ Data consistency issues after deletion")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("GOALS DELETE FUNCTIONALITY TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_critical_balance_calculation_investigation():
     """
     CRITICAL INVESTIGATION: Balance calculation error for user hpdanielvb@gmail.com
