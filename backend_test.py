@@ -4690,27 +4690,29 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - NEW ENHANCED FEATURES")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - HIERARCHICAL CATEGORY SELECT SUPPORT")
     print("="*80)
     
-    # Run new enhanced features test
-    enhanced_features_success = test_new_enhanced_features()
+    # Run the hierarchical category select backend support test
+    print("\n🔥 EXECUTING HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT TEST")
+    success = test_hierarchical_category_select_backend_support()
     
     # Final Summary
     print("\n" + "="*80)
-    print("📊 NEW ENHANCED FEATURES TESTING SUMMARY")
+    print("📊 HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT SUMMARY")
     print("="*80)
     
-    if enhanced_features_success:
-        print("🎉 SUCCESS: New enhanced features are working correctly")
-        print("✅ Enhanced Reports System functional")
-        print("✅ Credit Card Invoice Management operational")
-        print("✅ Transaction Tags System working")
-        print("✅ Enhanced Transaction Support with tags active")
-        print("✅ Backend APIs ready for frontend integration")
+    if success:
+        print("🎉 BACKEND FULLY SUPPORTS HIERARCHICAL CATEGORY SELECT COMPONENT!")
+        print("✅ All category-related functionality working correctly!")
+        print("✅ Frontend HierarchicalCategorySelect component should work properly!")
+        print("✅ User authentication working with hpdanielvb@gmail.com")
+        print("✅ Categories API returning proper parent_category_id relationships")
+        print("✅ Transaction creation working with both parent and child categories")
+        print("✅ Data integrity maintained for hierarchical category system")
     else:
-        print("❌ ISSUES DETECTED: Some enhanced features need attention")
-        print("🚨 Review failed endpoints and implement fixes")
-        print("🚨 Check server logs for detailed error information")
+        print("⚠️ BACKEND SUPPORT ISSUES DETECTED FOR HIERARCHICAL CATEGORIES")
+        print("❌ Review backend category functionality before frontend testing")
+        print("🚨 Check specific test failures above for detailed information")
     
     print("="*80)
