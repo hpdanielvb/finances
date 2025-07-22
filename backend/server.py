@@ -68,6 +68,15 @@ class PasswordReset(BaseModel):
     new_password: str
     confirm_password: str
 
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$')
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6)
+    confirm_password: str = Field(..., min_length=6)
+
 class EmailConfirmation(BaseModel):
     token: str
 
