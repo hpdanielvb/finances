@@ -5017,29 +5017,31 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - HIERARCHICAL CATEGORY SELECT SUPPORT")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - GOALS DELETE FUNCTIONALITY")
     print("="*80)
     
-    # Run the hierarchical category select backend support test
-    print("\n🔥 EXECUTING HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT TEST")
-    success = test_hierarchical_category_select_backend_support()
+    # Run the Goals Delete functionality test
+    print("\n🔥 EXECUTING GOALS DELETE FUNCTIONALITY TEST")
+    success = test_goals_delete_functionality()
     
     # Final Summary
     print("\n" + "="*80)
-    print("📊 HIERARCHICAL CATEGORY SELECT BACKEND SUPPORT SUMMARY")
+    print("📊 GOALS DELETE FUNCTIONALITY SUMMARY")
     print("="*80)
     
     if success:
-        print("🎉 BACKEND FULLY SUPPORTS HIERARCHICAL CATEGORY SELECT COMPONENT!")
-        print("✅ All category-related functionality working correctly!")
-        print("✅ Frontend HierarchicalCategorySelect component should work properly!")
-        print("✅ User authentication working with hpdanielvb@gmail.com")
-        print("✅ Categories API returning proper parent_category_id relationships")
-        print("✅ Transaction creation working with both parent and child categories")
-        print("✅ Data integrity maintained for hierarchical category system")
+        print("🎉 GOALS DELETE FUNCTIONALITY WORKING PERFECTLY!")
+        print("✅ All backend functionality working correctly for Goals deletion!")
+        print("✅ User authentication working with hpdanielvb@gmail.com / 123456")
+        print("✅ Goals API endpoints (GET /api/goals) working")
+        print("✅ Goal creation (POST /api/goals) working")
+        print("✅ Goal deletion (DELETE /api/goals/{goal_id}) working")
+        print("✅ Goals statistics (GET /api/goals/statistics) updating correctly")
+        print("✅ Data consistency maintained after deletion")
+        print("✅ Backend supports frontend Goals management properly")
     else:
-        print("⚠️ BACKEND SUPPORT ISSUES DETECTED FOR HIERARCHICAL CATEGORIES")
-        print("❌ Review backend category functionality before frontend testing")
+        print("⚠️ GOALS DELETE FUNCTIONALITY ISSUES DETECTED")
+        print("❌ Review backend Goals deletion functionality")
         print("🚨 Check specific test failures above for detailed information")
     
     print("="*80)
