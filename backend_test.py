@@ -5418,31 +5418,37 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - GOALS DELETE FUNCTIONALITY")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - LAZER CATEGORY GOALS SYSTEM")
     print("="*80)
+    print("PHASE 2 IMPLEMENTATION: Testing newly added 'Lazer' category in Goals system")
     
-    # Run the Goals Delete functionality test
-    print("\n🔥 EXECUTING GOALS DELETE FUNCTIONALITY TEST")
-    success = test_goals_delete_functionality()
+    # Run the specific Lazer category test as requested in the review
+    print("\n" + "="*80)
+    print("🎯 MAIN TEST: LAZER CATEGORY IN GOALS SYSTEM")
+    print("="*80)
+    result = test_lazer_category_goals_system()
     
     # Final Summary
     print("\n" + "="*80)
-    print("📊 GOALS DELETE FUNCTIONALITY SUMMARY")
+    print("🎯 FINAL TEST SUMMARY")
     print("="*80)
     
-    if success:
-        print("🎉 GOALS DELETE FUNCTIONALITY WORKING PERFECTLY!")
-        print("✅ All backend functionality working correctly for Goals deletion!")
-        print("✅ User authentication working with hpdanielvb@gmail.com / 123456")
-        print("✅ Goals API endpoints (GET /api/goals) working")
-        print("✅ Goal creation (POST /api/goals) working")
-        print("✅ Goal deletion (DELETE /api/goals/{goal_id}) working")
-        print("✅ Goals statistics (GET /api/goals/statistics) updating correctly")
-        print("✅ Data consistency maintained after deletion")
-        print("✅ Backend supports frontend Goals management properly")
+    if result:
+        print("✅ LAZER CATEGORY GOALS SYSTEM TEST - PASSED")
+        print("🎉 PHASE 2 FEATURE SUCCESSFULLY IMPLEMENTED!")
+        print("   'Lazer' category is now available in Goals system")
+        print("   All required functionality working correctly:")
+        print("   - User authentication ✅")
+        print("   - Goal creation with Lazer category ✅") 
+        print("   - Goal categories validation ✅")
+        print("   - Goal listing and retrieval ✅")
+        print("   - Goal statistics with Lazer category ✅")
+        print("   - All goal operations (CRUD) working ✅")
     else:
-        print("⚠️ GOALS DELETE FUNCTIONALITY ISSUES DETECTED")
-        print("❌ Review backend Goals deletion functionality")
-        print("🚨 Check specific test failures above for detailed information")
+        print("❌ LAZER CATEGORY GOALS SYSTEM TEST - FAILED")
+        print("⚠️  Issues detected with Lazer category implementation")
+        print("   Check the detailed test output above for specific problems")
     
+    print("\n" + "="*80)
+    print("📋 TEST COMPLETED - Review the results above")
     print("="*80)
