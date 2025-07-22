@@ -1350,6 +1350,16 @@ const Dashboard = () => {
                 >
                   💳 Cartões
                 </button>
+
+                {/* User Profile Button */}
+                <button
+                  onClick={() => setActiveView('profile')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeView === 'profile' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  👤 Perfil
+                </button>
               </div>
             </div>
             
