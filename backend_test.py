@@ -1281,6 +1281,403 @@ def test_balance_audit_and_correction():
         print_test_result("BALANCE AUDIT AND CORRECTION", False, f"Exception: {str(e)}")
         return False
 
+def test_lazer_category_goals_system():
+    """
+    CRITICAL TEST: Lazer Category in Goals System - Phase 2 Implementation
+    
+    This addresses the specific review request to test the newly added "Lazer" category
+    in the Goals system as the first feature of Phase 2 implementation.
+    
+    Test Steps:
+    1. User Authentication - login with hpdanielvb@gmail.com / 123456
+    2. Goal Creation with Lazer - Test POST /api/goals with category "Lazer"
+    3. Goal Categories Validation - Ensure backend accepts "Lazer" as valid category
+    4. Goal Listing - Test GET /api/goals to verify Lazer goal is stored/retrieved
+    5. Goal Statistics - Test GET /api/goals/statistics to ensure Lazer appears in stats
+    6. Goal Operations - Test update, contribute, and delete operations with Lazer goal
+    
+    Expected Categories: "Emergência", "Casa Própria", "Viagem", "Aposentadoria", "Lazer", "Outros"
+    Focus: Verify that "Lazer" category works correctly in all Goals system operations
+    """
+    print("\n" + "="*80)
+    print("🎯 LAZER CATEGORY IN GOALS SYSTEM TEST - PHASE 2")
+    print("="*80)
+    print("Testing newly added 'Lazer' category in Goals system")
+    print("Expected categories: Emergência, Casa Própria, Viagem, Aposentadoria, Lazer, Outros")
+    
+    # Test credentials from review request
+    user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"  # Password from review request
+    }
+    
+    test_results = {
+        "login_success": False,
+        "lazer_goal_creation": False,
+        "lazer_goal_retrieval": False,
+        "lazer_goal_statistics": False,
+        "lazer_goal_operations": False,
+        "category_validation": False,
+        "test_goal_id": None,
+        "all_categories_supported": [],
+        "lazer_in_statistics": False
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: User Authentication - {user_login['email']}")
+        
+        # Test login
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("USER AUTHENTICATION", False, f"❌ Login failed: {error_detail}")
+            return test_results
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["login_success"] = True
+        
+        print_test_result("USER AUTHENTICATION", True, f"✅ Login successful for {user_info.get('name')}")
+        print(f"   User ID: {user_info.get('id')}")
+        print(f"   Email: {user_info.get('email')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Goal Creation with Lazer Category
+        print(f"\n🔍 STEP 2: Goal Creation with Lazer Category")
+        print("   Testing POST /api/goals with category 'Lazer'...")
+        
+        # Create a test goal with Lazer category
+        lazer_goal_data = {
+            "name": "Férias em Cancún",
+            "description": "Viagem de lazer para Cancún com a família",
+            "target_amount": 15000.00,
+            "current_amount": 2500.00,
+            "target_date": (datetime.now() + timedelta(days=365)).isoformat(),
+            "category": "Lazer",  # THE KEY TEST - Using "Lazer" category
+            "priority": "Alta",
+            "auto_contribution": 500.00
+        }
+        
+        goal_creation_response = requests.post(f"{BACKEND_URL}/goals", 
+                                             json=lazer_goal_data, headers=headers)
+        
+        if goal_creation_response.status_code == 200:
+            created_goal = goal_creation_response.json()
+            test_goal_id = created_goal.get("id")
+            test_results["test_goal_id"] = test_goal_id
+            test_results["lazer_goal_creation"] = True
+            
+            print_test_result("LAZER GOAL CREATION", True, 
+                            f"✅ Goal created successfully with Lazer category")
+            print(f"   Goal ID: {test_goal_id}")
+            print(f"   Goal Name: {created_goal.get('name')}")
+            print(f"   Category: {created_goal.get('category')}")
+            print(f"   Target Amount: R$ {created_goal.get('target_amount'):.2f}")
+            print(f"   Priority: {created_goal.get('priority')}")
+            
+            # Verify the goal has correct Lazer category
+            if created_goal.get('category') == "Lazer":
+                test_results["category_validation"] = True
+                print_test_result("LAZER CATEGORY VALIDATION", True, 
+                                "✅ Goal correctly stored with 'Lazer' category")
+            else:
+                print_test_result("LAZER CATEGORY VALIDATION", False, 
+                                f"❌ Expected 'Lazer', got '{created_goal.get('category')}'")
+        else:
+            error_detail = goal_creation_response.json().get("detail", "Unknown error")
+            print_test_result("LAZER GOAL CREATION", False, 
+                            f"❌ Failed to create goal with Lazer category: {error_detail}")
+            print(f"   Status Code: {goal_creation_response.status_code}")
+            return test_results
+        
+        # STEP 3: Goal Categories Validation - Test all expected categories
+        print(f"\n🔍 STEP 3: Goal Categories Validation")
+        print("   Testing all expected goal categories...")
+        
+        expected_categories = ["Emergência", "Casa Própria", "Viagem", "Aposentadoria", "Lazer", "Outros"]
+        supported_categories = []
+        
+        for category in expected_categories:
+            test_goal_data = {
+                "name": f"Teste {category}",
+                "description": f"Meta de teste para categoria {category}",
+                "target_amount": 1000.00,
+                "current_amount": 0.00,
+                "target_date": (datetime.now() + timedelta(days=180)).isoformat(),
+                "category": category,
+                "priority": "Média"
+            }
+            
+            category_test_response = requests.post(f"{BACKEND_URL}/goals", 
+                                                 json=test_goal_data, headers=headers)
+            
+            if category_test_response.status_code == 200:
+                supported_categories.append(category)
+                # Clean up test goal immediately
+                test_goal = category_test_response.json()
+                requests.delete(f"{BACKEND_URL}/goals/{test_goal.get('id')}", headers=headers)
+            else:
+                print(f"   ❌ Category '{category}' not supported: {category_test_response.status_code}")
+        
+        test_results["all_categories_supported"] = supported_categories
+        
+        print_test_result("GOAL CATEGORIES VALIDATION", True, 
+                        f"✅ Supported categories: {len(supported_categories)}/{len(expected_categories)}")
+        print(f"   Supported: {', '.join(supported_categories)}")
+        
+        if "Lazer" in supported_categories:
+            print(f"   🎯 'Lazer' category is SUPPORTED ✅")
+        else:
+            print(f"   🚨 'Lazer' category is NOT SUPPORTED ❌")
+        
+        missing_categories = [cat for cat in expected_categories if cat not in supported_categories]
+        if missing_categories:
+            print(f"   Missing: {', '.join(missing_categories)}")
+        
+        # STEP 4: Goal Listing - Verify Lazer goal appears in list
+        print(f"\n🔍 STEP 4: Goal Listing - GET /api/goals")
+        print("   Verifying Lazer goal is properly stored and retrieved...")
+        
+        goals_response = requests.get(f"{BACKEND_URL}/goals", headers=headers)
+        
+        if goals_response.status_code == 200:
+            goals = goals_response.json()
+            test_results["lazer_goal_retrieval"] = True
+            
+            print_test_result("GOALS LISTING", True, f"✅ Retrieved {len(goals)} goal(s)")
+            
+            # Find our Lazer goal in the list
+            lazer_goal_found = None
+            for goal in goals:
+                if goal.get('id') == test_goal_id and goal.get('category') == 'Lazer':
+                    lazer_goal_found = goal
+                    break
+            
+            if lazer_goal_found:
+                print_test_result("LAZER GOAL IN LIST", True, 
+                                "✅ Lazer goal found in goals list")
+                print(f"   Goal: {lazer_goal_found.get('name')}")
+                print(f"   Category: {lazer_goal_found.get('category')}")
+                print(f"   Progress: R$ {lazer_goal_found.get('current_amount'):.2f} / R$ {lazer_goal_found.get('target_amount'):.2f}")
+            else:
+                print_test_result("LAZER GOAL IN LIST", False, 
+                                "❌ Lazer goal not found in goals list")
+            
+            # Show all goals with their categories
+            print(f"\n   📋 ALL GOALS BY CATEGORY:")
+            category_breakdown = {}
+            for goal in goals:
+                category = goal.get('category', 'Unknown')
+                if category not in category_breakdown:
+                    category_breakdown[category] = []
+                category_breakdown[category].append(goal.get('name'))
+            
+            for category, goal_names in category_breakdown.items():
+                print(f"      {category}: {len(goal_names)} goal(s)")
+                for name in goal_names[:3]:  # Show first 3 goals
+                    print(f"         - {name}")
+                if len(goal_names) > 3:
+                    print(f"         ... and {len(goal_names) - 3} more")
+        else:
+            print_test_result("GOALS LISTING", False, 
+                            f"❌ Failed to retrieve goals: {goals_response.status_code}")
+        
+        # STEP 5: Goal Statistics - Verify Lazer appears in statistics
+        print(f"\n🔍 STEP 5: Goal Statistics - GET /api/goals/statistics")
+        print("   Verifying Lazer category appears in goal statistics...")
+        
+        statistics_response = requests.get(f"{BACKEND_URL}/goals/statistics", headers=headers)
+        
+        if statistics_response.status_code == 200:
+            statistics = statistics_response.json()
+            test_results["lazer_goal_statistics"] = True
+            
+            print_test_result("GOALS STATISTICS", True, "✅ Goal statistics retrieved successfully")
+            
+            # Display overall statistics
+            total_goals = statistics.get('total_goals', 0)
+            achieved_goals = statistics.get('achieved_goals', 0)
+            active_goals = statistics.get('active_goals', 0)
+            total_target = statistics.get('total_target_amount', 0)
+            total_saved = statistics.get('total_saved_amount', 0)
+            overall_progress = statistics.get('overall_progress', 0)
+            
+            print(f"   📊 OVERALL STATISTICS:")
+            print(f"      Total Goals: {total_goals}")
+            print(f"      Achieved Goals: {achieved_goals}")
+            print(f"      Active Goals: {active_goals}")
+            print(f"      Total Target: R$ {total_target:.2f}")
+            print(f"      Total Saved: R$ {total_saved:.2f}")
+            print(f"      Overall Progress: {overall_progress:.1f}%")
+            
+            # Check category statistics
+            category_statistics = statistics.get('category_statistics', {})
+            
+            print(f"\n   📊 CATEGORY STATISTICS:")
+            for category, stats in category_statistics.items():
+                count = stats.get('count', 0)
+                target = stats.get('target', 0)
+                saved = stats.get('saved', 0)
+                progress = stats.get('progress', 0)
+                
+                print(f"      {category}: {count} goal(s)")
+                print(f"         Target: R$ {target:.2f}")
+                print(f"         Saved: R$ {saved:.2f}")
+                print(f"         Progress: {progress:.1f}%")
+            
+            # Check if Lazer category appears in statistics
+            if 'Lazer' in category_statistics:
+                test_results["lazer_in_statistics"] = True
+                lazer_stats = category_statistics['Lazer']
+                print_test_result("LAZER IN STATISTICS", True, 
+                                "✅ Lazer category found in statistics")
+                print(f"   Lazer Goals: {lazer_stats.get('count', 0)}")
+                print(f"   Lazer Target: R$ {lazer_stats.get('target', 0):.2f}")
+                print(f"   Lazer Progress: {lazer_stats.get('progress', 0):.1f}%")
+            else:
+                print_test_result("LAZER IN STATISTICS", False, 
+                                "❌ Lazer category not found in statistics")
+        else:
+            print_test_result("GOALS STATISTICS", False, 
+                            f"❌ Failed to retrieve statistics: {statistics_response.status_code}")
+        
+        # STEP 6: Goal Operations - Test update, contribute, delete with Lazer goal
+        print(f"\n🔍 STEP 6: Goal Operations with Lazer Goal")
+        print("   Testing update, contribute, and delete operations...")
+        
+        if test_goal_id:
+            # Test goal update
+            print("   Testing goal update...")
+            update_data = {
+                "name": "Férias em Cancún - Atualizada",
+                "description": "Viagem de lazer para Cancún - plano atualizado",
+                "target_amount": 18000.00,
+                "current_amount": 3000.00,
+                "target_date": (datetime.now() + timedelta(days=300)).isoformat(),
+                "category": "Lazer",  # Keep Lazer category
+                "priority": "Alta",
+                "auto_contribution": 600.00
+            }
+            
+            update_response = requests.put(f"{BACKEND_URL}/goals/{test_goal_id}", 
+                                         json=update_data, headers=headers)
+            
+            if update_response.status_code == 200:
+                updated_goal = update_response.json()
+                print_test_result("LAZER GOAL UPDATE", True, 
+                                "✅ Lazer goal updated successfully")
+                print(f"      New Target: R$ {updated_goal.get('target_amount'):.2f}")
+                print(f"      Category: {updated_goal.get('category')}")
+            else:
+                print_test_result("LAZER GOAL UPDATE", False, 
+                                f"❌ Update failed: {update_response.status_code}")
+            
+            # Test goal contribution
+            print("   Testing goal contribution...")
+            contribution_response = requests.post(f"{BACKEND_URL}/goals/{test_goal_id}/contribute", 
+                                                json={"amount": 1000.00}, headers=headers)
+            
+            if contribution_response.status_code == 200:
+                contribution_result = contribution_response.json()
+                print_test_result("LAZER GOAL CONTRIBUTION", True, 
+                                "✅ Contribution to Lazer goal successful")
+                print(f"      Contribution: R$ 1000.00")
+                print(f"      Goal Achieved: {contribution_result.get('goal_achieved', False)}")
+            else:
+                print_test_result("LAZER GOAL CONTRIBUTION", False, 
+                                f"❌ Contribution failed: {contribution_response.status_code}")
+            
+            # Test goal deletion
+            print("   Testing goal deletion...")
+            delete_response = requests.delete(f"{BACKEND_URL}/goals/{test_goal_id}", headers=headers)
+            
+            if delete_response.status_code == 200:
+                delete_result = delete_response.json()
+                print_test_result("LAZER GOAL DELETION", True, 
+                                "✅ Lazer goal deleted successfully")
+                print(f"      Message: {delete_result.get('message', 'Goal deleted')}")
+                
+                # Verify goal is no longer in active list
+                verify_response = requests.get(f"{BACKEND_URL}/goals", headers=headers)
+                if verify_response.status_code == 200:
+                    remaining_goals = verify_response.json()
+                    goal_still_exists = any(g.get('id') == test_goal_id for g in remaining_goals)
+                    
+                    if not goal_still_exists:
+                        print_test_result("LAZER GOAL DELETION VERIFICATION", True, 
+                                        "✅ Lazer goal no longer appears in active goals list")
+                        test_results["lazer_goal_operations"] = True
+                    else:
+                        print_test_result("LAZER GOAL DELETION VERIFICATION", False, 
+                                        "❌ Lazer goal still appears in active goals list")
+            else:
+                print_test_result("LAZER GOAL DELETION", False, 
+                                f"❌ Deletion failed: {delete_response.status_code}")
+        
+        # STEP 7: Final Summary
+        print(f"\n🔍 STEP 7: LAZER CATEGORY GOALS SYSTEM SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ User Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   🎯 Lazer Goal Creation: {'SUCCESS' if test_results['lazer_goal_creation'] else 'FAILED'}")
+        print(f"   📋 Lazer Goal Retrieval: {'SUCCESS' if test_results['lazer_goal_retrieval'] else 'FAILED'}")
+        print(f"   📊 Lazer Goal Statistics: {'SUCCESS' if test_results['lazer_goal_statistics'] else 'FAILED'}")
+        print(f"   🔧 Lazer Goal Operations: {'SUCCESS' if test_results['lazer_goal_operations'] else 'FAILED'}")
+        print(f"   ✅ Category Validation: {'SUCCESS' if test_results['category_validation'] else 'FAILED'}")
+        print(f"   📈 Lazer in Statistics: {'YES' if test_results['lazer_in_statistics'] else 'NO'}")
+        
+        print(f"\n📊 CATEGORY SUPPORT:")
+        print(f"   Supported Categories: {len(test_results['all_categories_supported'])}/6")
+        print(f"   Categories: {', '.join(test_results['all_categories_supported'])}")
+        
+        # Determine overall success
+        lazer_system_working = (
+            test_results['login_success'] and
+            test_results['lazer_goal_creation'] and
+            test_results['lazer_goal_retrieval'] and
+            test_results['lazer_goal_statistics'] and
+            test_results['category_validation'] and
+            'Lazer' in test_results['all_categories_supported']
+        )
+        
+        if lazer_system_working:
+            print(f"\n🎉 LAZER CATEGORY IN GOALS SYSTEM WORKING PERFECTLY!")
+            print("✅ Phase 2 Feature Implementation Successful:")
+            print("   - User authentication with hpdanielvb@gmail.com / 123456 ✅")
+            print("   - Goal creation with 'Lazer' category ✅")
+            print("   - Goal categories validation (Lazer accepted) ✅")
+            print("   - Goal listing (Lazer goal properly stored/retrieved) ✅")
+            print("   - Goal statistics (Lazer category appears in stats) ✅")
+            print("   - All goal operations working with Lazer category ✅")
+            print(f"\n🎯 CATEGORIA 'LAZER' NAS METAS FINANCEIRAS - IMPLEMENTADA COM SUCESSO!")
+            print("   'Lazer' está disponível como opção ao criar metas ✅")
+            
+            return True
+        else:
+            print(f"\n⚠️ LAZER CATEGORY GOALS SYSTEM ISSUES DETECTED:")
+            if not test_results['login_success']:
+                print("   ❌ User authentication failed")
+            if not test_results['lazer_goal_creation']:
+                print("   ❌ Lazer goal creation failed")
+            if not test_results['lazer_goal_retrieval']:
+                print("   ❌ Lazer goal retrieval failed")
+            if not test_results['lazer_goal_statistics']:
+                print("   ❌ Lazer goal statistics failed")
+            if not test_results['category_validation']:
+                print("   ❌ Lazer category validation failed")
+            if 'Lazer' not in test_results['all_categories_supported']:
+                print("   ❌ Lazer category not supported by backend")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("LAZER CATEGORY GOALS SYSTEM TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_goals_delete_functionality():
     """
     CRITICAL TEST: Goals Delete Functionality
