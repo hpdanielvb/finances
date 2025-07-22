@@ -2348,6 +2348,75 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Fixed Quick Actions - Show when scrolled on dashboard */}
+      {showFixedActions && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Ações Rápidas</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Add Income */}
+              <button
+                onClick={openIncomeModal}
+                className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
+                title="Adicionar Receita"
+              >
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-green-600 transition-colors">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-green-700">Receita</span>
+              </button>
+
+              {/* Add Expense */}
+              <button
+                onClick={openExpenseModal}
+                className="flex flex-col items-center justify-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors group"
+                title="Adicionar Despesa"
+              >
+                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-red-600 transition-colors">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-red-700">Despesa</span>
+              </button>
+
+              {/* Transfer */}
+              <button
+                onClick={openTransferModal}
+                className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors group"
+                title="Transferir entre Contas"
+              >
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-600 transition-colors">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-blue-700">Transferir</span>
+              </button>
+
+              {/* Reports */}
+              <button
+                onClick={openReportsModal}
+                className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors group"
+                title="Ver Relatórios"
+              >
+                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center mb-2 group-hover:bg-purple-600 transition-colors">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-purple-700">Relatórios</span>
+              </button>
+            </div>
+            
+            {/* Hide button */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowFixedActions(false)}
+                className="w-full text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                title="Ocultar ações rápidas"
+              >
+                ✕ Ocultar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       {showAccountModal && (
         <AccountModal
