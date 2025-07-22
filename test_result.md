@@ -544,20 +544,17 @@ frontend:
         - agent: "main"
         - comment: "Enhanced CSS with premium animations, gradients, hover effects, Brazilian color scheme, responsive design, and accessibility features."
 
-  - task: "Goals Display UI Implementation (Excluir Meta Button Fix)"
+  - task: "Fixed Quick Actions Implementation"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
     stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    priority: "medium"
+    needs_retesting: true
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "CRITICAL BUG FIX: User reported 'Excluir Meta' button not removing goals in 'Gerenciar Orçamentos'. Root cause identified - the GoalsView component was incomplete, only showing statistics but not displaying individual goals with their action buttons. Fixed by implementing the missing goals display UI with complete goal cards showing: (1) Goal details (name, category, priority, description) (2) Progress tracking (current amount, target amount, percentage, progress bar) (3) Target date with days remaining calculation (4) Action buttons including Edit, Contribute, and Delete (Excluir Meta) (5) Achievement status indicator. The backend DELETE /api/goals/{goal_id} endpoint was working perfectly - the issue was purely frontend UI missing."
-        - working: true
-        - agent: "testing"
-        - comment: "✅ GOALS DELETE FUNCTIONALITY VERIFIED SUCCESSFULLY! Backend testing confirmed complete functionality: ✅ User Authentication (hpdanielvb@gmail.com / 123456) working ✅ Goals API (GET /api/goals) retrieving goals correctly ✅ Goal Creation (POST /api/goals) working perfectly ✅ Goal Deletion (DELETE /api/goals/{goal_id}) - THE REPORTED ISSUE IS NOT IN THE BACKEND - DELETE working perfectly with 200 status and 'Meta excluída com sucesso' message ✅ Goals Statistics (GET /api/goals/statistics) updating correctly after operations ✅ Data Consistency verified - goals properly removed from active list, no orphaned data. ROOT CAUSE: Backend working perfectly, issue was missing frontend Goals UI implementation - now fixed with complete goal cards and delete buttons."
+        - comment: "PHASE 2 FEATURE 2: Implemented fixed quick actions scroll functionality. Added showFixedActions state and scroll event listener to show/hide action buttons when scrolled >200px on dashboard. Fixed positioning below main menu as requested. Still need to complete the UI component implementation."
 
   - task: "Critical Balance Calculation Investigation"
     implemented: true
