@@ -783,6 +783,95 @@ async def refresh_token(current_user: User = Depends(get_current_user)):
         "expires_in": ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600
     }
 
+# =====================================================
+# PROFILE ENDPOINTS
+# =====================================================
+
+@api_router.get("/profile")
+async def get_profile(current_user: User = Depends(get_current_user)):
+    """Get current user profile"""
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "created_at": current_user.created_at.isoformat() if hasattr(current_user, 'created_at') else None,
+        "email_verified": getattr(current_user, 'email_verified', True)
+    }
+
+@api_router.put("/profile")
+async def update_profile(request: ProfileUpdateRequest, current_user: User = Depends(get_current_user)):
+    """Update user profile (name and email)"""
+    try:
+        # Check if email is already taken by another user
+        if request.email != current_user.email:
+            existing_user = await db.users.find_one({"email": request.email})
+            if existing_user:
+                raise HTTPException(status_code=400, detail="Este email já está em uso")
+        
+        # Update user profile
+        update_data = {
+            "name": request.name,
+            "email": request.email
+        }
+        
+        # If email changed, might need to re-verify
+        if request.email != current_user.email:
+            update_data["email_verified"] = False
+            # In production, send verification email here
+        
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        print(f"[LOG] Profile updated for user: {current_user.email} -> {request.email}")
+        return {"message": "Perfil atualizado com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Profile update error: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.put("/profile/password")
+async def change_password(request: PasswordChangeRequest, current_user: User = Depends(get_current_user)):
+    """Change user password"""
+    try:
+        # Verify current password
+        password_bytes = request.current_password.encode('utf-8')
+        stored_hash = current_user.password_hash.encode('utf-8')
+        
+        if not bcrypt.checkpw(password_bytes, stored_hash):
+            raise HTTPException(status_code=400, detail="Senha atual incorreta")
+        
+        # Validate new password confirmation
+        if request.new_password != request.confirm_password:
+            raise HTTPException(status_code=400, detail="Nova senha e confirmação não coincidem")
+        
+        # Check if new password is different from current
+        new_password_bytes = request.new_password.encode('utf-8')
+        if bcrypt.checkpw(new_password_bytes, stored_hash):
+            raise HTTPException(status_code=400, detail="A nova senha deve ser diferente da atual")
+        
+        # Hash new password
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(new_password_bytes, salt).decode('utf-8')
+        
+        # Update password
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": {"password_hash": hashed_password}}
+        )
+        
+        print(f"[LOG] Password changed for user: {current_user.email}")
+        return {"message": "Senha alterada com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Password change error: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 # Balance Audit and Correction Endpoint
 @api_router.post("/admin/audit-and-fix-balances")
 async def audit_and_fix_balances(current_user: User = Depends(get_current_user)):
