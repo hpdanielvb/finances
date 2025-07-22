@@ -952,6 +952,72 @@ const Dashboard = () => {
     }
   };
 
+  // ============================================================================
+  // 👤 FUNÇÕES DE PERFIL DE USUÁRIO  
+  // ============================================================================
+
+  const loadProfile = async () => {
+    try {
+      const response = await axios.get(`${API}/users/profile`);
+      setProfileData({
+        name: response.data.name,
+        email: response.data.email
+      });
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast.error('Erro ao carregar perfil');
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/users/profile`, profileData);
+      toast.success('Perfil atualizado com sucesso!');
+      setShowProfileModal(false);
+      // Reload dashboard to get updated user info
+      await loadDashboard();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao atualizar perfil');
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      toast.error('Nova senha e confirmação não coincidem');
+      return;
+    }
+    try {
+      await axios.put(`${API}/users/profile/password`, passwordData);
+      toast.success('Senha alterada com sucesso!');
+      setShowPasswordModal(false);
+      setPasswordData({
+        current_password: '',
+        new_password: '',
+        confirm_password: ''
+      });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao alterar senha');
+    }
+  };
+
+  const openProfileModal = () => {
+    loadProfile();
+    setShowProfileModal(true);
+  };
+
+  const openPasswordModal = () => {
+    setPasswordData({
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
+    });
+    setShowPasswordModal(true);
+  };
+
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
