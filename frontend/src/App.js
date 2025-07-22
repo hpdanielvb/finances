@@ -3451,21 +3451,43 @@ const TransactionModal = ({ transaction, type, accounts, categories, onClose, on
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
-              <HierarchicalCategorySelect
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 value={formData.category_id}
-                onChange={(categoryId) => setFormData({...formData, category_id: categoryId})}
-                categories={categories}
-                type={type}
-                placeholder="Selecione uma categoria"
-              />
-              
-              {/* AI Category Suggestion */}
-              <AICategorySuggestion
-                description={formData.description}
-                onSuggestionSelect={(category) => {
-                  setFormData({...formData, category_id: category.id});
-                }}
-              />
+                onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+              >
+                <option value="">Selecione uma categoria</option>
+                {categories.filter(cat => cat.type === type).map(category => {
+                  // Check if it's a parent category
+                  const hasSubcategories = categories.filter(cat => cat.type === type).some(cat => cat.parent_category_id === category.id);
+                  const isSubcategory = category.parent_category_id;
+                  
+                  if (isSubcategory) {
+                    // Find parent name
+                    const parent = categories.filter(cat => cat.type === type).find(cat => cat.id === category.parent_category_id);
+                    return (
+                      <option key={category.id} value={category.id} style={{paddingLeft: '20px'}}>
+                        {parent ? `${parent.name} » ${category.name}` : category.name}
+                      </option>
+                    );
+                  } else if (!hasSubcategories) {
+                    // Standalone category
+                    return (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    );
+                  } else {
+                    // Parent category (show disabled)
+                    return (
+                      <option key={category.id} value={category.id} style={{fontWeight: 'bold'}}>
+                        {category.name}
+                      </option>
+                    );
+                  }
+                })}
+              </select>
             </div>
           </div>
 
