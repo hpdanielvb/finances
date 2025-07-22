@@ -753,6 +753,25 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  // State for fixed quick actions
+  const [showFixedActions, setShowFixedActions] = useState(false);
+
+  // Effect to handle scroll and show/hide fixed actions
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      // Show fixed actions when scrolled down more than 200px and on dashboard
+      if (scrollY > 200 && activeView === 'dashboard') {
+        setShowFixedActions(true);
+      } else {
+        setShowFixedActions(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [activeView]);
+
   useEffect(() => {
     loadDashboard();
   }, []);
