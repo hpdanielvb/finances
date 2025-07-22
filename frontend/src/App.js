@@ -591,6 +591,19 @@ const Dashboard = () => {
   const [creditCardInvoices, setCreditCardInvoices] = useState([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
 
+  // 👤 User Profile States
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
