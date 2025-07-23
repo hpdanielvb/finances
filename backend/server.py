@@ -344,6 +344,29 @@ class Budget(BaseModel):
     spent_amount: float = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+# File Import Models
+class FileImportSession(BaseModel):
+    session_id: str
+    user_id: str
+    files_processed: int
+    preview_data: List[Dict[str, Any]]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "processing"  # processing, completed, error
+
+class ImportTransaction(BaseModel):
+    data: str
+    descricao: str
+    valor: float
+    categoria: Optional[str] = None
+    conta: Optional[str] = None
+    tipo: str = "Despesa"  # Receita or Despesa
+    is_duplicate: bool = False
+    confidence_score: float = 1.0  # For OCR results
+
+class ImportConfirmRequest(BaseModel):
+    session_id: str
+    selected_transactions: List[ImportTransaction]
+
 # Enhanced utility functions with better session management
 def create_access_token(data: dict):
     to_encode = data.copy()
