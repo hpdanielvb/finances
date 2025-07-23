@@ -23,6 +23,10 @@ import re
 import statistics
 import random
 from collections import defaultdict, Counter
+import pytesseract
+import pandas as pd
+from pdf2image import convert_from_bytes
+from PIL import Image
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
