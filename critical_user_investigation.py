@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://73981970-a0f3-42b8-8acb-bc1a630d1204.preview.emergentagent.com/api"
+BACKEND_URL = "https://6742bccc-697e-4837-b503-d6ac88619844.preview.emergentagent.com/api"
 
 # Existing user credentials
 EXISTING_USER_LOGIN = {
