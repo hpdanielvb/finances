@@ -3784,6 +3784,10 @@ async def get_import_session(
         if not session:
             raise HTTPException(status_code=404, detail="Sessão de importação não encontrada")
         
+        # Remove MongoDB ObjectId to avoid JSON serialization issues
+        if "_id" in session:
+            del session["_id"]
+        
         return session
         
     except Exception as e:
