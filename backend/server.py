@@ -3529,6 +3529,362 @@ def calculate_next_due_date(consortium: Dict[str, Any]) -> str:
     except:
         return "N/A"
 
+# ============================================================================
+# 📁 SISTEMA DE IMPORTAÇÃO DE ARQUIVOS COM OCR
+# ============================================================================
+
+async def extract_text_from_image(image_content: bytes) -> str:
+    """Extract text from image using Tesseract OCR"""
+    try:
+        image = Image.open(io.BytesIO(image_content))
+        text = pytesseract.image_to_string(image, lang='por')
+        return text
+    except Exception as e:
+        print(f"OCR Error: {e}")
+        return ""
+
+async def extract_text_from_pdf(pdf_content: bytes) -> str:
+    """Extract text from PDF using pdf2image and Tesseract"""
+    try:
+        images = convert_from_bytes(pdf_content)
+        full_text = ""
+        for image in images:
+            text = pytesseract.image_to_string(image, lang='por')
+            full_text += text + "\n"
+        return full_text
+    except Exception as e:
+        print(f"PDF OCR Error: {e}")
+        return ""
+
+async def parse_excel_file(file_content: bytes) -> List[Dict]:
+    """Parse Excel file and extract transaction data"""
+    try:
+        df = pd.read_excel(io.BytesIO(file_content))
+        
+        # Try to identify columns (flexible parsing)
+        transactions = []
+        for index, row in df.iterrows():
+            # Look for date, description, value patterns
+            transaction = {}
+            for col in df.columns:
+                col_lower = str(col).lower()
+                if any(word in col_lower for word in ['data', 'date']):
+                    transaction['data'] = str(row[col])
+                elif any(word in col_lower for word in ['descricao', 'description', 'desc']):
+                    transaction['descricao'] = str(row[col])
+                elif any(word in col_lower for word in ['valor', 'value', 'amount']):
+                    try:
+                        transaction['valor'] = float(row[col])
+                    except:
+                        transaction['valor'] = 0.0
+                elif any(word in col_lower for word in ['categoria', 'category']):
+                    transaction['categoria'] = str(row[col])
+                elif any(word in col_lower for word in ['tipo', 'type']):
+                    transaction['tipo'] = str(row[col])
+            
+            if 'data' in transaction and 'descricao' in transaction and 'valor' in transaction:
+                transactions.append(transaction)
+        
+        return transactions
+    except Exception as e:
+        print(f"Excel parsing error: {e}")
+        return []
+
+async def parse_csv_file(file_content: bytes) -> List[Dict]:
+    """Parse CSV file and extract transaction data"""
+    try:
+        df = pd.read_csv(io.BytesIO(file_content))
+        
+        transactions = []
+        for index, row in df.iterrows():
+            transaction = {}
+            for col in df.columns:
+                col_lower = str(col).lower()
+                if any(word in col_lower for word in ['data', 'date']):
+                    transaction['data'] = str(row[col])
+                elif any(word in col_lower for word in ['descricao', 'description', 'desc']):
+                    transaction['descricao'] = str(row[col])
+                elif any(word in col_lower for word in ['valor', 'value', 'amount']):
+                    try:
+                        transaction['valor'] = float(row[col])
+                    except:
+                        transaction['valor'] = 0.0
+                elif any(word in col_lower for word in ['categoria', 'category']):
+                    transaction['categoria'] = str(row[col])
+                elif any(word in col_lower for word in ['tipo', 'type']):
+                    transaction['tipo'] = str(row[col])
+            
+            if 'data' in transaction and 'descricao' in transaction and 'valor' in transaction:
+                transactions.append(transaction)
+        
+        return transactions
+    except Exception as e:
+        print(f"CSV parsing error: {e}")
+        return []
+
+async def extract_transactions_from_text(text: str) -> List[Dict]:
+    """Extract transaction data from OCR text using pattern matching"""
+    transactions = []
+    
+    # Brazilian date patterns (dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy)
+    date_patterns = [
+        r'\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}',
+        r'\d{1,2} de \w+ de \d{4}'
+    ]
+    
+    # Value patterns (R$ 123,45 or 123.45)
+    value_patterns = [
+        r'R\$\s*\d{1,3}(?:\.\d{3})*,\d{2}',
+        r'\d{1,3}(?:\.\d{3})*,\d{2}',
+        r'\d+\.\d{2}'
+    ]
+    
+    lines = text.split('\n')
+    current_transaction = {}
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Look for dates
+        for pattern in date_patterns:
+            dates = re.findall(pattern, line)
+            if dates:
+                current_transaction['data'] = dates[0]
+        
+        # Look for values
+        for pattern in value_patterns:
+            values = re.findall(pattern, line)
+            if values:
+                value_str = values[0].replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
+                try:
+                    current_transaction['valor'] = float(value_str)
+                except:
+                    pass
+        
+        # Description (lines with common transaction words)
+        transaction_keywords = ['compra', 'pagamento', 'transferencia', 'pix', 'deposito', 'saque']
+        if any(keyword in line.lower() for keyword in transaction_keywords):
+            current_transaction['descricao'] = line
+        
+        # If we have enough data, save transaction
+        if len(current_transaction) >= 3 and 'data' in current_transaction:
+            transactions.append(current_transaction.copy())
+            current_transaction = {}
+    
+    return transactions
+
+async def check_duplicate_transaction(user_id: str, transaction: Dict) -> bool:
+    """Check if transaction is duplicate based on date + description + value"""
+    existing = await db.transactions.find_one({
+        "user_id": user_id,
+        "transaction_date": transaction.get('data'),
+        "description": transaction.get('descricao'),
+        "value": transaction.get('valor')
+    })
+    return bool(existing)
+
+@api_router.post("/import/upload")
+async def upload_files_for_import(
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload multiple files for import processing"""
+    try:
+        session_id = str(uuid.uuid4())
+        processed_data = []
+        total_transactions = []
+        
+        for file in files:
+            if not file.filename:
+                continue
+                
+            content = await file.read()
+            file_extension = Path(file.filename).suffix.lower()
+            
+            print(f"Processing file: {file.filename} ({file_extension})")
+            
+            transactions = []
+            
+            # Process based on file type
+            if file_extension in ['.png', '.jpg', '.jpeg']:
+                text = await extract_text_from_image(content)
+                transactions = await extract_transactions_from_text(text)
+                
+            elif file_extension == '.pdf':
+                text = await extract_text_from_pdf(content)
+                transactions = await extract_transactions_from_text(text)
+                
+            elif file_extension == '.xlsx':
+                transactions = await parse_excel_file(content)
+                
+            elif file_extension == '.csv':
+                transactions = await parse_csv_file(content)
+            
+            # Check for duplicates
+            for transaction in transactions:
+                is_duplicate = await check_duplicate_transaction(current_user.id, transaction)
+                transaction['is_duplicate'] = is_duplicate
+                transaction['confidence_score'] = 0.8 if file_extension in ['.xlsx', '.csv'] else 0.6
+                
+                # Set default values
+                if 'tipo' not in transaction:
+                    transaction['tipo'] = 'Despesa'
+                if 'categoria' not in transaction:
+                    transaction['categoria'] = None
+                if 'conta' not in transaction:
+                    transaction['conta'] = None
+            
+            file_data = {
+                "filename": file.filename,
+                "extension": file_extension,
+                "transactions_found": len(transactions),
+                "transactions": transactions
+            }
+            
+            processed_data.append(file_data)
+            total_transactions.extend(transactions)
+        
+        # Save import session
+        import_session = FileImportSession(
+            session_id=session_id,
+            user_id=current_user.id,
+            files_processed=len(files),
+            preview_data=total_transactions,
+            status="completed"
+        )
+        
+        await db.import_sessions.insert_one(import_session.dict())
+        
+        return {
+            "session_id": session_id,
+            "files_processed": len(files),
+            "total_transactions": len(total_transactions),
+            "preview_data": total_transactions,
+            "files_detail": processed_data
+        }
+        
+    except Exception as e:
+        print(f"Import upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro no upload: {str(e)}")
+
+@api_router.get("/import/sessions/{session_id}")
+async def get_import_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get import session data for preview"""
+    try:
+        session = await db.import_sessions.find_one({
+            "session_id": session_id,
+            "user_id": current_user.id
+        })
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Sessão de importação não encontrada")
+        
+        return session
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar sessão: {str(e)}")
+
+@api_router.post("/import/confirm")
+async def confirm_import(
+    import_request: ImportConfirmRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Confirm and import selected transactions"""
+    try:
+        # Verify session exists
+        session = await db.import_sessions.find_one({
+            "session_id": import_request.session_id,
+            "user_id": current_user.id
+        })
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Sessão de importação não encontrada")
+        
+        imported_count = 0
+        skipped_count = 0
+        errors = []
+        
+        # Get user's default account
+        default_account = await db.accounts.find_one({"user_id": current_user.id})
+        
+        for transaction_data in import_request.selected_transactions:
+            try:
+                # Skip duplicates if requested
+                if transaction_data.is_duplicate:
+                    skipped_count += 1
+                    continue
+                
+                # Create transaction
+                transaction = Transaction(
+                    user_id=current_user.id,
+                    description=transaction_data.descricao,
+                    value=transaction_data.valor,
+                    type=transaction_data.tipo or "Despesa",
+                    account_id=default_account["id"] if default_account else "",
+                    category_id=transaction_data.categoria or "",
+                    transaction_date=datetime.fromisoformat(transaction_data.data) if transaction_data.data else datetime.utcnow(),
+                    status="Pago",
+                    tags=[],
+                    notes=f"Importado via arquivo - Confiança: {transaction_data.confidence_score}"
+                )
+                
+                await db.transactions.insert_one(transaction.dict())
+                
+                # Update account balance if account exists
+                if default_account:
+                    balance_change = transaction_data.valor if transaction_data.tipo == "Receita" else -transaction_data.valor
+                    await db.accounts.update_one(
+                        {"id": default_account["id"]},
+                        {"$inc": {"current_balance": balance_change}}
+                    )
+                
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"Erro ao importar transação '{transaction_data.descricao}': {str(e)}")
+        
+        # Update session status
+        await db.import_sessions.update_one(
+            {"session_id": import_request.session_id},
+            {"$set": {"status": "imported"}}
+        )
+        
+        return {
+            "message": "Importação concluída com sucesso!",
+            "imported_count": imported_count,
+            "skipped_count": skipped_count,
+            "errors": errors,
+            "session_id": import_request.session_id
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na importação: {str(e)}")
+
+@api_router.delete("/import/sessions/{session_id}")
+async def delete_import_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete import session (cancel import)"""
+    try:
+        result = await db.import_sessions.delete_one({
+            "session_id": session_id,
+            "user_id": current_user.id
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+        
+        return {"message": "Sessão de importação cancelada"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao cancelar importação: {str(e)}")
+
 # Include router
 app.include_router(api_router)
 
