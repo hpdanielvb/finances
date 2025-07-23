@@ -3823,6 +3823,21 @@ async def confirm_import(
                     skipped_count += 1
                     continue
                 
+                # Parse Brazilian date format (dd/mm/yyyy) to datetime
+                transaction_date = datetime.utcnow()  # default fallback
+                if transaction_data.data:
+                    try:
+                        # Try parsing Brazilian date format first (dd/mm/yyyy)
+                        if '/' in transaction_data.data:
+                            day, month, year = transaction_data.data.split('/')
+                            transaction_date = datetime(int(year), int(month), int(day))
+                        else:
+                            # Try ISO format as fallback
+                            transaction_date = datetime.fromisoformat(transaction_data.data)
+                    except Exception as date_error:
+                        print(f"[IMPORT DEBUG] Date parsing failed for '{transaction_data.data}': {date_error}")
+                        # Keep default datetime.utcnow()
+                
                 # Create transaction
                 transaction = Transaction(
                     user_id=current_user.id,
@@ -3830,13 +3845,14 @@ async def confirm_import(
                     value=transaction_data.valor,
                     type=transaction_data.tipo or "Despesa",
                     account_id=default_account["id"] if default_account else "",
-                    category_id=transaction_data.categoria or "",
-                    transaction_date=datetime.fromisoformat(transaction_data.data) if transaction_data.data else datetime.utcnow(),
+                    category_id=transaction_data.categoria or None,
+                    transaction_date=transaction_date,
                     status="Pago",
                     tags=[],
-                    notes=f"Importado via arquivo - Confiança: {transaction_data.confidence_score}"
+                    observation=f"Importado via arquivo - Confiança: {transaction_data.confidence_score}"
                 )
                 
+                print(f"[IMPORT DEBUG] Creating transaction: {transaction_data.descricao} - R${transaction_data.valor}")
                 await db.transactions.insert_one(transaction.dict())
                 
                 # Update account balance if account exists
