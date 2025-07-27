@@ -1357,8 +1357,17 @@ def test_consortium_consigned_loan_system():
         
         consortium_response = requests.post(f"{BACKEND_URL}/contratos", json=consortium_data, headers=headers)
         
+        print(f"   Response status: {consortium_response.status_code}")
+        print(f"   Response headers: {dict(consortium_response.headers)}")
+        print(f"   Response text: {consortium_response.text[:500]}")
+        
         if consortium_response.status_code == 200:
-            consortium_result = consortium_response.json()
+            try:
+                consortium_result = consortium_response.json()
+            except Exception as json_error:
+                print(f"   JSON parsing error: {json_error}")
+                print_test_result("CREATE CONSORTIUM CONTRACT", False, f"❌ JSON parsing failed: {json_error}")
+                return test_results
             contract_info = consortium_result.get("contract", {})
             test_results["consortium_contract_id"] = contract_info.get("id")
             test_results["create_consortium_working"] = True
