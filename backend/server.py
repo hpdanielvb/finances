@@ -4098,6 +4098,10 @@ async def get_contract(
         if not contract:
             raise HTTPException(status_code=404, detail="Contrato não encontrado")
         
+        # Remove MongoDB _id field for JSON serialization
+        if "_id" in contract:
+            del contract["_id"]
+        
         # Calculate totals
         contract_totals = calculate_contract_totals(contract)
         contract.update(contract_totals)
