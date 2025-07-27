@@ -7313,3 +7313,291 @@ if __name__ == "__main__":
         print("❌ Review the detailed test results above for specific problems")
     
     print("\n" + "="*80)
+
+def test_file_import_system_critical():
+    """
+    🚨 CRITICAL FILE IMPORT SYSTEM RE-TEST
+    
+    This addresses the SPECIFIC CRITICAL BUG reported in the review request:
+    - Previous tests showed ALL endpoints work (upload, session retrieval, confirmation)
+    - BUT the /api/import/confirm endpoint was NOT creating transactions in database
+    - Despite returning success message "Importação concluída com sucesso!", 0 transactions were created
+    - Recent code modifications were made to fix this transaction creation bug
+    
+    CRITICAL TEST WORKFLOW:
+    1. Authenticate with hpdanielvb@gmail.com / 123456
+    2. Upload CSV test file with valid transactions
+    3. Verify session retrieval works
+    4. Confirm import via POST /api/import/confirm
+    5. **CRITICAL**: Verify transactions were ACTUALLY created in database using GET /api/transactions
+    
+    FOCUS: Verify if the bug is resolved and transactions are actually being created
+    """
+    print("\n" + "="*80)
+    print("🚨 CRITICAL FILE IMPORT SYSTEM RE-TEST")
+    print("="*80)
+    print("TESTING CRITICAL BUG FIX: Verify /api/import/confirm actually creates transactions")
+    print("Previous issue: Success message returned but 0 transactions created in database")
+    
+    # Test credentials from review request
+    user_login = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"
+    }
+    
+    test_results = {
+        "step1_authentication": False,
+        "step2_file_upload": False,
+        "step3_session_retrieval": False,
+        "step4_import_confirmation": False,
+        "step5_transactions_created": False,
+        "critical_bug_fixed": False,
+        "auth_token": None,
+        "session_id": None,
+        "preview_transactions_count": 0,
+        "actual_transactions_created": 0,
+        "transactions_before_import": 0,
+        "transactions_after_import": 0
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Authentication with {user_login['email']} / {user_login['password']}")
+        
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Unknown error")
+            print_test_result("STEP 1 - AUTHENTICATION", False, f"❌ Login failed: {error_detail}")
+            return test_results
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["auth_token"] = auth_token
+        test_results["step1_authentication"] = True
+        
+        print_test_result("STEP 1 - AUTHENTICATION", True, f"✅ Login successful as {user_info.get('name')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # Count existing transactions BEFORE import
+        print(f"\n🔍 PRE-IMPORT: Counting existing transactions...")
+        existing_transactions_response = requests.get(f"{BACKEND_URL}/transactions", headers=headers)
+        if existing_transactions_response.status_code == 200:
+            existing_transactions = existing_transactions_response.json()
+            test_results["transactions_before_import"] = len(existing_transactions)
+            print(f"   Existing transactions: {len(existing_transactions)}")
+        else:
+            print(f"   ⚠️  Could not count existing transactions: {existing_transactions_response.status_code}")
+        
+        # STEP 2: File Upload - Create CSV test data
+        print(f"\n🔍 STEP 2: File Upload - CSV with test transactions")
+        
+        # Create CSV test data with Brazilian transactions
+        csv_content = """Data,Descrição,Valor,Tipo
+15/01/2025,Supermercado Teste,150.50,Despesa
+16/01/2025,Salário Teste,3500.00,Receita
+17/01/2025,Farmácia Teste,45.80,Despesa"""
+        
+        print(f"   Creating CSV test file with 3 transactions:")
+        print(f"      1. Supermercado Teste - R$ 150.50 (Despesa)")
+        print(f"      2. Salário Teste - R$ 3,500.00 (Receita)")
+        print(f"      3. Farmácia Teste - R$ 45.80 (Despesa)")
+        
+        # Prepare file for upload
+        files = {
+            'file': ('test_transactions.csv', csv_content, 'text/csv')
+        }
+        
+        upload_response = requests.post(f"{BACKEND_URL}/import/upload", files=files, headers=headers)
+        
+        if upload_response.status_code != 200:
+            error_detail = upload_response.json().get("detail", "Unknown error") if upload_response.headers.get('content-type', '').startswith('application/json') else f"HTTP {upload_response.status_code}"
+            print_test_result("STEP 2 - FILE UPLOAD", False, f"❌ Upload failed: {error_detail}")
+            return test_results
+        
+        upload_data = upload_response.json()
+        session_id = upload_data.get("session_id")
+        files_processed = upload_data.get("files_processed", 0)
+        preview_data = upload_data.get("preview_data", [])
+        
+        test_results["session_id"] = session_id
+        test_results["preview_transactions_count"] = len(preview_data)
+        test_results["step2_file_upload"] = True
+        
+        print_test_result("STEP 2 - FILE UPLOAD", True, 
+                        f"✅ Upload successful - Session ID: {session_id}")
+        print(f"   Files processed: {files_processed}")
+        print(f"   Preview transactions found: {len(preview_data)}")
+        
+        # Display preview data
+        if preview_data:
+            print(f"   📊 PREVIEW DATA:")
+            for i, transaction in enumerate(preview_data, 1):
+                desc = transaction.get('descricao', 'N/A')
+                valor = transaction.get('valor', 0)
+                tipo = transaction.get('tipo', 'N/A')
+                print(f"      {i}. {desc} - R$ {valor} ({tipo})")
+        
+        # STEP 3: Session Retrieval
+        print(f"\n🔍 STEP 3: Session Retrieval - GET /api/import/sessions/{session_id}")
+        
+        session_response = requests.get(f"{BACKEND_URL}/import/sessions/{session_id}", headers=headers)
+        
+        if session_response.status_code != 200:
+            error_detail = session_response.json().get("detail", "Unknown error") if session_response.headers.get('content-type', '').startswith('application/json') else f"HTTP {session_response.status_code}"
+            print_test_result("STEP 3 - SESSION RETRIEVAL", False, f"❌ Session retrieval failed: {error_detail}")
+            return test_results
+        
+        session_data = session_response.json()
+        session_status = session_data.get("status", "unknown")
+        session_transactions = session_data.get("preview_data", [])
+        
+        test_results["step3_session_retrieval"] = True
+        
+        print_test_result("STEP 3 - SESSION RETRIEVAL", True, 
+                        f"✅ Session retrieved - Status: {session_status}")
+        print(f"   Session transactions: {len(session_transactions)}")
+        
+        # STEP 4: Import Confirmation - THE CRITICAL TEST
+        print(f"\n🔍 STEP 4: Import Confirmation - POST /api/import/confirm")
+        print("   🚨 CRITICAL TEST: This is where the bug was occurring!")
+        print("   Previous behavior: Success message but 0 transactions created")
+        
+        # Prepare confirmation request with all transactions
+        confirm_request = {
+            "session_id": session_id,
+            "selected_transactions": preview_data  # Confirm all transactions
+        }
+        
+        confirm_response = requests.post(f"{BACKEND_URL}/import/confirm", 
+                                       json=confirm_request, headers=headers)
+        
+        if confirm_response.status_code != 200:
+            error_detail = confirm_response.json().get("detail", "Unknown error") if confirm_response.headers.get('content-type', '').startswith('application/json') else f"HTTP {confirm_response.status_code}"
+            print_test_result("STEP 4 - IMPORT CONFIRMATION", False, f"❌ Confirmation failed: {error_detail}")
+            return test_results
+        
+        confirm_data = confirm_response.json()
+        confirm_message = confirm_data.get("message", "No message")
+        
+        test_results["step4_import_confirmation"] = True
+        
+        print_test_result("STEP 4 - IMPORT CONFIRMATION", True, 
+                        f"✅ Confirmation successful: {confirm_message}")
+        
+        # STEP 5: CRITICAL VERIFICATION - Check if transactions were ACTUALLY created
+        print(f"\n🔍 STEP 5: CRITICAL VERIFICATION - Check actual transaction creation")
+        print("   🚨 THIS IS THE CRITICAL TEST: Were transactions actually created in database?")
+        
+        # Wait a moment for database operations to complete
+        import time
+        time.sleep(1)
+        
+        # Get all transactions after import
+        post_import_response = requests.get(f"{BACKEND_URL}/transactions", headers=headers)
+        
+        if post_import_response.status_code != 200:
+            print_test_result("STEP 5 - TRANSACTION VERIFICATION", False, 
+                            f"❌ Could not retrieve transactions: {post_import_response.status_code}")
+            return test_results
+        
+        post_import_transactions = post_import_response.json()
+        test_results["transactions_after_import"] = len(post_import_transactions)
+        
+        # Calculate new transactions created
+        new_transactions_count = len(post_import_transactions) - test_results["transactions_before_import"]
+        test_results["actual_transactions_created"] = new_transactions_count
+        
+        print(f"   📊 TRANSACTION COUNT ANALYSIS:")
+        print(f"      Before import: {test_results['transactions_before_import']} transactions")
+        print(f"      After import: {test_results['transactions_after_import']} transactions")
+        print(f"      New transactions created: {new_transactions_count}")
+        print(f"      Expected transactions: {test_results['preview_transactions_count']}")
+        
+        # Check if the expected number of transactions were created
+        if new_transactions_count == test_results['preview_transactions_count'] and new_transactions_count > 0:
+            test_results["step5_transactions_created"] = True
+            test_results["critical_bug_fixed"] = True
+            
+            print_test_result("STEP 5 - TRANSACTION VERIFICATION", True, 
+                            f"✅ SUCCESS! {new_transactions_count} transactions created as expected")
+            
+            # Verify specific transactions
+            print(f"   🔍 VERIFYING SPECIFIC IMPORTED TRANSACTIONS:")
+            recent_transactions = sorted(post_import_transactions, 
+                                       key=lambda x: x.get('created_at', ''), reverse=True)[:new_transactions_count]
+            
+            for i, transaction in enumerate(recent_transactions, 1):
+                desc = transaction.get('description', 'N/A')
+                value = transaction.get('value', 0)
+                trans_type = transaction.get('type', 'N/A')
+                print(f"      {i}. {desc} - R$ {value} ({trans_type})")
+            
+        elif new_transactions_count == 0:
+            print_test_result("STEP 5 - TRANSACTION VERIFICATION", False, 
+                            "❌ CRITICAL BUG STILL EXISTS: 0 transactions created despite success message")
+            
+        else:
+            print_test_result("STEP 5 - TRANSACTION VERIFICATION", False, 
+                            f"❌ PARTIAL FAILURE: Expected {test_results['preview_transactions_count']}, got {new_transactions_count}")
+        
+        # FINAL SUMMARY
+        print(f"\n🔍 CRITICAL FILE IMPORT SYSTEM TEST SUMMARY")
+        print("="*70)
+        
+        print(f"📊 STEP-BY-STEP RESULTS:")
+        print(f"   ✅ Step 1 - Authentication: {'SUCCESS' if test_results['step1_authentication'] else 'FAILED'}")
+        print(f"   ✅ Step 2 - File Upload: {'SUCCESS' if test_results['step2_file_upload'] else 'FAILED'}")
+        print(f"   ✅ Step 3 - Session Retrieval: {'SUCCESS' if test_results['step3_session_retrieval'] else 'FAILED'}")
+        print(f"   ✅ Step 4 - Import Confirmation: {'SUCCESS' if test_results['step4_import_confirmation'] else 'FAILED'}")
+        print(f"   ✅ Step 5 - Transactions Created: {'SUCCESS' if test_results['step5_transactions_created'] else 'FAILED'}")
+        
+        print(f"\n📊 CRITICAL BUG STATUS:")
+        print(f"   Preview Transactions: {test_results['preview_transactions_count']}")
+        print(f"   Actual Transactions Created: {test_results['actual_transactions_created']}")
+        print(f"   Critical Bug Fixed: {'YES' if test_results['critical_bug_fixed'] else 'NO'}")
+        
+        if test_results['critical_bug_fixed']:
+            print(f"\n🎉 CRITICAL BUG SUCCESSFULLY FIXED!")
+            print("✅ File Import System is now working correctly:")
+            print("   - Authentication working with hpdanielvb@gmail.com / 123456")
+            print("   - File upload processing CSV data correctly")
+            print("   - Session retrieval returning proper preview data")
+            print("   - Import confirmation endpoint working")
+            print("   - 🚨 MOST IMPORTANT: Transactions are now ACTUALLY being created in database")
+            print("   - Transaction count matches expected preview count")
+            print("   - Complete import workflow functioning end-to-end")
+            
+            return True
+        else:
+            print(f"\n❌ CRITICAL BUG STILL EXISTS OR NEW ISSUES FOUND:")
+            if not test_results['step1_authentication']:
+                print("   - Authentication failed")
+            if not test_results['step2_file_upload']:
+                print("   - File upload failed")
+            if not test_results['step3_session_retrieval']:
+                print("   - Session retrieval failed")
+            if not test_results['step4_import_confirmation']:
+                print("   - Import confirmation failed")
+            if not test_results['step5_transactions_created']:
+                print("   - 🚨 CRITICAL: Transactions not created in database")
+                print("   - This is the same bug that was reported")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("CRITICAL FILE IMPORT SYSTEM TEST", False, f"Exception: {str(e)}")
+        return False
+
+if __name__ == "__main__":
+    print("🚀 INICIANDO TESTES BACKEND COMPLETOS - OrçaZenFinanceiro")
+    print("="*80)
+    
+    # Run the critical file import system test
+    print("\n🔥 EXECUTANDO TESTE CRÍTICO DO SISTEMA DE IMPORTAÇÃO DE ARQUIVOS")
+    test_file_import_system_critical()
+    
+    print("\n" + "="*80)
+    print("✅ TESTES BACKEND CONCLUÍDOS")
+    print("="*80)
