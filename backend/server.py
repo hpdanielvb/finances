@@ -2796,6 +2796,57 @@ async def update_budget_spent(user_id: str, category_id: str, month_year: str, a
         upsert=False
     )
 
+# ============================================================================
+# 🏠 CONTRACT HELPER FUNCTIONS - PHASE 2
+# ============================================================================
+
+def calculate_contract_totals(contract: dict) -> dict:
+    """
+    Calcula valores totais do contrato incluindo juros, taxa administrativa e seguro
+    """
+    parcelas_restantes = contract["quantidade_parcelas"] - contract["parcela_atual"]
+    juros_acumulado = contract["parcela_mensal"] * contract["juros_mensal"] / 100 * contract["parcela_atual"]
+    
+    valor_total_pago = contract["parcela_mensal"] * contract["parcela_atual"]
+    valor_total_final = (contract["parcela_mensal"] * contract["quantidade_parcelas"] + 
+                        contract["taxa_administrativa"] + 
+                        contract["seguro"])
+    valor_restante = valor_total_final - valor_total_pago
+    
+    return {
+        "valor_total_pago": valor_total_pago,
+        "valor_total_final": valor_total_final,
+        "valor_restante": valor_restante,
+        "parcelas_restantes": parcelas_restantes,
+        "juros_acumulado": juros_acumulado,
+        "progresso_percentual": (contract["parcela_atual"] / contract["quantidade_parcelas"]) * 100
+    }
+
+def check_contract_status(contract: dict) -> str:
+    """
+    Verifica e atualiza automaticamente o status do contrato
+    """
+    if contract["parcela_atual"] >= contract["quantidade_parcelas"]:
+        return "quitado"
+    elif contract["status"] == "cancelado":
+        return "cancelado"
+    else:
+        return "ativo"
+
+async def update_contract_status(contract_id: str, user_id: str):
+    """
+    Atualiza o status do contrato baseado nas regras de negócio
+    """
+    contract = await db.contracts.find_one({"id": contract_id, "user_id": user_id})
+    if contract:
+        new_status = check_contract_status(contract)
+        if new_status != contract["status"]:
+            await db.contracts.update_one(
+                {"id": contract_id, "user_id": user_id},
+                {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
+            )
+    return new_status
+
 # Test endpoint for authentication debugging
 @api_router.get("/test/auth", response_model=Dict[str, Any])
 async def test_auth(current_user: User = Depends(get_current_user)):
