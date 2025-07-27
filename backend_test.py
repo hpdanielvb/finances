@@ -7405,9 +7405,9 @@ def test_file_import_system_critical():
         print(f"      3. Farmácia Teste - R$ 45.80 (Despesa)")
         
         # Prepare file for upload
-        files = {
-            'file': ('test_transactions.csv', csv_content, 'text/csv')
-        }
+        files = [
+            ('files', ('test_transactions.csv', csv_content, 'text/csv'))
+        ]
         
         upload_response = requests.post(f"{BACKEND_URL}/import/upload", files=files, headers=headers)
         
