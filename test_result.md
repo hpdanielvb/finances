@@ -632,7 +632,8 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Consortium and Consigned Loan Backend Implementation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -646,6 +647,8 @@ agent_communication:
     - message: "PHASE 1 BACKEND DISCOVERY: Discovered that the File Import System backend is already fully implemented! Found complete OCR processing (images/PDFs), Excel/CSV parsing, duplicate detection, and all API endpoints (/api/import/upload, /api/import/preview, /api/import/confirm). Will test backend functionality before proceeding to frontend integration."
     - agent: "main"
     - message: "RE-TEST REQUIRED: Sistema de Importação de Arquivos needs immediate re-testing. Previous tests showed critical bug in /api/import/confirm endpoint - transactions not being created in database despite success messages. Recent code modifications were made to fix the transaction creation logic. Need to verify if the bug is resolved and transactions are actually being created when import is confirmed. Focus testing on complete file import workflow with transaction verification."
+    - agent: "main"
+    - message: "FASE 2 FEATURE 1 COMPLETED: Sistema de Importação de Arquivos implementado com sucesso! Backend 100% funcional com bug crítico resolvido, frontend completamente implementado com interface moderna. Iniciando FASE 2 FEATURE 2: Backend para Consórcio e Empréstimo Consignado. Implementará modelo comum ContractBase, endpoints CRUD completos (/api/contratos), validações Pydantic, regras de negócio (mudança automática de status), e cálculos financeiros integrados."
     - agent: "testing"
     - message: "🎉 BACKEND TESTING COMPLETED SUCCESSFULLY! All 6 backend tasks tested and working perfectly: (1) JWT Authentication System - token generation, validation, and security working correctly (2) User Registration/Login APIs - proper validation, error handling, password security (3) Account Management CRUD - creation, listing, balance tracking (4) Transaction Management CRUD - creation, listing, automatic balance updates for both income/expense (5) Dashboard Summary API - accurate calculations, proper data aggregation (6) Categories API - default Brazilian categories created automatically. All APIs use proper authentication, handle Brazilian data correctly, and perform accurate financial calculations. Backend is production-ready. Only frontend tasks remain for testing."
     - agent: "testing"
