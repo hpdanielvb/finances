@@ -612,6 +612,8 @@ const Dashboard = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState([]);
 
+  const { user, logout } = useAuth();
+
   const loadDashboard = async () => {
     try {
       console.log('Loading dashboard data...');
