@@ -2462,6 +2462,21 @@ const Dashboard = () => {
             onChangePassword={openPasswordModal}
           />
         )}
+
+        {/* 📄 FILE IMPORT VIEW */}
+        {activeView === 'import' && (
+          <FileImportView
+            importStep={importStep}
+            selectedFiles={selectedFiles}
+            importPreview={importPreview}
+            selectedTransactions={selectedTransactions}
+            importLoading={importLoading}
+            onFileUpload={handleFileUpload}
+            onImportConfirm={handleImportConfirm}
+            onTransactionToggle={toggleTransactionSelection}
+            onReset={resetImport}
+          />
+        )}
       </div>
 
       {/* Fixed Quick Actions - Show when scrolled on dashboard */}
