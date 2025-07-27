@@ -4083,6 +4083,61 @@ async def list_contracts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao listar contratos: {str(e)}")
 
+@api_router.get("/contratos/statistics", response_model=Dict[str, Any])
+async def get_contracts_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """Obter estatísticas dos contratos do usuário"""
+    try:
+        # Get all contracts
+        contracts = await db.contracts.find({"user_id": current_user.id}).to_list(100)
+        
+        if not contracts:
+            return {
+                "total_contracts": 0,
+                "active_contracts": 0,
+                "paid_contracts": 0,
+                "cancelled_contracts": 0,
+                "consortium_count": 0,
+                "consigned_count": 0,
+                "total_value_sum": 0,
+                "total_paid_sum": 0,
+                "total_remaining_sum": 0
+            }
+        
+        # Calculate statistics
+        total_contracts = len(contracts)
+        active_contracts = len([c for c in contracts if c["status"] == "ativo"])
+        paid_contracts = len([c for c in contracts if c["status"] == "quitado"])
+        cancelled_contracts = len([c for c in contracts if c["status"] == "cancelado"])
+        consortium_count = len([c for c in contracts if c["tipo"] == "consórcio"])
+        consigned_count = len([c for c in contracts if c["tipo"] == "consignado"])
+        
+        total_value_sum = 0
+        total_paid_sum = 0
+        total_remaining_sum = 0
+        
+        for contract in contracts:
+            totals = calculate_contract_totals(contract)
+            total_value_sum += totals["valor_total_final"]
+            total_paid_sum += totals["valor_total_pago"]
+            total_remaining_sum += totals["valor_restante"]
+        
+        return {
+            "total_contracts": total_contracts,
+            "active_contracts": active_contracts,
+            "paid_contracts": paid_contracts,
+            "cancelled_contracts": cancelled_contracts,
+            "consortium_count": consortium_count,
+            "consigned_count": consigned_count,
+            "total_value_sum": total_value_sum,
+            "total_paid_sum": total_paid_sum,
+            "total_remaining_sum": total_remaining_sum
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao calcular estatísticas: {str(e)}")
+
 @api_router.get("/contratos/{contract_id}", response_model=Dict[str, Any])
 async def get_contract(
     contract_id: str,
