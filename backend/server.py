@@ -4004,6 +4004,238 @@ async def delete_import_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao cancelar importação: {str(e)}")
 
+# ============================================================================
+# 🏠 CONTRACT ENDPOINTS - PHASE 2 (CONSORTIUM AND CONSIGNED LOAN)
+# ============================================================================
+
+@api_router.post("/contratos", response_model=Dict[str, Any])
+async def create_contract(
+    contract_data: ContractCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Criar novo contrato (consórcio ou empréstimo consignado)"""
+    try:
+        # Validate contract type
+        if contract_data.tipo not in ["consórcio", "consignado"]:
+            raise HTTPException(status_code=400, detail="Tipo deve ser 'consórcio' ou 'consignado'")
+        
+        # Validate status
+        if contract_data.status not in ["ativo", "quitado", "cancelado"]:
+            raise HTTPException(status_code=400, detail="Status deve ser 'ativo', 'quitado' ou 'cancelado'")
+        
+        # Create contract document
+        contract = ContractBase(
+            user_id=current_user.id,
+            **contract_data.dict()
+        ).dict()
+        
+        # Auto-update status if needed
+        contract["status"] = check_contract_status(contract)
+        
+        # Insert into database
+        await db.contracts.insert_one(contract)
+        
+        # Calculate totals for response
+        contract_totals = calculate_contract_totals(contract)
+        contract.update(contract_totals)
+        
+        return {
+            "message": f"Contrato {contract_data.tipo} criado com sucesso!",
+            "contract": contract
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar contrato: {str(e)}")
+
+@api_router.get("/contratos", response_model=List[Dict[str, Any]])
+async def list_contracts(
+    current_user: User = Depends(get_current_user),
+    tipo: Optional[str] = None,
+    status: Optional[str] = None
+):
+    """Listar todos os contratos do usuário com filtros opcionais"""
+    try:
+        # Build query filter
+        query = {"user_id": current_user.id}
+        
+        if tipo and tipo in ["consórcio", "consignado"]:
+            query["tipo"] = tipo
+            
+        if status and status in ["ativo", "quitado", "cancelado"]:
+            query["status"] = status
+        
+        # Get contracts
+        contracts = await db.contracts.find(query).to_list(100)
+        
+        # Calculate totals for each contract
+        for contract in contracts:
+            contract_totals = calculate_contract_totals(contract)
+            contract.update(contract_totals)
+        
+        return contracts
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar contratos: {str(e)}")
+
+@api_router.get("/contratos/{contract_id}", response_model=Dict[str, Any])
+async def get_contract(
+    contract_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obter contrato específico por ID"""
+    try:
+        contract = await db.contracts.find_one({
+            "id": contract_id,
+            "user_id": current_user.id
+        })
+        
+        if not contract:
+            raise HTTPException(status_code=404, detail="Contrato não encontrado")
+        
+        # Calculate totals
+        contract_totals = calculate_contract_totals(contract)
+        contract.update(contract_totals)
+        
+        return contract
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar contrato: {str(e)}")
+
+@api_router.put("/contratos/{contract_id}", response_model=Dict[str, Any])
+async def update_contract(
+    contract_id: str,
+    contract_update: ContractUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Atualizar contrato existente"""
+    try:
+        # Check if contract exists
+        existing_contract = await db.contracts.find_one({
+            "id": contract_id,
+            "user_id": current_user.id
+        })
+        
+        if not existing_contract:
+            raise HTTPException(status_code=404, detail="Contrato não encontrado")
+        
+        # Prepare update data
+        update_data = {}
+        for field, value in contract_update.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        # Always update the updated_at timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        # Update contract
+        await db.contracts.update_one(
+            {"id": contract_id, "user_id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        # Get updated contract
+        updated_contract = await db.contracts.find_one({
+            "id": contract_id,
+            "user_id": current_user.id
+        })
+        
+        # Check and update status if needed
+        new_status = await update_contract_status(contract_id, current_user.id)
+        updated_contract["status"] = new_status
+        
+        # Calculate totals
+        contract_totals = calculate_contract_totals(updated_contract)
+        updated_contract.update(contract_totals)
+        
+        return {
+            "message": "Contrato atualizado com sucesso!",
+            "contract": updated_contract
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar contrato: {str(e)}")
+
+@api_router.delete("/contratos/{contract_id}", response_model=Dict[str, str])
+async def delete_contract(
+    contract_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Deletar contrato"""
+    try:
+        result = await db.contracts.delete_one({
+            "id": contract_id,
+            "user_id": current_user.id
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Contrato não encontrado")
+        
+        return {"message": "Contrato deletado com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao deletar contrato: {str(e)}")
+
+@api_router.get("/contratos/statistics", response_model=Dict[str, Any])
+async def get_contracts_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """Obter estatísticas dos contratos do usuário"""
+    try:
+        # Get all contracts
+        contracts = await db.contracts.find({"user_id": current_user.id}).to_list(100)
+        
+        if not contracts:
+            return {
+                "total_contracts": 0,
+                "active_contracts": 0,
+                "paid_contracts": 0,
+                "cancelled_contracts": 0,
+                "consortium_count": 0,
+                "consigned_count": 0,
+                "total_value_sum": 0,
+                "total_paid_sum": 0,
+                "total_remaining_sum": 0
+            }
+        
+        # Calculate statistics
+        total_contracts = len(contracts)
+        active_contracts = len([c for c in contracts if c["status"] == "ativo"])
+        paid_contracts = len([c for c in contracts if c["status"] == "quitado"])
+        cancelled_contracts = len([c for c in contracts if c["status"] == "cancelado"])
+        consortium_count = len([c for c in contracts if c["tipo"] == "consórcio"])
+        consigned_count = len([c for c in contracts if c["tipo"] == "consignado"])
+        
+        total_value_sum = 0
+        total_paid_sum = 0
+        total_remaining_sum = 0
+        
+        for contract in contracts:
+            totals = calculate_contract_totals(contract)
+            total_value_sum += totals["valor_total_final"]
+            total_paid_sum += totals["valor_total_pago"]
+            total_remaining_sum += totals["valor_restante"]
+        
+        return {
+            "total_contracts": total_contracts,
+            "active_contracts": active_contracts,
+            "paid_contracts": paid_contracts,
+            "cancelled_contracts": cancelled_contracts,
+            "consortium_count": consortium_count,
+            "consigned_count": consigned_count,
+            "total_value_sum": total_value_sum,
+            "total_paid_sum": total_paid_sum,
+            "total_remaining_sum": total_remaining_sum
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao calcular estatísticas: {str(e)}")
+
 # Include router
 app.include_router(api_router)
 
