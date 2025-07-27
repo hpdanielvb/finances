@@ -8202,10 +8202,15 @@ if __name__ == "__main__":
     print("🚀 INICIANDO TESTES BACKEND COMPLETOS - OrçaZenFinanceiro")
     print("="*80)
     
-    # Run the critical file import system test
-    print("\n🔥 EXECUTANDO TESTE CRÍTICO DO SISTEMA DE IMPORTAÇÃO DE ARQUIVOS")
-    test_file_import_system_critical()
+    # Run the consortium and consigned loan system test
+    print("\n🏠 EXECUTANDO TESTE DO SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO")
+    consortium_success = test_consortium_consigned_loan_system()
     
     print("\n" + "="*80)
     print("✅ TESTES BACKEND CONCLUÍDOS")
     print("="*80)
+    
+    if consortium_success:
+        print("🎉 SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO: FUNCIONANDO PERFEITAMENTE!")
+    else:
+        print("⚠️ SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO: PROBLEMAS DETECTADOS")
