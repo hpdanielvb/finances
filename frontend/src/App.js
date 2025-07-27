@@ -1328,6 +1328,104 @@ const Dashboard = () => {
   };
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
+  // 📄 File Import Functions
+  const handleFileUpload = async (files) => {
+    if (!files || files.length === 0) {
+      toast.error('Por favor, selecione pelo menos um arquivo');
+      return;
+    }
+
+    setImportLoading(true);
+    const formData = new FormData();
+    
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await axios.post(`${API}/import/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const { session_id, preview_data } = response.data;
+      setImportSession(session_id);
+      setImportPreview(preview_data || []);
+      setSelectedTransactions(preview_data || []);
+      setImportStep('preview');
+      
+      toast.success(`${Array.from(files).length} arquivo(s) processado(s) com sucesso!`);
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao fazer upload dos arquivos');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importSession || selectedTransactions.length === 0) {
+      toast.error('Nenhuma transação selecionada para importação');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportStep('confirming');
+
+    try {
+      const response = await axios.post(`${API}/import/confirm`, {
+        session_id: importSession,
+        selected_transactions: selectedTransactions
+      });
+
+      toast.success(response.data.message || 'Importação concluída com sucesso!');
+      
+      // Reset import state and reload transactions
+      setImportStep('upload');
+      setImportSession(null);
+      setImportPreview([]);
+      setSelectedTransactions([]);
+      setSelectedFiles([]);
+      
+      // Reload data
+      await loadDashboard();
+      
+    } catch (error) {
+      console.error('Erro na confirmação:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao confirmar importação');
+      setImportStep('preview'); // Return to preview on error
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const toggleTransactionSelection = (transaction) => {
+    const isSelected = selectedTransactions.some(t => 
+      t.descricao === transaction.descricao && 
+      t.valor === transaction.valor && 
+      t.data === transaction.data
+    );
+
+    if (isSelected) {
+      setSelectedTransactions(selectedTransactions.filter(t => 
+        !(t.descricao === transaction.descricao && 
+          t.valor === transaction.valor && 
+          t.data === transaction.data)
+      ));
+    } else {
+      setSelectedTransactions([...selectedTransactions, transaction]);
+    }
+  };
+
+  const resetImport = () => {
+    setImportStep('upload');
+    setImportSession(null);
+    setImportPreview([]);
+    setSelectedTransactions([]);
+    setSelectedFiles([]);
+  };
+
   // Prepare chart data
   const expenseChartData = summary?.expense_by_category ? 
     Object.entries(summary.expense_by_category).map(([name, value], index) => ({
