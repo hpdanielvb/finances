@@ -4035,6 +4035,10 @@ async def create_contract(
         # Insert into database
         await db.contracts.insert_one(contract)
         
+        # Remove MongoDB _id field for JSON serialization
+        if "_id" in contract:
+            del contract["_id"]
+        
         # Calculate totals for response
         contract_totals = calculate_contract_totals(contract)
         contract.update(contract_totals)
