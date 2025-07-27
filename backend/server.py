@@ -4048,7 +4048,10 @@ async def create_contract(
             "contract": contract
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[CONTRACT ERROR] {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro ao criar contrato: {str(e)}")
 
 @api_router.get("/contratos", response_model=List[Dict[str, Any]])
