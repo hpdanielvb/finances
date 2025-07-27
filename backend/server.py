@@ -367,6 +367,54 @@ class ImportConfirmRequest(BaseModel):
     session_id: str
     selected_transactions: List[ImportTransaction]
 
+# ============================================================================
+# 🏠 CONSORTIUM AND CONSIGNED LOAN MODELS - PHASE 2
+# ============================================================================
+
+class ContractBase(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    tipo: str  # "consórcio" ou "consignado"
+    nome: str
+    valor_total: float
+    parcela_mensal: float
+    quantidade_parcelas: int
+    parcela_atual: int = 0
+    juros_mensal: float
+    taxa_administrativa: float
+    seguro: float
+    data_inicio: datetime
+    data_vencimento: datetime
+    status: str = "ativo"  # "ativo", "quitado", "cancelado"
+    observacoes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ContractCreate(BaseModel):
+    tipo: str  # "consórcio" ou "consignado"
+    nome: str
+    valor_total: float
+    parcela_mensal: float
+    quantidade_parcelas: int
+    parcela_atual: int = 0
+    juros_mensal: float
+    taxa_administrativa: float
+    seguro: float
+    data_inicio: datetime
+    data_vencimento: datetime
+    status: str = "ativo"
+    observacoes: Optional[str] = None
+
+class ContractUpdate(BaseModel):
+    nome: Optional[str] = None
+    parcela_atual: Optional[int] = None
+    juros_mensal: Optional[float] = None
+    taxa_administrativa: Optional[float] = None
+    seguro: Optional[float] = None
+    data_vencimento: Optional[datetime] = None
+    status: Optional[str] = None
+    observacoes: Optional[str] = None
+
 # Enhanced utility functions with better session management
 def create_access_token(data: dict):
     to_encode = data.copy()
