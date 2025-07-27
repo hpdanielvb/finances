@@ -4151,6 +4151,10 @@ async def update_contract(
             "user_id": current_user.id
         })
         
+        # Remove MongoDB _id field for JSON serialization
+        if "_id" in updated_contract:
+            del updated_contract["_id"]
+        
         # Check and update status if needed
         new_status = await update_contract_status(contract_id, current_user.id)
         updated_contract["status"] = new_status
