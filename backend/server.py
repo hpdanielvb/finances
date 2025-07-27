@@ -4071,8 +4071,10 @@ async def list_contracts(
         # Get contracts
         contracts = await db.contracts.find(query).to_list(100)
         
-        # Calculate totals for each contract
+        # Calculate totals for each contract and remove MongoDB _id
         for contract in contracts:
+            if "_id" in contract:
+                del contract["_id"]
             contract_totals = calculate_contract_totals(contract)
             contract.update(contract_totals)
         
