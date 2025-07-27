@@ -604,7 +604,13 @@ const Dashboard = () => {
     confirm_password: ''
   });
 
-  const { user, logout } = useAuth();
+  // 📄 File Import States
+  const [importStep, setImportStep] = useState('upload'); // 'upload', 'preview', 'confirming'
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [importSession, setImportSession] = useState(null);
+  const [importPreview, setImportPreview] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [selectedTransactions, setSelectedTransactions] = useState([]);
 
   const loadDashboard = async () => {
     try {
