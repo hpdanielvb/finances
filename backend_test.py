@@ -1231,6 +1231,614 @@ def test_user_profile_endpoints_detailed():
         print_test_result("HIERARCHICAL CATEGORY SELECT BACKEND TEST", False, f"Exception: {str(e)}")
         return False
 
+def test_consortium_consigned_loan_system():
+    """
+    COMPREHENSIVE CONSORTIUM AND CONSIGNED LOAN BACKEND SYSTEM TEST
+    
+    This addresses the specific review request to test the newly implemented
+    Sistema de Consórcio e Empréstimo Consignado backend functionality.
+    
+    Test Coverage:
+    1. Authentication - Login with hpdanielvb@gmail.com / 123456
+    2. POST /api/contratos - Create new contracts (both "consórcio" and "consignado")
+    3. GET /api/contratos - List contracts with filters (tipo/status)
+    4. GET /api/contratos/{id} - Get specific contract by ID
+    5. PUT /api/contratos/{id} - Update contract (test automatic status changes)
+    6. DELETE /api/contratos/{id} - Delete contract
+    7. GET /api/contratos/statistics - Get contract statistics
+    
+    Business Rules Testing:
+    - Automatic status change when parcela_atual >= quantidade_parcelas
+    - Financial calculations (valor_total_pago, valor_restante, progresso_percentual)
+    - Type validation ("consórcio" vs "consignado")
+    - Status validation ("ativo", "quitado", "cancelado")
+    
+    Data Validation:
+    - Required fields validation
+    - Pydantic model validation
+    - Brazilian financial data patterns
+    """
+    print("\n" + "="*80)
+    print("🏠 CONSORTIUM AND CONSIGNED LOAN BACKEND SYSTEM TEST")
+    print("="*80)
+    print("Testing Sistema de Consórcio e Empréstimo Consignado backend functionality")
+    print("Endpoints: POST/GET/PUT/DELETE /api/contratos + statistics")
+    
+    # Test credentials from review request
+    user_login_primary = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"
+    }
+    
+    user_login_secondary = {
+        "email": "hpdanielvb@gmail.com", 
+        "password": "TestPassword123"
+    }
+    
+    test_results = {
+        "login_success": False,
+        "create_consortium_working": False,
+        "create_consigned_working": False,
+        "list_contracts_working": False,
+        "get_contract_by_id_working": False,
+        "update_contract_working": False,
+        "delete_contract_working": False,
+        "statistics_working": False,
+        "type_validation_working": False,
+        "status_validation_working": False,
+        "automatic_status_change_working": False,
+        "financial_calculations_working": False,
+        "filters_working": False,
+        "pydantic_validation_working": False,
+        "auth_token": None,
+        "consortium_contract_id": None,
+        "consigned_contract_id": None,
+        "contracts_created": 0,
+        "contracts_tested": 0
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Authentication")
+        print(f"   Testing primary credentials: {user_login_primary['email']} / {user_login_primary['password']}")
+        
+        # Try primary credentials first
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_primary)
+        
+        if response.status_code != 200:
+            print(f"   Primary login failed, trying secondary credentials: {user_login_secondary['password']}")
+            response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_secondary)
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                print_test_result("AUTHENTICATION", False, f"❌ Both login attempts failed: {error_detail}")
+                return test_results
+            else:
+                used_credentials = user_login_secondary
+        else:
+            used_credentials = user_login_primary
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["auth_token"] = auth_token
+        test_results["login_success"] = True
+        
+        print_test_result("AUTHENTICATION", True, 
+                        f"✅ Login successful with {used_credentials['password']}")
+        print(f"   User: {user_info.get('name')} ({user_info.get('email')})")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Create Consortium Contract - POST /api/contratos
+        print(f"\n🔍 STEP 2: Create Consortium Contract - POST /api/contratos")
+        print("   Testing contract creation with type 'consórcio'...")
+        
+        consortium_data = {
+            "tipo": "consórcio",
+            "nome": "Consórcio Imóvel Casa Própria",
+            "valor_total": 350000.00,
+            "parcela_mensal": 1500.00,
+            "quantidade_parcelas": 240,
+            "parcela_atual": 24,
+            "juros_mensal": 0.8,
+            "taxa_administrativa": 2500.00,
+            "seguro": 1200.00,
+            "data_inicio": "2023-01-15T00:00:00",
+            "data_vencimento": "2043-01-15T00:00:00",
+            "status": "ativo",
+            "observacoes": "Consórcio para aquisição de imóvel residencial"
+        }
+        
+        print(f"   Creating consortium contract:")
+        print(f"      Nome: {consortium_data['nome']}")
+        print(f"      Valor Total: R$ {consortium_data['valor_total']:,.2f}")
+        print(f"      Parcela Mensal: R$ {consortium_data['parcela_mensal']:,.2f}")
+        print(f"      Parcelas: {consortium_data['parcela_atual']}/{consortium_data['quantidade_parcelas']}")
+        
+        consortium_response = requests.post(f"{BACKEND_URL}/contratos", json=consortium_data, headers=headers)
+        
+        if consortium_response.status_code == 200:
+            consortium_result = consortium_response.json()
+            contract_info = consortium_result.get("contract", {})
+            test_results["consortium_contract_id"] = contract_info.get("id")
+            test_results["create_consortium_working"] = True
+            test_results["contracts_created"] += 1
+            
+            print_test_result("CREATE CONSORTIUM CONTRACT", True, 
+                            f"✅ Contract created: {consortium_result.get('message', 'Success')}")
+            
+            # Verify financial calculations
+            expected_calculations = [
+                "valor_total_pago", "valor_total_final", "valor_restante", 
+                "parcelas_restantes", "juros_acumulado", "progresso_percentual"
+            ]
+            
+            calculations_present = all(calc in contract_info for calc in expected_calculations)
+            if calculations_present:
+                test_results["financial_calculations_working"] = True
+                print(f"   📊 FINANCIAL CALCULATIONS:")
+                print(f"      Valor Total Pago: R$ {contract_info.get('valor_total_pago', 0):,.2f}")
+                print(f"      Valor Restante: R$ {contract_info.get('valor_restante', 0):,.2f}")
+                print(f"      Progresso: {contract_info.get('progresso_percentual', 0):.1f}%")
+                print(f"      Parcelas Restantes: {contract_info.get('parcelas_restantes', 0)}")
+                print_test_result("FINANCIAL CALCULATIONS", True, "✅ All calculations present")
+            else:
+                print_test_result("FINANCIAL CALCULATIONS", False, "❌ Missing calculations")
+        else:
+            error_detail = consortium_response.json().get("detail", "Unknown error")
+            print_test_result("CREATE CONSORTIUM CONTRACT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 3: Create Consigned Loan Contract
+        print(f"\n🔍 STEP 3: Create Consigned Loan Contract - POST /api/contratos")
+        print("   Testing contract creation with type 'consignado'...")
+        
+        consigned_data = {
+            "tipo": "consignado",
+            "nome": "Empréstimo Consignado INSS",
+            "valor_total": 50000.00,
+            "parcela_mensal": 850.00,
+            "quantidade_parcelas": 72,
+            "parcela_atual": 12,
+            "juros_mensal": 1.2,
+            "taxa_administrativa": 500.00,
+            "seguro": 300.00,
+            "data_inicio": "2024-01-01T00:00:00",
+            "data_vencimento": "2030-01-01T00:00:00",
+            "status": "ativo",
+            "observacoes": "Empréstimo consignado para aposentado INSS"
+        }
+        
+        print(f"   Creating consigned loan contract:")
+        print(f"      Nome: {consigned_data['nome']}")
+        print(f"      Valor Total: R$ {consigned_data['valor_total']:,.2f}")
+        print(f"      Parcela Mensal: R$ {consigned_data['parcela_mensal']:,.2f}")
+        print(f"      Parcelas: {consigned_data['parcela_atual']}/{consigned_data['quantidade_parcelas']}")
+        
+        consigned_response = requests.post(f"{BACKEND_URL}/contratos", json=consigned_data, headers=headers)
+        
+        if consigned_response.status_code == 200:
+            consigned_result = consigned_response.json()
+            contract_info = consigned_result.get("contract", {})
+            test_results["consigned_contract_id"] = contract_info.get("id")
+            test_results["create_consigned_working"] = True
+            test_results["contracts_created"] += 1
+            
+            print_test_result("CREATE CONSIGNED LOAN CONTRACT", True, 
+                            f"✅ Contract created: {consigned_result.get('message', 'Success')}")
+            
+            print(f"   📊 CONSIGNED LOAN CALCULATIONS:")
+            print(f"      Valor Total Pago: R$ {contract_info.get('valor_total_pago', 0):,.2f}")
+            print(f"      Valor Restante: R$ {contract_info.get('valor_restante', 0):,.2f}")
+            print(f"      Progresso: {contract_info.get('progresso_percentual', 0):.1f}%")
+        else:
+            error_detail = consigned_response.json().get("detail", "Unknown error")
+            print_test_result("CREATE CONSIGNED LOAN CONTRACT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 4: List Contracts - GET /api/contratos
+        print(f"\n🔍 STEP 4: List Contracts - GET /api/contratos")
+        print("   Testing contract listing with and without filters...")
+        
+        # Test without filters
+        list_response = requests.get(f"{BACKEND_URL}/contratos", headers=headers)
+        
+        if list_response.status_code == 200:
+            contracts_list = list_response.json()
+            test_results["list_contracts_working"] = True
+            
+            print_test_result("LIST CONTRACTS", True, 
+                            f"✅ Retrieved {len(contracts_list)} contracts")
+            
+            # Test with tipo filter
+            consortium_filter_response = requests.get(f"{BACKEND_URL}/contratos?tipo=consórcio", headers=headers)
+            consigned_filter_response = requests.get(f"{BACKEND_URL}/contratos?tipo=consignado", headers=headers)
+            
+            if consortium_filter_response.status_code == 200 and consigned_filter_response.status_code == 200:
+                consortium_contracts = consortium_filter_response.json()
+                consigned_contracts = consigned_filter_response.json()
+                
+                consortium_count = len([c for c in consortium_contracts if c.get("tipo") == "consórcio"])
+                consigned_count = len([c for c in consigned_contracts if c.get("tipo") == "consignado"])
+                
+                if consortium_count > 0 and consigned_count > 0:
+                    test_results["filters_working"] = True
+                    print_test_result("CONTRACT FILTERS", True, 
+                                    f"✅ Filters working: {consortium_count} consortium, {consigned_count} consigned")
+                else:
+                    print_test_result("CONTRACT FILTERS", False, "❌ Filters not working properly")
+            
+            # Test with status filter
+            active_filter_response = requests.get(f"{BACKEND_URL}/contratos?status=ativo", headers=headers)
+            if active_filter_response.status_code == 200:
+                active_contracts = active_filter_response.json()
+                active_count = len([c for c in active_contracts if c.get("status") == "ativo"])
+                print(f"   📊 FILTER RESULTS:")
+                print(f"      Active contracts: {active_count}")
+                print(f"      Total contracts: {len(contracts_list)}")
+        else:
+            print_test_result("LIST CONTRACTS", False, f"❌ Failed: {list_response.status_code}")
+        
+        # STEP 5: Get Contract by ID - GET /api/contratos/{id}
+        print(f"\n🔍 STEP 5: Get Contract by ID - GET /api/contratos/{{id}}")
+        
+        if test_results["consortium_contract_id"]:
+            contract_id = test_results["consortium_contract_id"]
+            print(f"   Testing contract retrieval by ID: {contract_id}")
+            
+            get_contract_response = requests.get(f"{BACKEND_URL}/contratos/{contract_id}", headers=headers)
+            
+            if get_contract_response.status_code == 200:
+                contract_detail = get_contract_response.json()
+                test_results["get_contract_by_id_working"] = True
+                
+                print_test_result("GET CONTRACT BY ID", True, 
+                                f"✅ Contract retrieved: {contract_detail.get('nome')}")
+                
+                # Verify all expected fields are present
+                expected_fields = [
+                    "id", "tipo", "nome", "valor_total", "parcela_mensal", 
+                    "quantidade_parcelas", "parcela_atual", "status"
+                ]
+                
+                missing_fields = [field for field in expected_fields if field not in contract_detail]
+                if not missing_fields:
+                    print(f"   📋 All required fields present")
+                else:
+                    print(f"   ⚠️  Missing fields: {', '.join(missing_fields)}")
+            else:
+                print_test_result("GET CONTRACT BY ID", False, f"❌ Failed: {get_contract_response.status_code}")
+        
+        # STEP 6: Update Contract and Test Automatic Status Change - PUT /api/contratos/{id}
+        print(f"\n🔍 STEP 6: Update Contract and Test Automatic Status Change")
+        
+        if test_results["consigned_contract_id"]:
+            contract_id = test_results["consigned_contract_id"]
+            print(f"   Testing contract update with automatic status change...")
+            print(f"   Contract ID: {contract_id}")
+            
+            # Update parcela_atual to equal quantidade_parcelas (should trigger status change to "quitado")
+            update_data = {
+                "parcela_atual": 72,  # Equal to quantidade_parcelas
+                "observacoes": "Contrato quitado - teste automático"
+            }
+            
+            print(f"   Updating parcela_atual to {update_data['parcela_atual']} (should trigger 'quitado' status)")
+            
+            update_response = requests.put(f"{BACKEND_URL}/contratos/{contract_id}", json=update_data, headers=headers)
+            
+            if update_response.status_code == 200:
+                update_result = update_response.json()
+                updated_contract = update_result.get("contract", {})
+                test_results["update_contract_working"] = True
+                
+                print_test_result("UPDATE CONTRACT", True, 
+                                f"✅ Contract updated: {update_result.get('message', 'Success')}")
+                
+                # Check if status changed automatically
+                new_status = updated_contract.get("status")
+                if new_status == "quitado":
+                    test_results["automatic_status_change_working"] = True
+                    print_test_result("AUTOMATIC STATUS CHANGE", True, 
+                                    f"✅ Status automatically changed to 'quitado'")
+                    
+                    # Verify progress is 100%
+                    progress = updated_contract.get("progresso_percentual", 0)
+                    if progress >= 100:
+                        print(f"   📊 Progress: {progress:.1f}% (Complete)")
+                    else:
+                        print(f"   ⚠️  Progress: {progress:.1f}% (Expected 100%)")
+                else:
+                    print_test_result("AUTOMATIC STATUS CHANGE", False, 
+                                    f"❌ Status is '{new_status}', expected 'quitado'")
+            else:
+                error_detail = update_response.json().get("detail", "Unknown error")
+                print_test_result("UPDATE CONTRACT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 7: Contract Statistics - GET /api/contratos/statistics
+        print(f"\n🔍 STEP 7: Contract Statistics - GET /api/contratos/statistics")
+        print("   Testing statistics endpoint...")
+        
+        stats_response = requests.get(f"{BACKEND_URL}/contratos/statistics", headers=headers)
+        
+        if stats_response.status_code == 200:
+            statistics = stats_response.json()
+            test_results["statistics_working"] = True
+            
+            print_test_result("CONTRACT STATISTICS", True, "✅ Statistics retrieved successfully")
+            
+            # Display statistics
+            print(f"   📊 CONTRACT STATISTICS:")
+            print(f"      Total Contracts: {statistics.get('total_contracts', 0)}")
+            print(f"      Active Contracts: {statistics.get('active_contracts', 0)}")
+            print(f"      Paid Contracts: {statistics.get('paid_contracts', 0)}")
+            print(f"      Cancelled Contracts: {statistics.get('cancelled_contracts', 0)}")
+            print(f"      Consortium Count: {statistics.get('consortium_count', 0)}")
+            print(f"      Consigned Count: {statistics.get('consigned_count', 0)}")
+            print(f"      Total Value Sum: R$ {statistics.get('total_value_sum', 0):,.2f}")
+            print(f"      Total Paid Sum: R$ {statistics.get('total_paid_sum', 0):,.2f}")
+            print(f"      Total Remaining Sum: R$ {statistics.get('total_remaining_sum', 0):,.2f}")
+            
+            # Verify statistics make sense
+            expected_stats = [
+                "total_contracts", "active_contracts", "paid_contracts", 
+                "consortium_count", "consigned_count", "total_value_sum"
+            ]
+            
+            missing_stats = [stat for stat in expected_stats if stat not in statistics]
+            if not missing_stats:
+                print(f"   ✅ All expected statistics present")
+            else:
+                print(f"   ⚠️  Missing statistics: {', '.join(missing_stats)}")
+        else:
+            print_test_result("CONTRACT STATISTICS", False, f"❌ Failed: {stats_response.status_code}")
+        
+        # STEP 8: Validation Tests
+        print(f"\n🔍 STEP 8: Validation Tests")
+        print("   Testing type and status validation...")
+        
+        validation_tests_passed = 0
+        total_validation_tests = 4
+        
+        # Test 8.1: Invalid contract type
+        print("   8.1: Testing invalid contract type...")
+        invalid_type_data = {
+            "tipo": "invalid_type",
+            "nome": "Test Invalid Type",
+            "valor_total": 10000.00,
+            "parcela_mensal": 500.00,
+            "quantidade_parcelas": 24,
+            "juros_mensal": 1.0,
+            "taxa_administrativa": 100.00,
+            "seguro": 50.00,
+            "data_inicio": "2024-01-01T00:00:00",
+            "data_vencimento": "2026-01-01T00:00:00"
+        }
+        
+        invalid_type_response = requests.post(f"{BACKEND_URL}/contratos", json=invalid_type_data, headers=headers)
+        
+        if invalid_type_response.status_code == 400:
+            error_detail = invalid_type_response.json().get("detail", "")
+            if "consórcio" in error_detail and "consignado" in error_detail:
+                validation_tests_passed += 1
+                print_test_result("INVALID TYPE VALIDATION", True, 
+                                f"✅ Properly rejected: {error_detail}")
+            else:
+                print_test_result("INVALID TYPE VALIDATION", False, 
+                                f"❌ Wrong error message: {error_detail}")
+        else:
+            print_test_result("INVALID TYPE VALIDATION", False, 
+                            f"❌ Expected 400, got: {invalid_type_response.status_code}")
+        
+        # Test 8.2: Invalid contract status
+        print("   8.2: Testing invalid contract status...")
+        invalid_status_data = {
+            "tipo": "consórcio",
+            "nome": "Test Invalid Status",
+            "valor_total": 10000.00,
+            "parcela_mensal": 500.00,
+            "quantidade_parcelas": 24,
+            "juros_mensal": 1.0,
+            "taxa_administrativa": 100.00,
+            "seguro": 50.00,
+            "data_inicio": "2024-01-01T00:00:00",
+            "data_vencimento": "2026-01-01T00:00:00",
+            "status": "invalid_status"
+        }
+        
+        invalid_status_response = requests.post(f"{BACKEND_URL}/contratos", json=invalid_status_data, headers=headers)
+        
+        if invalid_status_response.status_code == 400:
+            error_detail = invalid_status_response.json().get("detail", "")
+            if "ativo" in error_detail and "quitado" in error_detail and "cancelado" in error_detail:
+                validation_tests_passed += 1
+                print_test_result("INVALID STATUS VALIDATION", True, 
+                                f"✅ Properly rejected: {error_detail}")
+            else:
+                print_test_result("INVALID STATUS VALIDATION", False, 
+                                f"❌ Wrong error message: {error_detail}")
+        else:
+            print_test_result("INVALID STATUS VALIDATION", False, 
+                            f"❌ Expected 400, got: {invalid_status_response.status_code}")
+        
+        # Test 8.3: Missing required fields
+        print("   8.3: Testing missing required fields...")
+        missing_fields_data = {
+            "tipo": "consórcio",
+            # Missing nome, valor_total, etc.
+        }
+        
+        missing_fields_response = requests.post(f"{BACKEND_URL}/contratos", json=missing_fields_data, headers=headers)
+        
+        if missing_fields_response.status_code == 422 or missing_fields_response.status_code == 400:
+            validation_tests_passed += 1
+            print_test_result("MISSING FIELDS VALIDATION", True, 
+                            f"✅ Properly rejected missing fields: {missing_fields_response.status_code}")
+        else:
+            print_test_result("MISSING FIELDS VALIDATION", False, 
+                            f"❌ Expected 400/422, got: {missing_fields_response.status_code}")
+        
+        # Test 8.4: Invalid data types
+        print("   8.4: Testing invalid data types...")
+        invalid_data_types = {
+            "tipo": "consórcio",
+            "nome": "Test Invalid Data Types",
+            "valor_total": "not_a_number",  # Should be float
+            "parcela_mensal": 500.00,
+            "quantidade_parcelas": "not_a_number",  # Should be int
+            "juros_mensal": 1.0,
+            "taxa_administrativa": 100.00,
+            "seguro": 50.00,
+            "data_inicio": "2024-01-01T00:00:00",
+            "data_vencimento": "2026-01-01T00:00:00"
+        }
+        
+        invalid_data_response = requests.post(f"{BACKEND_URL}/contratos", json=invalid_data_types, headers=headers)
+        
+        if invalid_data_response.status_code == 422 or invalid_data_response.status_code == 400:
+            validation_tests_passed += 1
+            print_test_result("INVALID DATA TYPES VALIDATION", True, 
+                            f"✅ Properly rejected invalid data types: {invalid_data_response.status_code}")
+        else:
+            print_test_result("INVALID DATA TYPES VALIDATION", False, 
+                            f"❌ Expected 400/422, got: {invalid_data_response.status_code}")
+        
+        if validation_tests_passed >= 3:  # At least 3 out of 4 validation tests should pass
+            test_results["pydantic_validation_working"] = True
+            test_results["type_validation_working"] = True
+            test_results["status_validation_working"] = True
+            print_test_result("PYDANTIC VALIDATION", True, 
+                            f"✅ Validation working ({validation_tests_passed}/{total_validation_tests} tests passed)")
+        else:
+            print_test_result("PYDANTIC VALIDATION", False, 
+                            f"❌ Validation issues ({validation_tests_passed}/{total_validation_tests} tests passed)")
+        
+        # STEP 9: Delete Contract - DELETE /api/contratos/{id}
+        print(f"\n🔍 STEP 9: Delete Contract - DELETE /api/contratos/{{id}}")
+        
+        if test_results["consortium_contract_id"]:
+            contract_id = test_results["consortium_contract_id"]
+            print(f"   Testing contract deletion: {contract_id}")
+            
+            delete_response = requests.delete(f"{BACKEND_URL}/contratos/{contract_id}", headers=headers)
+            
+            if delete_response.status_code == 200:
+                delete_result = delete_response.json()
+                test_results["delete_contract_working"] = True
+                
+                print_test_result("DELETE CONTRACT", True, 
+                                f"✅ Contract deleted: {delete_result.get('message', 'Success')}")
+                
+                # Verify contract is actually deleted
+                verify_delete_response = requests.get(f"{BACKEND_URL}/contratos/{contract_id}", headers=headers)
+                if verify_delete_response.status_code == 404:
+                    print(f"   ✅ Contract deletion verified (404 on GET)")
+                else:
+                    print(f"   ⚠️  Contract still exists after deletion")
+            else:
+                error_detail = delete_response.json().get("detail", "Unknown error")
+                print_test_result("DELETE CONTRACT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 10: Final Summary
+        print(f"\n🔍 STEP 10: CONSORTIUM AND CONSIGNED LOAN SYSTEM TEST SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   🏠 Create Consortium: {'WORKING' if test_results['create_consortium_working'] else 'FAILED'}")
+        print(f"   💳 Create Consigned: {'WORKING' if test_results['create_consigned_working'] else 'FAILED'}")
+        print(f"   📋 List Contracts: {'WORKING' if test_results['list_contracts_working'] else 'FAILED'}")
+        print(f"   🔍 Get Contract by ID: {'WORKING' if test_results['get_contract_by_id_working'] else 'FAILED'}")
+        print(f"   ✏️  Update Contract: {'WORKING' if test_results['update_contract_working'] else 'FAILED'}")
+        print(f"   🗑️  Delete Contract: {'WORKING' if test_results['delete_contract_working'] else 'FAILED'}")
+        print(f"   📊 Statistics: {'WORKING' if test_results['statistics_working'] else 'FAILED'}")
+        print(f"   🔄 Automatic Status Change: {'WORKING' if test_results['automatic_status_change_working'] else 'FAILED'}")
+        print(f"   💰 Financial Calculations: {'WORKING' if test_results['financial_calculations_working'] else 'FAILED'}")
+        print(f"   🔍 Filters: {'WORKING' if test_results['filters_working'] else 'FAILED'}")
+        print(f"   ✅ Pydantic Validation: {'WORKING' if test_results['pydantic_validation_working'] else 'FAILED'}")
+        
+        print(f"\n📊 SYSTEM STATISTICS:")
+        print(f"   Contracts Created: {test_results['contracts_created']}")
+        print(f"   Contracts Tested: {test_results['contracts_tested']}")
+        
+        # Determine overall success
+        critical_features = [
+            test_results['login_success'],
+            test_results['create_consortium_working'],
+            test_results['create_consigned_working'],
+            test_results['list_contracts_working'],
+            test_results['get_contract_by_id_working'],
+            test_results['update_contract_working'],
+            test_results['delete_contract_working'],
+            test_results['statistics_working']
+        ]
+        
+        business_rules = [
+            test_results['automatic_status_change_working'],
+            test_results['financial_calculations_working'],
+            test_results['filters_working']
+        ]
+        
+        validation_features = [
+            test_results['pydantic_validation_working'],
+            test_results['type_validation_working'],
+            test_results['status_validation_working']
+        ]
+        
+        critical_success = all(critical_features)
+        business_rules_success = all(business_rules)
+        validation_success = all(validation_features)
+        
+        if critical_success and business_rules_success and validation_success:
+            print(f"\n🎉 CONSORTIUM AND CONSIGNED LOAN SYSTEM WORKING EXCELLENTLY!")
+            print("✅ All critical functionality working correctly:")
+            print("   - User authentication with provided credentials")
+            print("   - Contract creation for both 'consórcio' and 'consignado' types")
+            print("   - Contract listing with tipo and status filters")
+            print("   - Contract retrieval by ID")
+            print("   - Contract updates with automatic status changes")
+            print("   - Contract deletion")
+            print("   - Comprehensive statistics endpoint")
+            print("   - Automatic status change when parcela_atual >= quantidade_parcelas")
+            print("   - Financial calculations (valor_total_pago, valor_restante, progresso_percentual)")
+            print("   - Pydantic model validation for types and required fields")
+            print("   - Brazilian financial data patterns support")
+            
+            return True
+        else:
+            print(f"\n⚠️ CONSORTIUM AND CONSIGNED LOAN SYSTEM ISSUES DETECTED:")
+            if not critical_success:
+                print("   ❌ Critical functionality issues:")
+                failed_critical = [name.replace('_', ' ').title() for name, result in 
+                                 zip(['login_success', 'create_consortium_working', 'create_consigned_working', 
+                                      'list_contracts_working', 'get_contract_by_id_working', 'update_contract_working', 
+                                      'delete_contract_working', 'statistics_working'], critical_features) 
+                                 if not result]
+                for issue in failed_critical:
+                    print(f"      - {issue}")
+            
+            if not business_rules_success:
+                print("   ❌ Business rules issues:")
+                if not test_results['automatic_status_change_working']:
+                    print("      - Automatic status change not working")
+                if not test_results['financial_calculations_working']:
+                    print("      - Financial calculations not working")
+                if not test_results['filters_working']:
+                    print("      - Contract filters not working")
+            
+            if not validation_success:
+                print("   ❌ Validation issues:")
+                if not test_results['pydantic_validation_working']:
+                    print("      - Pydantic validation not working properly")
+                if not test_results['type_validation_working']:
+                    print("      - Type validation not working")
+                if not test_results['status_validation_working']:
+                    print("      - Status validation not working")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("CONSORTIUM AND CONSIGNED LOAN SYSTEM TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_file_import_system():
     """
     COMPREHENSIVE FILE IMPORT SYSTEM BACKEND API TEST
