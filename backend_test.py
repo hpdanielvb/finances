@@ -10652,11 +10652,11 @@ if __name__ == "__main__":
         print("✅ Authentication with hpdanielvb@gmail.com / 123456 successful")
         print("✅ Test data creation and validation working")
         print("\n🏠 CONSORTIUM SYSTEM PHASE 3 VERIFIED AND READY FOR PRODUCTION!")
-        print("   - Data integrity and API stability")
     else:
-        print("⚠️ FIXED QUICK ACTIONS BACKEND TESTING ISSUES DETECTED!")
-        print("❌ Some backend APIs supporting the Fixed Quick Actions feature have issues")
+        print("⚠️ CONSORTIUM MODULE ENHANCEMENTS TESTING ISSUES DETECTED!")
+        print("❌ Some consortium module endpoints have issues")
         print("❌ Review the detailed test results above for specific problems")
+        print("❌ Check authentication, endpoint accessibility, or data structure issues")
     
     print("\n" + "="*80)
 
