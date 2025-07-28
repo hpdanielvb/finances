@@ -8544,7 +8544,7 @@ def test_credit_cards_and_invoices_system():
                                 "❌ Issues with account_id grouping")
             
         else:
-            error_detail = list_response.json().get("detail", "Unknown error")
+            error_detail = list_response.text if list_response.text else "Unknown error"
             print_test_result("INVOICE LISTING", False, f"❌ Failed: {error_detail}")
             return test_results
         
@@ -8567,8 +8567,10 @@ def test_credit_cards_and_invoices_system():
                 print(f"      Invoice ID: {invoice_id}")
                 print(f"      Amount: R$ {test_invoice.get('total_amount', 0):.2f}")
                 
+                # Send payment data
+                payment_data = {"payment_amount": test_invoice.get('total_amount', 0)}
                 pay_response = requests.patch(f"{BACKEND_URL}/credit-cards/invoices/{invoice_id}/pay", 
-                                            headers=headers)
+                                            json=payment_data, headers=headers)
                 
                 if pay_response.status_code == 200:
                     pay_data = pay_response.json()
