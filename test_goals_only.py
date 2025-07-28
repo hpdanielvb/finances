@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://c8483016-28e3-4c32-82b5-fe040e32c737.preview.emergentagent.com/api"
+BACKEND_URL = "https://64374cf7-c2c8-4cbb-a105-e6948a5cd79d.preview.emergentagent.com/api"
 
 # Test user credentials
 TEST_USER_LOGIN = {
