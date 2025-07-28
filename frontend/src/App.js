@@ -7971,7 +7971,9 @@ const PetShopView = () => {
   // States para modais locais
   const [showProductModal, setShowProductModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [stockProduct, setStockProduct] = useState(null);
 
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
