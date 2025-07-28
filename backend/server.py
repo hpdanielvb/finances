@@ -4838,6 +4838,297 @@ async def get_receipt(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar comprovante: {str(e)}")
 
+@api_router.get("/petshop/stock-movement", response_model=List[Dict[str, Any]])
+async def get_stock_movements(
+    current_user: User = Depends(get_current_user),
+    product_id: Optional[str] = None,
+    movement_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 50
+):
+    """Listar movimentações de estoque com filtros"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if product_id:
+            query["product_id"] = product_id
+            
+        if movement_type:
+            query["movement_type"] = movement_type
+            
+        # Filtro por data
+        if start_date or end_date:
+            date_filter = {}
+            if start_date:
+                date_filter["$gte"] = datetime.fromisoformat(start_date)
+            if end_date:
+                date_filter["$lte"] = datetime.fromisoformat(end_date)
+            query["created_at"] = date_filter
+        
+        movements = await db.stock_movements.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        # Remove MongoDB ObjectId fields and enrich with product info
+        for movement in movements:
+            if "_id" in movement:
+                del movement["_id"]
+                
+            # Get product info
+            product = await db.products.find_one({"id": movement["product_id"]})
+            if product:
+                movement["product_name"] = product.get("name", "Produto não encontrado")
+                movement["product_sku"] = product.get("sku", "N/A")
+        
+        return movements
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar movimentações: {str(e)}")
+
+@api_router.post("/petshop/stock-movement", response_model=Dict[str, Any])
+async def create_stock_movement(
+    product_id: str,
+    movement_type: str,
+    quantity: int,
+    reason: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Criar movimentação manual de estoque"""
+    try:
+        # Verificar se produto existe
+        product = await db.products.find_one({
+            "id": product_id,
+            "user_id": current_user.id
+        })
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+        
+        previous_stock = product["current_stock"]
+        
+        # Calcular novo estoque baseado no tipo de movimentação
+        if movement_type == "entrada":
+            new_stock = previous_stock + quantity
+        elif movement_type == "saída":
+            new_stock = previous_stock - quantity
+            if new_stock < 0:
+                raise HTTPException(status_code=400, detail="Estoque não pode ficar negativo")
+        elif movement_type == "ajuste":
+            new_stock = quantity  # Ajuste absoluto
+        else:
+            raise HTTPException(status_code=400, detail="Tipo de movimentação inválido. Use: entrada, saída, ajuste")
+        
+        # Atualizar estoque do produto
+        await db.products.update_one(
+            {"id": product_id, "user_id": current_user.id},
+            {"$set": {"current_stock": new_stock, "updated_at": datetime.utcnow()}}
+        )
+        
+        # Registrar movimentação
+        movement = StockMovement(
+            user_id=current_user.id,
+            product_id=product_id,
+            movement_type=movement_type,
+            quantity=abs(quantity),
+            reason=reason,
+            previous_stock=previous_stock,
+            new_stock=new_stock,
+            created_by=current_user.id
+        )
+        
+        await db.stock_movements.insert_one(movement.dict())
+        
+        # Remove MongoDB ObjectId for JSON serialization
+        movement_dict = movement.dict()
+        if "_id" in movement_dict:
+            del movement_dict["_id"]
+        
+        return {
+            "message": "Movimentação de estoque registrada com sucesso!",
+            "movement": movement_dict,
+            "product_name": product["name"],
+            "previous_stock": previous_stock,
+            "new_stock": new_stock
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao registrar movimentação: {str(e)}")
+
+@api_router.get("/petshop/stock-alert", response_model=Dict[str, Any])
+async def get_stock_alerts(
+    current_user: User = Depends(get_current_user)
+):
+    """Obter alertas de estoque baixo"""
+    try:
+        # Produtos com estoque baixo
+        low_stock_products = await check_low_stock_products(current_user.id)
+        
+        # Produtos com estoque zerado
+        zero_stock_products = await db.products.find({
+            "user_id": current_user.id,
+            "is_active": True,
+            "current_stock": 0
+        }).to_list(100)
+        
+        # Produtos próximos ao vencimento (30 dias)
+        thirty_days_from_now = datetime.utcnow() + timedelta(days=30)
+        expiring_products = await db.products.find({
+            "user_id": current_user.id,
+            "is_active": True,
+            "expiry_date": {
+                "$lte": thirty_days_from_now,
+                "$gte": datetime.utcnow()
+            }
+        }).to_list(100)
+        
+        # Remove MongoDB ObjectId fields
+        for product_list in [low_stock_products, zero_stock_products, expiring_products]:
+            for product in product_list:
+                if "_id" in product:
+                    del product["_id"]
+        
+        # Calcular estatísticas de alerta
+        total_products = await db.products.count_documents({
+            "user_id": current_user.id,
+            "is_active": True
+        })
+        
+        alert_summary = {
+            "total_products": total_products,
+            "low_stock_count": len(low_stock_products),
+            "zero_stock_count": len(zero_stock_products),
+            "expiring_count": len(expiring_products),
+            "alert_level": "high" if len(zero_stock_products) > 0 else "medium" if len(low_stock_products) > 0 else "low"
+        }
+        
+        return {
+            "alert_summary": alert_summary,
+            "low_stock_products": low_stock_products,
+            "zero_stock_products": zero_stock_products,
+            "expiring_products": expiring_products,
+            "recommendations": [
+                "Reabasteça produtos com estoque baixo",
+                "Verifique fornecedores para produtos em falta",
+                "Monitore produtos próximos ao vencimento",
+                "Configure alertas automáticos para estoque mínimo"
+            ]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao obter alertas de estoque: {str(e)}")
+
+@api_router.get("/petshop/statistics", response_model=Dict[str, Any])
+async def get_petshop_statistics(
+    current_user: User = Depends(get_current_user),
+    period: str = "30"  # days
+):
+    """Obter estatísticas detalhadas do pet shop"""
+    try:
+        period_days = int(period)
+        start_date = datetime.utcnow() - timedelta(days=period_days)
+        
+        # Estatísticas de produtos
+        total_products = await db.products.count_documents({
+            "user_id": current_user.id,
+            "is_active": True
+        })
+        
+        products_by_category = await db.products.aggregate([
+            {"$match": {"user_id": current_user.id, "is_active": True}},
+            {"$group": {"_id": "$category", "count": {"$sum": 1}, "total_stock": {"$sum": "$current_stock"}}},
+            {"$sort": {"count": -1}}
+        ]).to_list(100)
+        
+        # Estatísticas de vendas
+        sales_pipeline = [
+            {"$match": {"user_id": current_user.id, "sale_date": {"$gte": start_date}}},
+            {"$group": {
+                "_id": None,
+                "total_sales": {"$sum": 1},
+                "total_revenue": {"$sum": "$total"},
+                "avg_sale_value": {"$avg": "$total"}
+            }}
+        ]
+        
+        sales_stats = await db.sales.aggregate(sales_pipeline).to_list(1)
+        sales_summary = sales_stats[0] if sales_stats else {
+            "total_sales": 0,
+            "total_revenue": 0,
+            "avg_sale_value": 0
+        }
+        
+        # Vendas por método de pagamento
+        payment_method_stats = await db.sales.aggregate([
+            {"$match": {"user_id": current_user.id, "sale_date": {"$gte": start_date}}},
+            {"$group": {"_id": "$payment_method", "count": {"$sum": 1}, "revenue": {"$sum": "$total"}}},
+            {"$sort": {"count": -1}}
+        ]).to_list(100)
+        
+        # Produtos mais vendidos
+        top_products_pipeline = [
+            {"$match": {"user_id": current_user.id, "sale_date": {"$gte": start_date}}},
+            {"$unwind": "$items"},
+            {"$group": {
+                "_id": "$items.product_name",
+                "quantity_sold": {"$sum": "$items.quantity"},
+                "revenue": {"$sum": "$items.total"}
+            }},
+            {"$sort": {"quantity_sold": -1}},
+            {"$limit": 10}
+        ]
+        
+        top_products = await db.sales.aggregate(top_products_pipeline).to_list(10)
+        
+        # Vendas por dia (últimos 7 dias para gráfico)
+        daily_sales_pipeline = [
+            {"$match": {"user_id": current_user.id, "sale_date": {"$gte": datetime.utcnow() - timedelta(days=7)}}},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$sale_date"}},
+                "sales_count": {"$sum": 1},
+                "revenue": {"$sum": "$total"}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        
+        daily_sales = await db.sales.aggregate(daily_sales_pipeline).to_list(7)
+        
+        # Alertas de estoque
+        low_stock_count = len(await check_low_stock_products(current_user.id))
+        
+        # Movimentações de estoque recentes
+        recent_movements = await db.stock_movements.find({
+            "user_id": current_user.id
+        }).sort("created_at", -1).limit(10).to_list(10)
+        
+        # Remove MongoDB ObjectId fields
+        for movement in recent_movements:
+            if "_id" in movement:
+                del movement["_id"]
+        
+        return {
+            "period_days": period_days,
+            "products": {
+                "total_products": total_products,
+                "products_by_category": products_by_category,
+                "low_stock_alerts": low_stock_count
+            },
+            "sales": {
+                "summary": sales_summary,
+                "payment_methods": payment_method_stats,
+                "top_products": top_products,
+                "daily_sales": daily_sales
+            },
+            "inventory": {
+                "recent_movements": recent_movements,
+                "total_stock_value": 0  # Could be calculated if needed
+            },
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao obter estatísticas: {str(e)}")
+
 # Include router
 app.include_router(api_router)
 
