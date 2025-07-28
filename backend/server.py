@@ -552,28 +552,34 @@ def generate_verification_token():
     return secrets.token_urlsafe(32)
 
 async def send_email(to_email: str, subject: str, html_content: str, text_content: str = None):
-    """Send email using SMTP (simulated for MVP)"""
+    """Send email using SMTP"""
     try:
-        # For MVP, we'll log the email instead of actually sending
-        print(f"[EMAIL SIMULATION] To: {to_email}")
-        print(f"[EMAIL SIMULATION] Subject: {subject}")
-        print(f"[EMAIL SIMULATION] Content: {html_content}")
+        if not EMAIL_ENABLED:
+            # For MVP/testing, log the email instead of actually sending
+            print(f"[EMAIL SIMULATION] To: {to_email}")
+            print(f"[EMAIL SIMULATION] Subject: {subject}")
+            print(f"[EMAIL SIMULATION] Content: {html_content[:200]}...")
+            return True
         
-        # In production, this would actually send the email:
-        # msg = MIMEMultipart("alternative")
-        # msg["Subject"] = subject
-        # msg["From"] = EMAIL_FROM
-        # msg["To"] = to_email
-        # 
-        # if text_content:
-        #     msg.attach(MIMEText(text_content, "plain"))
-        # msg.attach(MIMEText(html_content, "html"))
-        # 
-        # with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        #     server.starttls()
-        #     server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        #     server.send_message(msg)
+        # Production email sending
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
         
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to_email
+        
+        if text_content:
+            msg.attach(MIMEText(text_content, "plain"))
+        msg.attach(MIMEText(html_content, "html"))
+        
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+        
+        print(f"[EMAIL SENT] Successfully sent to: {to_email}")
         return True
     except Exception as e:
         print(f"Email sending error: {e}")
