@@ -4603,6 +4603,10 @@ async def update_product(
             "user_id": current_user.id
         })
         
+        # Remove MongoDB ObjectId for JSON serialization
+        if updated_product and "_id" in updated_product:
+            del updated_product["_id"]
+        
         return {
             "message": "Produto atualizado com sucesso!",
             "product": updated_product
