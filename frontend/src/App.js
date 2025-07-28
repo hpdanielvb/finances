@@ -8746,7 +8746,7 @@ const PetShopProducts = ({
 
 // Placeholder para os outros componentes (implementaremos nas próximas fases)
 // Placeholder para os outros componentes (implementaremos nas próximas fases)
-const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => {
+const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onShowReceipt }) => {
   const [searchProduct, setSearchProduct] = useState('');
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState('');
