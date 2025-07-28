@@ -625,6 +625,8 @@ const Dashboard = () => {
   // 🐾 Pet Shop states
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
   const [contractsLoading, setContractsLoading] = useState(false);
   const [contractFilters, setContractFilters] = useState({
     tipo: '',
