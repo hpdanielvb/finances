@@ -1034,6 +1034,28 @@ const Dashboard = () => {
     loadDashboard();
   }, []);
 
+  // Debounced search effect
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleGlobalSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, transactions, accounts]);
+
+  // Load dashboard preferences effect  
+  React.useEffect(() => {
+    const savedWidgets = localStorage.getItem('dashboardWidgets');
+    if (savedWidgets) {
+      setDashboardWidgets(JSON.parse(savedWidgets));
+    }
+    
+    const sidebarState = localStorage.getItem('sidebarCollapsed');
+    if (sidebarState !== null) {
+      setSidebarCollapsed(JSON.parse(sidebarState));
+    }
+  }, []);
+
   // ============================================================================
   // 🧠 FUNÇÕES DE IA
   // ============================================================================
