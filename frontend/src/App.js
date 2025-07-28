@@ -1437,6 +1437,85 @@ const Dashboard = () => {
     setSelectedFiles([]);
   };
 
+  // 🏠 Contracts Functions
+  const loadContracts = async () => {
+    setContractsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (contractFilters.tipo) params.append('tipo', contractFilters.tipo);
+      if (contractFilters.status) params.append('status', contractFilters.status);
+      
+      const response = await axios.get(`${API}/contratos?${params.toString()}`);
+      setContracts(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar contratos:', error);
+      toast.error('Erro ao carregar contratos');
+    } finally {
+      setContractsLoading(false);
+    }
+  };
+
+  const loadContractStats = async () => {
+    try {
+      const response = await axios.get(`${API}/contratos/statistics`);
+      setContractStats(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
+  const handleCreateContract = async (contractData) => {
+    try {
+      const response = await axios.post(`${API}/contratos`, contractData);
+      toast.success(response.data.message);
+      setShowContractModal(false);
+      setEditingContract(null);
+      await loadContracts();
+      await loadContractStats();
+    } catch (error) {
+      console.error('Erro ao criar contrato:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao criar contrato');
+    }
+  };
+
+  const handleUpdateContract = async (contractId, contractData) => {
+    try {
+      const response = await axios.put(`${API}/contratos/${contractId}`, contractData);
+      toast.success(response.data.message);
+      setShowContractModal(false);
+      setEditingContract(null);
+      await loadContracts();
+      await loadContractStats();
+    } catch (error) {
+      console.error('Erro ao atualizar contrato:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao atualizar contrato');
+    }
+  };
+
+  const handleDeleteContract = async (contractId) => {
+    if (window.confirm('Tem certeza que deseja excluir este contrato?')) {
+      try {
+        const response = await axios.delete(`${API}/contratos/${contractId}`);
+        toast.success(response.data.message);
+        await loadContracts();
+        await loadContractStats();
+      } catch (error) {
+        console.error('Erro ao excluir contrato:', error);
+        toast.error(error.response?.data?.detail || 'Erro ao excluir contrato');
+      }
+    }
+  };
+
+  const openContractModal = (contract = null) => {
+    setEditingContract(contract);
+    setShowContractModal(true);
+  };
+
+  const closeContractModal = () => {
+    setShowContractModal(false);
+    setEditingContract(null);
+  };
+
   // Prepare chart data
   const expenseChartData = summary?.expense_by_category ? 
     Object.entries(summary.expense_by_category).map(([name, value], index) => ({
