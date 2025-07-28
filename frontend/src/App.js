@@ -386,6 +386,10 @@ const LoginForm = () => {
           setError(result.message);
           toast.error(result.message);
           setLoading(false);
+        } else {
+          // Login successful - reset loading after success
+          setLoading(false);
+          // The AuthContext will handle the user state update and UI will re-render
         }
       }
       // Don't set loading to false here - let the context handle the redirect
