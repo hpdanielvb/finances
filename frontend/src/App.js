@@ -3246,6 +3246,7 @@ const Dashboard = () => {
       )}
 
       <Toaster position="top-right" />
+      </div>
     </div>
   );
 };
