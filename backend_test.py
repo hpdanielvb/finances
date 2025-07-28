@@ -9468,16 +9468,29 @@ def test_credit_cards_and_invoices_system():
 if __name__ == "__main__":
     print("🚀 INICIANDO TESTES BACKEND COMPLETOS - OrçaZenFinanceiro")
     print("="*80)
+    print("🐾 FOCO: MÓDULO PET SHOP - FASE 3")
+    print("Testando funcionalidades completas do Pet Shop com controle de estoque e integração financeira")
+    print("="*80)
     
-    # Run the credit cards and invoices system test
-    print("\n💳 EXECUTANDO TESTE DO SISTEMA DE CARTÕES E FATURAS")
-    credit_cards_success = test_credit_cards_and_invoices_system()
+    # Run the Pet Shop Module - Phase 3 test
+    print("\n🐾 EXECUTANDO TESTE ABRANGENTE DO MÓDULO PET SHOP - FASE 3")
+    petshop_success = test_petshop_module_phase3()
     
     print("\n" + "="*80)
     print("✅ TESTES BACKEND CONCLUÍDOS")
     print("="*80)
     
-    if credit_cards_success:
-        print("🎉 SISTEMA DE CARTÕES E FATURAS: FUNCIONANDO PERFEITAMENTE!")
+    if petshop_success:
+        print("🎉 MÓDULO PET SHOP - FASE 3: FUNCIONANDO PERFEITAMENTE!")
+        print("✅ Todas as funcionalidades críticas testadas e aprovadas:")
+        print("   - Gestão completa de produtos (CRUD)")
+        print("   - Sistema de vendas com subtração automática de estoque")
+        print("   - Integração financeira (vendas viram receitas)")
+        print("   - Dashboard com estatísticas e alertas")
+        print("   - Geração de comprovantes únicos")
+        print("   - Controle de estoque baixo")
+        print("   - Validações de SKU e regras de negócio")
     else:
-        print("⚠️ SISTEMA DE CARTÕES E FATURAS: PROBLEMAS DETECTADOS")
+        print("⚠️ MÓDULO PET SHOP - FASE 3: PROBLEMAS DETECTADOS")
+        print("❌ Algumas funcionalidades precisam de correção")
+        print("📋 Verifique os detalhes dos testes acima para identificar os problemas")
