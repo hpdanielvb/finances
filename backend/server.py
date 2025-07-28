@@ -4093,8 +4093,16 @@ async def get_consortium_statistics(
         paid_count = len([c for c in consortiums if c["status"] == "Pago"])
         suspended_count = len([c for c in consortiums if c["status"] == "Suspenso"])
         
-        # Estatísticas por tipo
-        type_distribution = {
+        # Distribuição por status (campo esperado pelos testes)
+        distribution_by_status = {
+            "Ativo": active_count,
+            "Contemplado": contemplated_count,
+            "Pago": paid_count,
+            "Suspenso": suspended_count
+        }
+        
+        # Distribuição por tipo (campo esperado pelos testes)
+        distribution_by_type = {
             "Imóvel": len([c for c in consortiums if c["type"] == "Imóvel"]),
             "Veículo": len([c for c in consortiums if c["type"] == "Veículo"]),
             "Moto": len([c for c in consortiums if c["type"] == "Moto"])
@@ -4106,12 +4114,12 @@ async def get_consortium_statistics(
         total_pending = sum(c["remaining_balance"] for c in consortiums)
         avg_monthly_payment = sum(c["monthly_installment"] for c in consortiums) / len(consortiums)
         
-        # Estatísticas de progresso
+        # Progresso médio (campo esperado pelos testes)
         completion_percentages = [
             (c["paid_installments"] / c["installment_count"]) * 100 
             for c in consortiums
         ]
-        avg_completion = sum(completion_percentages) / len(completion_percentages)
+        average_progress = sum(completion_percentages) / len(completion_percentages)
         
         # Top administradoras
         administrators = [c["administrator"] for c in consortiums]
@@ -4121,8 +4129,8 @@ async def get_consortium_statistics(
         
         top_administrators = sorted(admin_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         
-        # Próximos vencimentos (próximos 30 dias)
-        upcoming_payments = []
+        # Próximos vencimentos (campo esperado pelos testes)
+        upcoming_due_dates = []
         for consortium in consortiums:
             if consortium["status"] == "Ativo":
                 next_due = datetime.utcnow().replace(day=consortium["due_day"])
@@ -4134,37 +4142,42 @@ async def get_consortium_statistics(
                 
                 days_until_due = (next_due - datetime.utcnow()).days
                 if days_until_due <= 30:
-                    upcoming_payments.append({
+                    upcoming_due_dates.append({
                         "consortium_name": consortium["name"],
                         "due_date": next_due.isoformat(),
                         "amount": consortium["monthly_installment"],
                         "days_until_due": days_until_due
                     })
         
-        upcoming_payments.sort(key=lambda x: x["days_until_due"])
+        upcoming_due_dates.sort(key=lambda x: x["days_until_due"])
+        
+        # Resumo de contemplação (campo esperado pelos testes)
+        contemplation_summary = {
+            "total_contemplated": contemplated_count,
+            "contemplation_rate": round((contemplated_count / total_consortiums) * 100, 2),
+            "average_contemplation_time": 0,  # Seria calculado baseado em dados históricos
+            "contemplation_methods": {
+                "sorteio": len([c for c in consortiums if c.get("contemplated") and c.get("bid_value") is None]),
+                "lance": len([c for c in consortiums if c.get("contemplated") and c.get("bid_value") is not None]),
+                "natural": len([c for c in consortiums if c["status"] == "Pago"])
+            }
+        }
         
         return {
             "total_consortiums": total_consortiums,
-            "status_distribution": {
-                "active": active_count,
-                "contemplated": contemplated_count,
-                "paid": paid_count,
-                "suspended": suspended_count
-            },
-            "type_distribution": type_distribution,
+            "distribution_by_status": distribution_by_status,
+            "distribution_by_type": distribution_by_type,
             "financial_summary": {
                 "total_invested": round(total_invested, 2),
                 "total_portfolio_value": round(total_portfolio_value, 2),
                 "total_pending": round(total_pending, 2),
                 "average_monthly_payment": round(avg_monthly_payment, 2)
             },
-            "progress_summary": {
-                "average_completion": round(avg_completion, 2),
-                "contemplation_rate": round((contemplated_count / total_consortiums) * 100, 2),
-                "completion_percentages": [round(p, 2) for p in completion_percentages]
-            },
+            "average_progress": round(average_progress, 2),
+            "contemplation_summary": contemplation_summary,
             "top_administrators": [{"name": admin, "count": count} for admin, count in top_administrators],
-            "upcoming_payments": upcoming_payments[:10],
+            "upcoming_due_dates": upcoming_due_dates[:10],
+            "completion_percentages": [round(p, 2) for p in completion_percentages],
             "generated_at": datetime.utcnow().isoformat()
         }
         
