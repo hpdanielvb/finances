@@ -1617,6 +1617,34 @@ const Dashboard = () => {
     setEditingContract(null);
   };
 
+  // ✨ Biblical Messages Functions
+  const getDailyMessage = () => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    
+    // Alternate between biblical and motivational messages
+    const useBiblical = dayOfYear % 2 === 0;
+    const messages = useBiblical ? biblicalMessages : motivationalMessages;
+    
+    // Use day of year to get consistent daily message
+    const messageIndex = dayOfYear % messages.length;
+    const selectedMessage = messages[messageIndex];
+    
+    return {
+      ...selectedMessage,
+      type: useBiblical ? 'biblical' : 'motivational',
+      date: today.toDateString()
+    };
+  };
+
+  // Load daily message on component mount and user login
+  React.useEffect(() => {
+    if (user) {
+      const message = getDailyMessage();
+      setDailyMessage(message);
+    }
+  }, [user]);
+
   // Prepare chart data
   const expenseChartData = summary?.expense_by_category ? 
     Object.entries(summary.expense_by_category).map(([name, value], index) => ({
