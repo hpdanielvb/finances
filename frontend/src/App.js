@@ -1999,111 +1999,113 @@ const Dashboard = () => {
           </div>
         </header>
 
-      {/* Mobile Navigation Menu */}
-      {showMobileMenu && (
-        <div className="md:hidden bg-white shadow-lg border-t border-gray-200">
-          <div className="px-4 py-2 space-y-1">
-            <button
-              onClick={() => {setActiveView('dashboard'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => {setActiveView('transactions'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'transactions' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Transações
-            </button>
-            <button
-              onClick={() => {setActiveView('accounts'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Contas
-            </button>
-            <button
-              onClick={() => {setActiveView('goals'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'goals' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Metas
-            </button>
-            <button
-              onClick={() => {setActiveView('budgets'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'budgets' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Orçamentos
-            </button>
-            <button
-              onClick={() => {setActiveView('ai'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'ai' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              🧠 IA
-            </button>
-            <button
-              onClick={() => {setActiveView('consortiums'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'consortiums' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              🏠 Consórcios
-            </button>
-            <button
-              onClick={() => {setActiveView('credit-cards'); loadCreditCardInvoices(); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'credit-cards' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              💳 Cartões
-            </button>
-            <button
-              onClick={() => {setActiveView('profile'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'profile' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              👤 Perfil
-            </button>
-            <button
-              onClick={() => {setActiveView('import'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'import' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              📄 Importar
-            </button>
-            <button
-              onClick={() => {setActiveView('contracts'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'contracts' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              🏠 Contratos
-            </button>
-            <button
-              onClick={() => {setActiveView('petshop'); setShowMobileMenu(false);}}
-              className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                activeView === 'petshop' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              🐾 Pet Shop
-            </button>
+        {/* Mobile Navigation Menu */}
+        {showMobileMenu && (
+          <div className="lg:hidden bg-white shadow-lg border-t border-gray-200 absolute w-full z-40">
+            <div className="px-4 py-2 space-y-1">
+              <button
+                onClick={() => {setActiveView('dashboard'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                📊 Dashboard
+              </button>
+              <button
+                onClick={() => {setActiveView('transactions'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'transactions' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                💳 Transações
+              </button>
+              <button
+                onClick={() => {setActiveView('accounts'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🏦 Contas
+              </button>
+              <button
+                onClick={() => {setActiveView('goals'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'goals' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🎯 Metas
+              </button>
+              <button
+                onClick={() => {setActiveView('budgets'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'budgets' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                📈 Orçamentos
+              </button>
+              <button
+                onClick={() => {setActiveView('ai'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'ai' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🧠 IA Financeira
+              </button>
+              <button
+                onClick={() => {setActiveView('consortiums'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'consortiums' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🏠 Consórcios
+              </button>
+              <button
+                onClick={() => {setActiveView('credit-cards'); loadCreditCardInvoices(); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'credit-cards' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                💳 Cartões
+              </button>
+              <button
+                onClick={() => {setActiveView('profile'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'profile' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                👤 Perfil
+              </button>
+              <button
+                onClick={() => {setActiveView('import'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'import' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                📄 Importar
+              </button>
+              <button
+                onClick={() => {setActiveView('contracts'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'contracts' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🏠 Contratos
+              </button>
+              <button
+                onClick={() => {setActiveView('petshop'); setShowMobileMenu(false);}}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                  activeView === 'petshop' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                🐾 Pet Shop
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto">
+          <div className="p-4 lg:p-8">
         {activeView === 'dashboard' && (
           <>
             {/* ✨ Daily Inspirational Message */}
