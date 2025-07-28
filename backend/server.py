@@ -4674,6 +4674,10 @@ async def create_sale(
         
         await db.sales.insert_one(sale)
         
+        # Remove MongoDB ObjectId for JSON serialization
+        if "_id" in sale:
+            del sale["_id"]
+        
         # Atualizar estoque dos produtos
         for item in sale_data.items:
             await update_product_stock(
