@@ -4782,6 +4782,16 @@ async def get_petshop_dashboard(
             reverse=True
         )[:5]
         
+        # Remove MongoDB ObjectId fields from recent sales
+        for sale in recent_sales:
+            if "_id" in sale:
+                del sale["_id"]
+        
+        # Remove MongoDB ObjectId fields from low stock products
+        for product in low_stock_products:
+            if "_id" in product:
+                del product["_id"]
+        
         return {
             "total_products": total_products,
             "low_stock_count": len(low_stock_products),
