@@ -8844,6 +8844,8 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onSho
         }))
       };
 
+      const response = await axios.post(`${API}/petshop/sales`, saleData);
+      
       toast.success('Venda realizada com sucesso! 🎉');
       
       // Preparar dados do comprovante
