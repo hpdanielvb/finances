@@ -4201,12 +4201,25 @@ async def get_payments_calendar(
             return {
                 "calendar": {},
                 "total_months": 0,
+                "total_monthly_commitment": 0.0,
+                "next_12_months_summary": {},
                 "message": "Nenhum consórcio ativo encontrado"
             }
+        
+        # Calcular compromisso mensal total (campo esperado pelos testes)
+        total_monthly_commitment = sum(c["monthly_installment"] for c in active_consortiums)
         
         # Gerar calendário de pagamentos
         calendar = {}
         current_date = datetime.utcnow()
+        
+        # Resumo dos próximos 12 meses (campo esperado pelos testes)
+        next_12_months_summary = {
+            "total_amount": total_monthly_commitment * min(months_ahead, 12),
+            "total_payments": len(active_consortiums) * min(months_ahead, 12),
+            "monthly_average": total_monthly_commitment,
+            "active_consortiums": len(active_consortiums)
+        }
         
         for month_offset in range(months_ahead):
             # Calcular mês/ano
@@ -4244,8 +4257,10 @@ async def get_payments_calendar(
         return {
             "calendar": calendar,
             "total_months": months_ahead,
+            "total_monthly_commitment": round(total_monthly_commitment, 2),
+            "next_12_months_summary": next_12_months_summary,
             "summary": {
-                "total_monthly_commitment": sum(c["monthly_installment"] for c in active_consortiums),
+                "total_monthly_commitment": round(total_monthly_commitment, 2),
                 "active_consortiums_count": len(active_consortiums)
             },
             "generated_at": datetime.utcnow().isoformat()
