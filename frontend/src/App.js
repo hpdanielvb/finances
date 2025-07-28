@@ -1877,6 +1877,62 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeView === 'dashboard' && (
           <>
+            {/* ✨ Daily Inspirational Message */}
+            {dailyMessage && (
+              <div className="mb-8">
+                <div className={`rounded-2xl p-6 shadow-lg border-l-4 ${
+                  dailyMessage.type === 'biblical' 
+                    ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-500' 
+                    : 'bg-gradient-to-r from-green-50 to-blue-50 border-green-500'
+                }`}>
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-full ${
+                      dailyMessage.type === 'biblical' 
+                        ? 'bg-indigo-100 text-indigo-600' 
+                        : 'bg-green-100 text-green-600'
+                    }`}>
+                      {dailyMessage.type === 'biblical' ? '📖' : '💡'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className={`font-semibold ${
+                          dailyMessage.type === 'biblical' 
+                            ? 'text-indigo-900' 
+                            : 'text-green-900'
+                        }`}>
+                          {dailyMessage.type === 'biblical' ? 'Palavra do Dia' : 'Inspiração do Dia'}
+                        </h3>
+                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
+                          {new Date().toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <p className={`text-sm leading-relaxed mb-2 ${
+                        dailyMessage.type === 'biblical' 
+                          ? 'text-indigo-800' 
+                          : 'text-green-800'
+                      }`}>
+                        "{dailyMessage.message}"
+                      </p>
+                      {dailyMessage.verse && (
+                        <p className="text-xs font-medium text-indigo-600">
+                          — {dailyMessage.verse}
+                        </p>
+                      )}
+                      <div className="mt-3">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          dailyMessage.type === 'biblical' 
+                            ? 'bg-indigo-100 text-indigo-700' 
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          #{dailyMessage.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Enhanced Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* SALDO TOTAL CONSOLIDADO - GRANDE DESTAQUE */}
