@@ -3905,9 +3905,19 @@ async def get_consortium_dashboard(
     try:
         dashboard = await generate_consortium_dashboard(current_user.id)
         
+        # Retornar dados estruturados conforme esperado pelos testes
         return {
             "message": "Painel de consórcios carregado com sucesso",
-            "dashboard": dashboard.dict(),
+            "total_consortiums": dashboard.total_consortiums,
+            "active_consortiums": dashboard.active_consortiums,
+            "contemplated_consortiums": dashboard.contemplated_consortiums,
+            "paid_consortiums": dashboard.paid_consortiums,
+            "suspended_consortiums": dashboard.suspended_consortiums,
+            "total_invested": dashboard.total_invested,
+            "total_pending": dashboard.total_pending,
+            "next_payments": dashboard.next_payments,
+            "contemplation_projections": dashboard.contemplation_projections,
+            "performance_summary": dashboard.performance_summary,
             "generated_at": datetime.utcnow().isoformat()
         }
         
