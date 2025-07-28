@@ -3017,17 +3017,15 @@ const Dashboard = () => {
         )}
           </div>
         </main>
-      </div>
-    </div>
 
-      {/* Fixed Quick Actions - Show when scrolled on dashboard */}
-      {showFixedActions && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Ações Rápidas</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Add Income */}
-              <button
+        {/* Fixed Quick Actions - Show when scrolled on dashboard */}
+        {showFixedActions && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Ações Rápidas</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Add Income */}
+                <button
                 onClick={openIncomeModal}
                 className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
                 title="Adicionar Receita"
