@@ -4523,6 +4523,11 @@ async def list_products(
         else:
             products = await db.products.find(query).sort("name", 1).to_list(100)
         
+        # Remove MongoDB ObjectId fields for JSON serialization
+        for product in products:
+            if "_id" in product:
+                del product["_id"]
+        
         return products
         
     except Exception as e:
