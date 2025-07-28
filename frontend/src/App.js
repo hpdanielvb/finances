@@ -623,6 +623,107 @@ const Dashboard = () => {
   });
   const [contractStats, setContractStats] = useState({});
 
+  // ✨ Biblical Messages and Motivational System
+  const [dailyMessage, setDailyMessage] = useState(null);
+  
+  const biblicalMessages = [
+    {
+      verse: "Filipenses 4:19",
+      message: "O meu Deus suprirá todas as vossas necessidades segundo as suas riquezas na glória em Cristo Jesus.",
+      category: "provisão"
+    },
+    {
+      verse: "Provérbios 21:5",
+      message: "Os planos do diligente tendem à abundância, mas todo apressado tende à pobreza.",
+      category: "planejamento"
+    },
+    {
+      verse: "1 Timóteo 6:10",
+      message: "Porque o amor ao dinheiro é a raiz de toda espécie de males; e nessa cobiça alguns se desviaram da fé.",
+      category: "sabedoria"
+    },
+    {
+      verse: "Provérbios 13:11",
+      message: "A riqueza de procedência vã diminuirá, mas quem ajunta à força do trabalho aumentará.",
+      category: "trabalho"
+    },
+    {
+      verse: "Lucas 14:28",
+      message: "Pois qual de vós, querendo edificar uma torre, não se assenta primeiro a fazer as contas dos gastos?",
+      category: "planejamento"
+    },
+    {
+      verse: "Malaquias 3:10",
+      message: "Trazei todos os dízimos à casa do tesouro... e provai-me nisto, se eu não vos abrir as janelas do céu.",
+      category: "fidelidade"
+    },
+    {
+      verse: "Provérbios 27:23",
+      message: "Procura conhecer o estado das tuas ovelhas, e cuida dos teus rebanhos.",
+      category: "administração"
+    },
+    {
+      verse: "Hebreus 13:5",
+      message: "Seja a vossa vida sem avareza, contentando-vos com o que tendes.",
+      category: "contentamento"
+    },
+    {
+      verse: "2 Coríntios 9:7",
+      message: "Cada um contribua segundo propôs no seu coração; não com tristeza ou por necessidade.",
+      category: "generosidade"
+    },
+    {
+      verse: "Provérbios 22:7",
+      message: "O rico domina sobre os pobres, e o que toma emprestado é servo do que empresta.",
+      category: "dívidas"
+    },
+    {
+      verse: "Eclesiastes 11:2",
+      message: "Reparte com sete e ainda com oito, porque não sabes que mal haverá sobre a terra.",
+      category: "diversificação"
+    },
+    {
+      verse: "Mateus 6:26",
+      message: "Olhai para as aves do céu, que nem semeiam, nem segam... vosso Pai celestial as alimenta.",
+      category: "confiança"
+    }
+  ];
+
+  const motivationalMessages = [
+    {
+      message: "Cada real economizado hoje é um passo em direção à sua liberdade financeira de amanhã.",
+      category: "economia"
+    },
+    {
+      message: "Controlar suas finanças é controlar seu futuro. Você está no caminho certo!",
+      category: "controle"
+    },
+    {
+      message: "Pequenos passos consistentes levam a grandes transformações financeiras.",
+      category: "persistência"
+    },
+    {
+      message: "Sua disciplina de hoje será a abundância de amanhã.",
+      category: "disciplina"
+    },
+    {
+      message: "Investir em conhecimento financeiro é o melhor investimento que você pode fazer.",
+      category: "educação"
+    },
+    {
+      message: "Cada transação registrada é um ato de amor próprio e responsabilidade.",
+      category: "organização"
+    },
+    {
+      message: "Você não está apenas gerenciando dinheiro, está construindo um futuro próspero.",
+      category: "visão"
+    },
+    {
+      message: "A prosperidade começa com uma decisão: tomar controle das suas finanças.",
+      category: "decisão"
+    }
+  ];
+
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
