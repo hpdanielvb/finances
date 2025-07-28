@@ -1621,6 +1621,46 @@ const Dashboard = () => {
     setEditingContract(null);
   };
 
+  // 🐾 Pet Shop Product functions
+  const handleCreateProduct = async (productData) => {
+    try {
+      console.log('Creating product:', productData);
+      const response = await axios.post(`${API}/petshop/products`, productData);
+      
+      toast.success('Produto criado com sucesso!');
+      setShowProductModal(false);
+      setEditingProduct(null);
+      
+      // Recarregar dados do Pet Shop se estivermos na view
+      if (activeView === 'petshop') {
+        // Trigger reload - será implementado quando o PetShopView estiver funcional
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao criar produto');
+    }
+  };
+
+  const handleUpdateProduct = async (productId, productData) => {
+    try {
+      console.log('Updating product:', productId, productData);
+      const response = await axios.put(`${API}/petshop/products/${productId}`, productData);
+      
+      toast.success('Produto atualizado com sucesso!');
+      setShowProductModal(false);
+      setEditingProduct(null);
+      
+      // Recarregar dados do Pet Shop se estivermos na view
+      if (activeView === 'petshop') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao atualizar produto');
+    }
+  };
+
   // ✨ Biblical Messages Functions
   const getDailyMessage = () => {
     const today = new Date();
