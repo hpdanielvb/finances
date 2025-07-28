@@ -1784,6 +1784,16 @@ const Dashboard = () => {
                 >
                   🏠 Contratos
                 </button>
+
+                {/* Pet Shop Button */}
+                <button
+                  onClick={() => setActiveView('petshop')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeView === 'petshop' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  🐾 Pet Shop
+                </button>
               </div>
             </div>
             
