@@ -4886,14 +4886,19 @@ async def get_stock_movements(
 
 @api_router.post("/petshop/stock-movement", response_model=Dict[str, Any])
 async def create_stock_movement(
-    product_id: str,
-    movement_type: str,
-    quantity: int,
-    reason: str,
+    movement_data: dict,
     current_user: User = Depends(get_current_user)
 ):
     """Criar movimentação manual de estoque"""
     try:
+        product_id = movement_data.get("product_id")
+        movement_type = movement_data.get("movement_type")
+        quantity = movement_data.get("quantity")
+        reason = movement_data.get("reason")
+        
+        if not all([product_id, movement_type, quantity, reason]):
+            raise HTTPException(status_code=400, detail="Todos os campos são obrigatórios: product_id, movement_type, quantity, reason")
+        
         # Verificar se produto existe
         product = await db.products.find_one({
             "id": product_id,
@@ -4907,13 +4912,13 @@ async def create_stock_movement(
         
         # Calcular novo estoque baseado no tipo de movimentação
         if movement_type == "entrada":
-            new_stock = previous_stock + quantity
+            new_stock = previous_stock + int(quantity)
         elif movement_type == "saída":
-            new_stock = previous_stock - quantity
+            new_stock = previous_stock - int(quantity)
             if new_stock < 0:
                 raise HTTPException(status_code=400, detail="Estoque não pode ficar negativo")
         elif movement_type == "ajuste":
-            new_stock = quantity  # Ajuste absoluto
+            new_stock = int(quantity)  # Ajuste absoluto
         else:
             raise HTTPException(status_code=400, detail="Tipo de movimentação inválido. Use: entrada, saída, ajuste")
         
@@ -4928,7 +4933,7 @@ async def create_stock_movement(
             user_id=current_user.id,
             product_id=product_id,
             movement_type=movement_type,
-            quantity=abs(quantity),
+            quantity=abs(int(quantity)),
             reason=reason,
             previous_stock=previous_stock,
             new_stock=new_stock,
