@@ -8293,6 +8293,10 @@ const PetShopView = () => {
           loading={loading}
           onCreateSale={() => setShowSaleModal(true)}
           onRefresh={loadPetShopData}
+          onShowReceipt={(receipt) => {
+            setCurrentReceipt(receipt);
+            setShowReceiptModal(true);
+          }}
         />
       )}
 
