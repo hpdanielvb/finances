@@ -2995,6 +2995,11 @@ async def check_low_stock_products(user_id: str):
         "$expr": {"$lte": ["$current_stock", "$minimum_stock"]}
     }).to_list(100)
     
+    # Remove MongoDB ObjectId fields for JSON serialization
+    for product in products:
+        if "_id" in product:
+            del product["_id"]
+    
     return products
 
 async def create_financial_transaction_from_sale(sale: dict, user_id: str):
