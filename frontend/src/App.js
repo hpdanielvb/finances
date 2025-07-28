@@ -1726,10 +1726,23 @@ const Dashboard = () => {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-between w-full">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 <h1 className="text-2xl font-bold">OrçaZenFinanceiro</h1>
               </div>
+                
+              {/* Mobile Menu Button */}
+              <button 
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+              
+            {/* Desktop Navigation */}
               <div className="hidden md:flex space-x-1">
                 <button
                   onClick={() => setActiveView('dashboard')}
