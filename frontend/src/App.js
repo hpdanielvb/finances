@@ -8045,6 +8045,40 @@ const PetShopView = () => {
     }
   };
 
+  // Função para deletar produto
+  const handleDeleteProduct = async (productId, productName) => {
+    if (window.confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir o produto "${productName}"?\n\n🗑️ Esta ação:\n• Excluirá o produto permanentemente\n• Não pode ser desfeita\n\nDigite OK para confirmar.`)) {
+      try {
+        await axios.delete(`${API}/petshop/products/${productId}`);
+        toast.success('Produto excluído com sucesso!');
+        
+        // Recarregar dados
+        await loadPetShopData();
+      } catch (error) {
+        console.error('Erro ao excluir produto:', error);
+        toast.error(error.response?.data?.detail || 'Erro ao excluir produto');
+      }
+    }
+  };
+
+  // Função para movimentação de estoque
+  const handleStockMovement = async (movementData) => {
+    try {
+      console.log('Stock movement:', movementData);
+      const response = await axios.post(`${API}/petshop/stock-movement`, movementData);
+      
+      toast.success(`${movementData.type === 'entrada' ? 'Entrada' : 'Saída'} de estoque registrada com sucesso!`);
+      setShowStockModal(false);
+      setStockProduct(null);
+      
+      // Recarregar dados
+      await loadPetShopData();
+    } catch (error) {
+      console.error('Erro na movimentação de estoque:', error);
+      toast.error(error.response?.data?.detail || 'Erro na movimentação de estoque');
+    }
+  };
+
   // Carregar dados na inicialização
   React.useEffect(() => {
     loadPetShopData();
