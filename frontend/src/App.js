@@ -8154,6 +8154,11 @@ const PetShopView = () => {
             setEditingProduct(product);
             setShowProductModal(true);
           }}
+          onDeleteProduct={handleDeleteProduct}
+          onStockMovement={(product) => {
+            setStockProduct(product);
+            setShowStockModal(true);
+          }}
           onRefresh={loadPetShopData}
         />
       )}
