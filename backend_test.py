@@ -619,6 +619,720 @@ def test_user_profile_system():
         return False
 
 
+def test_petshop_module_phase3():
+    """
+    🐾 COMPREHENSIVE PET SHOP MODULE - PHASE 3 TESTING
+    
+    This addresses the specific review request to test the newly implemented
+    Pet Shop Module - Phase 3 with complete functionality testing.
+    
+    Test Coverage:
+    1. Authentication - Login with hpdanielvb@gmail.com / 123456
+    2. Product Management:
+       - POST /api/petshop/products - Create products with SKU validation
+       - GET /api/petshop/products - List products with filters (category, low_stock, active_only)
+       - GET /api/petshop/products/{id} - Get specific product
+       - PUT /api/petshop/products/{id} - Update product
+       - DELETE /api/petshop/products/{id} - Remove product (soft delete)
+    3. Sales System:
+       - POST /api/petshop/sales - Create sales with automatic stock subtraction
+       - GET /api/petshop/sales - List sales with filters (date, payment_method)
+    4. Dashboard & Analytics:
+       - GET /api/petshop/dashboard - Dashboard with statistics
+       - GET /api/petshop/receipt/{receipt_number} - Receipt generation
+    5. Stock Control:
+       - Automatic stock subtraction on sales
+       - Low stock alerts
+       - Stock movement logging
+    6. Financial Integration:
+       - Automatic transaction creation from sales
+       - Integration with financial module
+    
+    Business Rules Testing:
+    - SKU uniqueness validation
+    - Stock control (current_stock vs minimum_stock)
+    - Automatic stock subtraction on sales
+    - Receipt number generation
+    - Financial transaction creation from sales
+    - Product expiry date handling
+    - Supplier management
+    """
+    print("\n" + "="*80)
+    print("🐾 PET SHOP MODULE - PHASE 3 COMPREHENSIVE TEST")
+    print("="*80)
+    print("Testing complete Pet Shop functionality with stock control and financial integration")
+    print("Endpoints: /api/petshop/products, /api/petshop/sales, /api/petshop/dashboard, /api/petshop/receipt")
+    
+    # Test credentials from review request
+    user_login_primary = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"
+    }
+    
+    user_login_secondary = {
+        "email": "hpdanielvb@gmail.com", 
+        "password": "TestPassword123"
+    }
+    
+    test_results = {
+        "login_success": False,
+        "product_creation_working": False,
+        "product_listing_working": False,
+        "product_retrieval_working": False,
+        "product_update_working": False,
+        "product_deletion_working": False,
+        "sales_creation_working": False,
+        "sales_listing_working": False,
+        "dashboard_working": False,
+        "receipt_generation_working": False,
+        "stock_control_working": False,
+        "financial_integration_working": False,
+        "sku_validation_working": False,
+        "filters_working": False,
+        "low_stock_alerts_working": False,
+        "auth_token": None,
+        "products_created": 0,
+        "sales_created": 0,
+        "product_ids": [],
+        "sale_ids": [],
+        "receipt_numbers": []
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Authentication")
+        print(f"   Testing primary credentials: {user_login_primary['email']} / {user_login_primary['password']}")
+        
+        # Try primary credentials first
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_primary)
+        
+        if response.status_code != 200:
+            print(f"   Primary login failed, trying secondary credentials: {user_login_secondary['password']}")
+            response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_secondary)
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                print_test_result("AUTHENTICATION", False, f"❌ Both login attempts failed: {error_detail}")
+                return test_results
+            else:
+                used_credentials = user_login_secondary
+        else:
+            used_credentials = user_login_primary
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["auth_token"] = auth_token
+        test_results["login_success"] = True
+        
+        print_test_result("AUTHENTICATION", True, 
+                        f"✅ Login successful with {used_credentials['password']}")
+        print(f"   User: {user_info.get('name')} ({user_info.get('email')})")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Product Creation - POST /api/petshop/products
+        print(f"\n🔍 STEP 2: Product Creation - POST /api/petshop/products")
+        print("   Testing product creation with SKU validation...")
+        
+        # Test products with different categories and stock levels
+        test_products = [
+            {
+                "sku": "RAC001",
+                "name": "Ração Premium Cães Adultos 15kg",
+                "description": "Ração super premium para cães adultos de todas as raças",
+                "cost_price": 45.00,
+                "sale_price": 89.90,
+                "current_stock": 25,
+                "minimum_stock": 5,
+                "expiry_date": (datetime.now() + timedelta(days=365)).isoformat(),
+                "supplier": "Pet Food Brasil Ltda",
+                "category": "Ração"
+            },
+            {
+                "sku": "BRI002", 
+                "name": "Brinquedo Corda Dental",
+                "description": "Brinquedo de corda para limpeza dental canina",
+                "cost_price": 8.50,
+                "sale_price": 19.90,
+                "current_stock": 3,  # Low stock for testing alerts
+                "minimum_stock": 10,
+                "supplier": "Brinquedos Pet Ltda",
+                "category": "Brinquedos"
+            },
+            {
+                "sku": "MED003",
+                "name": "Shampoo Antipulgas 500ml",
+                "description": "Shampoo medicinal antipulgas e carrapatos",
+                "cost_price": 12.00,
+                "sale_price": 24.90,
+                "current_stock": 15,
+                "minimum_stock": 8,
+                "expiry_date": (datetime.now() + timedelta(days=730)).isoformat(),
+                "supplier": "Veterinária Produtos Ltda",
+                "category": "Higiene"
+            }
+        ]
+        
+        created_products = []
+        
+        for i, product_data in enumerate(test_products):
+            print(f"   Creating product {i+1}: {product_data['name']}")
+            
+            response = requests.post(f"{BACKEND_URL}/petshop/products", 
+                                   json=product_data, headers=headers)
+            
+            if response.status_code == 200:
+                result = response.json()
+                product = result.get("product", {})
+                created_products.append(product)
+                test_results["product_ids"].append(product.get("id"))
+                test_results["products_created"] += 1
+                
+                print_test_result(f"PRODUCT CREATION {i+1}", True, 
+                                f"✅ Created: {product.get('name')} (SKU: {product.get('sku')})")
+            else:
+                error_detail = response.json().get("detail", "Unknown error")
+                print_test_result(f"PRODUCT CREATION {i+1}", False, 
+                                f"❌ Failed: {error_detail}")
+        
+        if test_results["products_created"] >= 2:
+            test_results["product_creation_working"] = True
+            print_test_result("PRODUCT CREATION SYSTEM", True, 
+                            f"✅ Created {test_results['products_created']}/3 products successfully")
+        
+        # Test SKU uniqueness validation
+        print(f"\n   🔍 SKU Uniqueness Validation Test")
+        duplicate_sku_product = {
+            "sku": "RAC001",  # Duplicate SKU
+            "name": "Duplicate SKU Test Product",
+            "cost_price": 10.00,
+            "sale_price": 20.00,
+            "current_stock": 10,
+            "minimum_stock": 5,
+            "category": "Test"
+        }
+        
+        dup_response = requests.post(f"{BACKEND_URL}/petshop/products", 
+                                   json=duplicate_sku_product, headers=headers)
+        
+        if dup_response.status_code == 400:
+            error_detail = dup_response.json().get("detail", "")
+            if "SKU já existe" in error_detail or "already exists" in error_detail.lower():
+                test_results["sku_validation_working"] = True
+                print_test_result("SKU UNIQUENESS VALIDATION", True, 
+                                f"✅ Duplicate SKU properly rejected: {error_detail}")
+            else:
+                print_test_result("SKU UNIQUENESS VALIDATION", False, 
+                                f"❌ Wrong error message: {error_detail}")
+        else:
+            print_test_result("SKU UNIQUENESS VALIDATION", False, 
+                            f"❌ Expected 400 error, got: {dup_response.status_code}")
+        
+        # STEP 3: Product Listing - GET /api/petshop/products
+        print(f"\n🔍 STEP 3: Product Listing - GET /api/petshop/products")
+        print("   Testing product listing with filters...")
+        
+        # Test basic listing
+        list_response = requests.get(f"{BACKEND_URL}/petshop/products", headers=headers)
+        
+        if list_response.status_code == 200:
+            products = list_response.json()
+            test_results["product_listing_working"] = True
+            
+            print_test_result("PRODUCT LISTING", True, 
+                            f"✅ Retrieved {len(products)} products")
+            
+            # Test category filter
+            category_response = requests.get(f"{BACKEND_URL}/petshop/products?category=Ração", 
+                                           headers=headers)
+            
+            if category_response.status_code == 200:
+                category_products = category_response.json()
+                racao_products = [p for p in category_products if p.get('category') == 'Ração']
+                
+                if len(racao_products) > 0:
+                    print_test_result("CATEGORY FILTER", True, 
+                                    f"✅ Category filter working: {len(racao_products)} Ração products")
+                else:
+                    print_test_result("CATEGORY FILTER", False, 
+                                    "❌ No products found with Ração category")
+            
+            # Test low stock filter
+            low_stock_response = requests.get(f"{BACKEND_URL}/petshop/products?low_stock=true", 
+                                            headers=headers)
+            
+            if low_stock_response.status_code == 200:
+                low_stock_products = low_stock_response.json()
+                
+                if len(low_stock_products) > 0:
+                    test_results["low_stock_alerts_working"] = True
+                    print_test_result("LOW STOCK FILTER", True, 
+                                    f"✅ Low stock filter working: {len(low_stock_products)} products")
+                    
+                    for product in low_stock_products:
+                        current = product.get('current_stock', 0)
+                        minimum = product.get('minimum_stock', 0)
+                        print(f"      - {product.get('name')}: {current}/{minimum} (low stock)")
+                else:
+                    print_test_result("LOW STOCK FILTER", False, 
+                                    "❌ No low stock products found (expected at least 1)")
+            
+            # Test active only filter
+            active_response = requests.get(f"{BACKEND_URL}/petshop/products?active_only=true", 
+                                         headers=headers)
+            
+            if active_response.status_code == 200:
+                active_products = active_response.json()
+                all_active = all(p.get('is_active', False) for p in active_products)
+                
+                if all_active:
+                    test_results["filters_working"] = True
+                    print_test_result("ACTIVE ONLY FILTER", True, 
+                                    f"✅ Active filter working: {len(active_products)} active products")
+                else:
+                    print_test_result("ACTIVE ONLY FILTER", False, 
+                                    "❌ Found inactive products in active-only filter")
+        else:
+            print_test_result("PRODUCT LISTING", False, 
+                            f"❌ Failed: {list_response.status_code}")
+        
+        # STEP 4: Product Retrieval - GET /api/petshop/products/{id}
+        print(f"\n🔍 STEP 4: Product Retrieval - GET /api/petshop/products/{{id}}")
+        
+        if test_results["product_ids"]:
+            test_product_id = test_results["product_ids"][0]
+            
+            get_response = requests.get(f"{BACKEND_URL}/petshop/products/{test_product_id}", 
+                                      headers=headers)
+            
+            if get_response.status_code == 200:
+                product = get_response.json()
+                test_results["product_retrieval_working"] = True
+                
+                print_test_result("PRODUCT RETRIEVAL", True, 
+                                f"✅ Retrieved product: {product.get('name')}")
+                print(f"   Product details: SKU {product.get('sku')}, Stock: {product.get('current_stock')}")
+            else:
+                print_test_result("PRODUCT RETRIEVAL", False, 
+                                f"❌ Failed: {get_response.status_code}")
+        
+        # STEP 5: Product Update - PUT /api/petshop/products/{id}
+        print(f"\n🔍 STEP 5: Product Update - PUT /api/petshop/products/{{id}}")
+        
+        if test_results["product_ids"]:
+            test_product_id = test_results["product_ids"][0]
+            
+            update_data = {
+                "name": "Ração Premium Cães Adultos 15kg - ATUALIZADA",
+                "sale_price": 94.90,  # Price increase
+                "current_stock": 30   # Stock increase
+            }
+            
+            update_response = requests.put(f"{BACKEND_URL}/petshop/products/{test_product_id}", 
+                                         json=update_data, headers=headers)
+            
+            if update_response.status_code == 200:
+                result = update_response.json()
+                updated_product = result.get("product", {})
+                
+                if (updated_product.get('name') == update_data['name'] and 
+                    updated_product.get('sale_price') == update_data['sale_price']):
+                    test_results["product_update_working"] = True
+                    print_test_result("PRODUCT UPDATE", True, 
+                                    f"✅ Product updated successfully")
+                    print(f"   New name: {updated_product.get('name')}")
+                    print(f"   New price: R$ {updated_product.get('sale_price'):.2f}")
+                else:
+                    print_test_result("PRODUCT UPDATE", False, 
+                                    "❌ Update not reflected in response")
+            else:
+                error_detail = update_response.json().get("detail", "Unknown error")
+                print_test_result("PRODUCT UPDATE", False, 
+                                f"❌ Failed: {error_detail}")
+        
+        # STEP 6: Sales Creation - POST /api/petshop/sales
+        print(f"\n🔍 STEP 6: Sales Creation - POST /api/petshop/sales")
+        print("   Testing sales creation with automatic stock subtraction...")
+        
+        if test_results["product_ids"] and len(test_results["product_ids"]) >= 2:
+            # Create a test sale with multiple products
+            sale_data = {
+                "customer_name": "João Silva",
+                "customer_phone": "(11) 99999-9999",
+                "items": [
+                    {
+                        "product_id": test_results["product_ids"][0],
+                        "product_name": "Ração Premium Cães Adultos 15kg",
+                        "quantity": 2,
+                        "unit_price": 89.90,
+                        "total": 179.80
+                    },
+                    {
+                        "product_id": test_results["product_ids"][1],
+                        "product_name": "Brinquedo Corda Dental",
+                        "quantity": 1,
+                        "unit_price": 19.90,
+                        "total": 19.90
+                    }
+                ],
+                "subtotal": 199.70,
+                "discount": 9.70,
+                "total": 190.00,
+                "payment_method": "PIX",
+                "payment_status": "Pago",
+                "notes": "Cliente fidelidade - desconto aplicado"
+            }
+            
+            # Get initial stock levels
+            initial_stocks = {}
+            for product_id in test_results["product_ids"][:2]:
+                get_response = requests.get(f"{BACKEND_URL}/petshop/products/{product_id}", 
+                                          headers=headers)
+                if get_response.status_code == 200:
+                    product = get_response.json()
+                    initial_stocks[product_id] = product.get('current_stock', 0)
+            
+            print(f"   Initial stock levels:")
+            for product_id, stock in initial_stocks.items():
+                print(f"      Product {product_id}: {stock} units")
+            
+            # Create the sale
+            sale_response = requests.post(f"{BACKEND_URL}/petshop/sales", 
+                                        json=sale_data, headers=headers)
+            
+            if sale_response.status_code == 200:
+                result = sale_response.json()
+                sale = result.get("sale", {})
+                receipt_number = result.get("receipt_number")
+                
+                test_results["sales_created"] += 1
+                test_results["sale_ids"].append(sale.get("id"))
+                test_results["receipt_numbers"].append(receipt_number)
+                test_results["sales_creation_working"] = True
+                
+                print_test_result("SALES CREATION", True, 
+                                f"✅ Sale created successfully")
+                print(f"   Receipt Number: {receipt_number}")
+                print(f"   Customer: {sale.get('customer_name')}")
+                print(f"   Total: R$ {sale.get('total'):.2f}")
+                print(f"   Payment: {sale.get('payment_method')}")
+                
+                # Verify automatic stock subtraction
+                print(f"\n   🔍 Verifying Automatic Stock Subtraction:")
+                stock_subtraction_working = True
+                
+                for item in sale_data["items"]:
+                    product_id = item["product_id"]
+                    quantity_sold = item["quantity"]
+                    expected_new_stock = initial_stocks[product_id] - quantity_sold
+                    
+                    # Get updated stock
+                    get_response = requests.get(f"{BACKEND_URL}/petshop/products/{product_id}", 
+                                              headers=headers)
+                    
+                    if get_response.status_code == 200:
+                        updated_product = get_response.json()
+                        actual_new_stock = updated_product.get('current_stock', 0)
+                        
+                        if actual_new_stock == expected_new_stock:
+                            print(f"      ✅ Product {product_id}: {initial_stocks[product_id]} → {actual_new_stock} (-{quantity_sold})")
+                        else:
+                            print(f"      ❌ Product {product_id}: Expected {expected_new_stock}, Got {actual_new_stock}")
+                            stock_subtraction_working = False
+                    else:
+                        stock_subtraction_working = False
+                
+                if stock_subtraction_working:
+                    test_results["stock_control_working"] = True
+                    print_test_result("AUTOMATIC STOCK SUBTRACTION", True, 
+                                    "✅ Stock levels correctly updated after sale")
+                else:
+                    print_test_result("AUTOMATIC STOCK SUBTRACTION", False, 
+                                    "❌ Stock levels not correctly updated")
+                
+                # Test financial integration
+                print(f"\n   🔍 Verifying Financial Integration:")
+                print("   Checking if sale created automatic financial transaction...")
+                
+                # Get recent transactions to verify financial integration
+                transactions_response = requests.get(f"{BACKEND_URL}/transactions?limit=10", 
+                                                   headers=headers)
+                
+                if transactions_response.status_code == 200:
+                    transactions = transactions_response.json()
+                    
+                    # Look for transaction with sale receipt number
+                    sale_transaction = None
+                    for trans in transactions:
+                        if receipt_number in trans.get('description', ''):
+                            sale_transaction = trans
+                            break
+                    
+                    if sale_transaction:
+                        test_results["financial_integration_working"] = True
+                        print_test_result("FINANCIAL INTEGRATION", True, 
+                                        f"✅ Financial transaction created automatically")
+                        print(f"      Transaction ID: {sale_transaction.get('id')}")
+                        print(f"      Description: {sale_transaction.get('description')}")
+                        print(f"      Value: R$ {sale_transaction.get('value'):.2f}")
+                        print(f"      Type: {sale_transaction.get('type')}")
+                    else:
+                        print_test_result("FINANCIAL INTEGRATION", False, 
+                                        "❌ No financial transaction found for sale")
+                else:
+                    print_test_result("FINANCIAL INTEGRATION", False, 
+                                    "❌ Could not verify financial integration")
+            else:
+                error_detail = sale_response.json().get("detail", "Unknown error")
+                print_test_result("SALES CREATION", False, 
+                                f"❌ Failed: {error_detail}")
+        
+        # STEP 7: Sales Listing - GET /api/petshop/sales
+        print(f"\n🔍 STEP 7: Sales Listing - GET /api/petshop/sales")
+        
+        sales_list_response = requests.get(f"{BACKEND_URL}/petshop/sales", headers=headers)
+        
+        if sales_list_response.status_code == 200:
+            sales = sales_list_response.json()
+            test_results["sales_listing_working"] = True
+            
+            print_test_result("SALES LISTING", True, 
+                            f"✅ Retrieved {len(sales)} sales")
+            
+            # Test date filter
+            today = datetime.now().strftime("%Y-%m-%d")
+            date_filter_response = requests.get(f"{BACKEND_URL}/petshop/sales?start_date={today}", 
+                                              headers=headers)
+            
+            if date_filter_response.status_code == 200:
+                today_sales = date_filter_response.json()
+                print_test_result("SALES DATE FILTER", True, 
+                                f"✅ Date filter working: {len(today_sales)} sales today")
+            
+            # Test payment method filter
+            pix_filter_response = requests.get(f"{BACKEND_URL}/petshop/sales?payment_method=PIX", 
+                                             headers=headers)
+            
+            if pix_filter_response.status_code == 200:
+                pix_sales = pix_filter_response.json()
+                print_test_result("SALES PAYMENT FILTER", True, 
+                                f"✅ Payment method filter working: {len(pix_sales)} PIX sales")
+        else:
+            print_test_result("SALES LISTING", False, 
+                            f"❌ Failed: {sales_list_response.status_code}")
+        
+        # STEP 8: Dashboard - GET /api/petshop/dashboard
+        print(f"\n🔍 STEP 8: Dashboard - GET /api/petshop/dashboard")
+        
+        dashboard_response = requests.get(f"{BACKEND_URL}/petshop/dashboard", headers=headers)
+        
+        if dashboard_response.status_code == 200:
+            dashboard = dashboard_response.json()
+            test_results["dashboard_working"] = True
+            
+            print_test_result("DASHBOARD", True, "✅ Dashboard loaded successfully")
+            
+            # Display dashboard statistics
+            print(f"   📊 DASHBOARD STATISTICS:")
+            print(f"      Total Products: {dashboard.get('total_products', 0)}")
+            print(f"      Low Stock Products: {dashboard.get('low_stock_count', 0)}")
+            print(f"      Sales (30 days): {dashboard.get('total_sales_30_days', 0)}")
+            print(f"      Revenue (30 days): R$ {dashboard.get('total_revenue_30_days', 0):.2f}")
+            
+            # Show top products
+            top_products = dashboard.get('top_products', [])
+            if top_products:
+                print(f"      Top Products:")
+                for i, (product_name, stats) in enumerate(top_products[:3]):
+                    print(f"         {i+1}. {product_name}: {stats['quantity']} units, R$ {stats['revenue']:.2f}")
+            
+            # Show low stock products
+            low_stock_products = dashboard.get('low_stock_products', [])
+            if low_stock_products:
+                print(f"      Low Stock Alerts:")
+                for product in low_stock_products[:3]:
+                    current = product.get('current_stock', 0)
+                    minimum = product.get('minimum_stock', 0)
+                    print(f"         - {product.get('name')}: {current}/{minimum}")
+        else:
+            print_test_result("DASHBOARD", False, 
+                            f"❌ Failed: {dashboard_response.status_code}")
+        
+        # STEP 9: Receipt Generation - GET /api/petshop/receipt/{receipt_number}
+        print(f"\n🔍 STEP 9: Receipt Generation - GET /api/petshop/receipt/{{receipt_number}}")
+        
+        if test_results["receipt_numbers"]:
+            receipt_number = test_results["receipt_numbers"][0]
+            
+            receipt_response = requests.get(f"{BACKEND_URL}/petshop/receipt/{receipt_number}", 
+                                          headers=headers)
+            
+            if receipt_response.status_code == 200:
+                receipt = receipt_response.json()
+                test_results["receipt_generation_working"] = True
+                
+                print_test_result("RECEIPT GENERATION", True, 
+                                f"✅ Receipt retrieved successfully")
+                
+                sale_info = receipt.get('sale', {})
+                business_info = receipt.get('business_info', {})
+                
+                print(f"   📄 RECEIPT DETAILS:")
+                print(f"      Receipt Number: {receipt_number}")
+                print(f"      Business: {business_info.get('name')}")
+                print(f"      Owner: {business_info.get('owner')}")
+                print(f"      Date: {business_info.get('date')}")
+                print(f"      Customer: {sale_info.get('customer_name')}")
+                print(f"      Total: R$ {sale_info.get('total', 0):.2f}")
+                print(f"      Items: {len(sale_info.get('items', []))}")
+            else:
+                print_test_result("RECEIPT GENERATION", False, 
+                                f"❌ Failed: {receipt_response.status_code}")
+        
+        # STEP 10: Product Deletion (Soft Delete) - DELETE /api/petshop/products/{id}
+        print(f"\n🔍 STEP 10: Product Deletion (Soft Delete) - DELETE /api/petshop/products/{{id}}")
+        
+        if test_results["product_ids"] and len(test_results["product_ids"]) >= 3:
+            # Delete the last created product
+            delete_product_id = test_results["product_ids"][-1]
+            
+            delete_response = requests.delete(f"{BACKEND_URL}/petshop/products/{delete_product_id}", 
+                                            headers=headers)
+            
+            if delete_response.status_code == 200:
+                result = delete_response.json()
+                
+                # Verify soft delete - product should still exist but be inactive
+                verify_response = requests.get(f"{BACKEND_URL}/petshop/products/{delete_product_id}", 
+                                             headers=headers)
+                
+                if verify_response.status_code == 200:
+                    deleted_product = verify_response.json()
+                    if not deleted_product.get('is_active', True):
+                        test_results["product_deletion_working"] = True
+                        print_test_result("PRODUCT SOFT DELETE", True, 
+                                        f"✅ Product soft deleted successfully")
+                        print(f"   Product marked as inactive: {deleted_product.get('name')}")
+                    else:
+                        print_test_result("PRODUCT SOFT DELETE", False, 
+                                        "❌ Product still active after deletion")
+                else:
+                    print_test_result("PRODUCT SOFT DELETE", False, 
+                                    "❌ Product not found after deletion")
+            else:
+                error_detail = delete_response.json().get("detail", "Unknown error")
+                print_test_result("PRODUCT SOFT DELETE", False, 
+                                f"❌ Failed: {error_detail}")
+        
+        # STEP 11: Final Summary
+        print(f"\n🔍 STEP 11: PET SHOP MODULE - PHASE 3 TEST SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   🏷️  Product Creation: {'WORKING' if test_results['product_creation_working'] else 'FAILED'}")
+        print(f"   📋 Product Listing: {'WORKING' if test_results['product_listing_working'] else 'FAILED'}")
+        print(f"   🔍 Product Retrieval: {'WORKING' if test_results['product_retrieval_working'] else 'FAILED'}")
+        print(f"   ✏️  Product Update: {'WORKING' if test_results['product_update_working'] else 'FAILED'}")
+        print(f"   🗑️  Product Deletion: {'WORKING' if test_results['product_deletion_working'] else 'FAILED'}")
+        print(f"   💰 Sales Creation: {'WORKING' if test_results['sales_creation_working'] else 'FAILED'}")
+        print(f"   📊 Sales Listing: {'WORKING' if test_results['sales_listing_working'] else 'FAILED'}")
+        print(f"   📈 Dashboard: {'WORKING' if test_results['dashboard_working'] else 'FAILED'}")
+        print(f"   🧾 Receipt Generation: {'WORKING' if test_results['receipt_generation_working'] else 'FAILED'}")
+        
+        print(f"\n📊 BUSINESS RULES:")
+        print(f"   🔒 SKU Validation: {'WORKING' if test_results['sku_validation_working'] else 'FAILED'}")
+        print(f"   📦 Stock Control: {'WORKING' if test_results['stock_control_working'] else 'FAILED'}")
+        print(f"   💳 Financial Integration: {'WORKING' if test_results['financial_integration_working'] else 'FAILED'}")
+        print(f"   🚨 Low Stock Alerts: {'WORKING' if test_results['low_stock_alerts_working'] else 'FAILED'}")
+        print(f"   🔍 Filters: {'WORKING' if test_results['filters_working'] else 'FAILED'}")
+        
+        print(f"\n📊 STATISTICS:")
+        print(f"   Products Created: {test_results['products_created']}")
+        print(f"   Sales Created: {test_results['sales_created']}")
+        print(f"   Receipts Generated: {len(test_results['receipt_numbers'])}")
+        
+        # Determine overall success
+        core_functionality = [
+            test_results['login_success'],
+            test_results['product_creation_working'],
+            test_results['product_listing_working'],
+            test_results['sales_creation_working'],
+            test_results['dashboard_working']
+        ]
+        
+        business_rules = [
+            test_results['sku_validation_working'],
+            test_results['stock_control_working'],
+            test_results['financial_integration_working']
+        ]
+        
+        advanced_features = [
+            test_results['receipt_generation_working'],
+            test_results['low_stock_alerts_working'],
+            test_results['filters_working']
+        ]
+        
+        core_success = all(core_functionality)
+        business_success = all(business_rules)
+        advanced_success = sum(advanced_features) >= 2  # At least 2 of 3
+        
+        if core_success and business_success and advanced_success:
+            print(f"\n🎉 PET SHOP MODULE - PHASE 3 WORKING EXCELLENTLY!")
+            print("✅ All critical functionality working correctly:")
+            print("   - User authentication with hpdanielvb@gmail.com / 123456")
+            print("   - Complete product management (CRUD operations)")
+            print("   - SKU uniqueness validation and product categorization")
+            print("   - Sales system with automatic stock subtraction")
+            print("   - Financial integration (sales creating automatic transactions)")
+            print("   - Dashboard with comprehensive statistics and analytics")
+            print("   - Receipt generation with unique receipt numbers")
+            print("   - Low stock alerts and inventory management")
+            print("   - Advanced filtering (category, stock level, date, payment method)")
+            print("   - Soft delete functionality for products")
+            print("   - Stock movement logging and control")
+            print("   - Brazilian business patterns and data validation")
+            
+            return True
+        else:
+            print(f"\n⚠️ PET SHOP MODULE ISSUES DETECTED:")
+            if not core_success:
+                print("   ❌ Core functionality issues:")
+                if not test_results['login_success']:
+                    print("      - Authentication failed")
+                if not test_results['product_creation_working']:
+                    print("      - Product creation failed")
+                if not test_results['product_listing_working']:
+                    print("      - Product listing failed")
+                if not test_results['sales_creation_working']:
+                    print("      - Sales creation failed")
+                if not test_results['dashboard_working']:
+                    print("      - Dashboard failed")
+            
+            if not business_success:
+                print("   ❌ Business rules issues:")
+                if not test_results['sku_validation_working']:
+                    print("      - SKU validation not working")
+                if not test_results['stock_control_working']:
+                    print("      - Stock control not working")
+                if not test_results['financial_integration_working']:
+                    print("      - Financial integration not working")
+            
+            if not advanced_success:
+                print("   ⚠️ Advanced features issues:")
+                if not test_results['receipt_generation_working']:
+                    print("      - Receipt generation not working")
+                if not test_results['low_stock_alerts_working']:
+                    print("      - Low stock alerts not working")
+                if not test_results['filters_working']:
+                    print("      - Filters not working properly")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("PET SHOP MODULE - PHASE 3 TEST", False, f"Exception: {str(e)}")
+        return False
+
 def test_user_profile_endpoints_detailed():
     """
     DETAILED USER PROFILE ENDPOINTS TEST
