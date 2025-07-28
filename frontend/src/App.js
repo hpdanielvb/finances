@@ -1859,147 +1859,63 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Enhanced Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center justify-between w-full md:w-auto">
-              <h1 className="text-2xl font-bold">OrçaZenFinanceiro</h1>
-              
-              {/* Mobile Menu Button */}
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar Desktop */}
+      <div className={`hidden lg:flex lg:flex-col bg-white shadow-lg transition-all duration-300 ${
+        sidebarCollapsed ? 'w-16' : 'w-64'
+      }`}>
+        <SidebarComponent 
+          collapsed={sidebarCollapsed}
+          onToggle={() => {
+            setSidebarCollapsed(!sidebarCollapsed);
+            localStorage.setItem('sidebarCollapsed', JSON.stringify(!sidebarCollapsed));
+          }}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          onCreditCardsClick={() => {
+            setActiveView('credit-cards');
+            loadCreditCardInvoices();
+          }}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Bar com Search */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3 lg:px-6">
+          <div className="flex items-center justify-between">
+            {/* Mobile Menu Button + Logo */}
+            <div className="flex items-center space-x-4">
               <button 
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
+              <h1 className="text-xl font-bold text-gray-900 lg:hidden">OrçaZen</h1>
             </div>
-            
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1">
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => setActiveView('transactions')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'transactions' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Transações
-                </button>
-                <button
-                  onClick={() => setActiveView('accounts')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Contas
-                </button>
-                <button
-                  onClick={() => setActiveView('goals')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'goals' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Metas
-                </button>
-                <button
-                  onClick={() => setActiveView('budgets')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'budgets' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Orçamentos
-                </button>
-                
-                {/* 🧠 AI Button */}
-                <button
-                  onClick={() => setActiveView('ai')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'ai' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  🧠 IA
-                </button>
 
-                {/* 🏠 Consortium Button */}
-                <button
-                  onClick={() => setActiveView('consortiums')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'consortiums' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  🏠 Consórcios
-                </button>
+            {/* Global Search Bar */}
+            <GlobalSearchBar 
+              isVisible={showSearchBar}
+              onToggle={() => setShowSearchBar(!showSearchBar)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchResults={searchResults}
+            />
 
-                <button
-                  onClick={() => {
-                    setActiveView('credit-cards');
-                    loadCreditCardInvoices();
-                  }}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'credit-cards' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  💳 Cartões
-                </button>
-
-                {/* User Profile Button */}
-                <button
-                  onClick={() => setActiveView('profile')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'profile' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  👤 Perfil
-                </button>
-
-                {/* File Import Button */}
-                <button
-                  onClick={() => setActiveView('import')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'import' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  📄 Importar
-                </button>
-
-                {/* Contracts Button */}
-                <button
-                  onClick={() => setActiveView('contracts')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'contracts' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  🏠 Contratos
-                </button>
-
-                {/* Pet Shop Button */}
-                <button
-                  onClick={() => setActiveView('petshop')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeView === 'petshop' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  🐾 Pet Shop
-                </button>
-              </div>
-            
+            {/* User Info & Notifications */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
+              <div className="hidden md:flex items-center space-x-3">
                 <span className="text-gray-600 text-sm">Bem-vindo,</span>
-                <span className="font-medium text-gray-900">{user?.name}</span>
+                <span className="font-medium text-gray-900">
+                  {user?.name || user?.email?.split('@')[0] || 'Usuário'}
+                </span>
               </div>
-              
+
+              {/* Notifications */}
               <div className="relative">
                 <button 
                   onClick={() => setShowNotificationPanel(!showNotificationPanel)}
@@ -2072,14 +1988,16 @@ const Dashboard = () => {
               
               <button
                 onClick={logout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Sair"
               >
-                Sair
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
               </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       {/* Mobile Navigation Menu */}
       {showMobileMenu && (
