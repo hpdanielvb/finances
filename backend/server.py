@@ -5552,6 +5552,471 @@ async def test_email_sending(
         )
 
 # ============================================================================
+# 🔄 AUTOMATIC RECURRENCE SYSTEM ENDPOINTS - PHASE 2
+# ============================================================================
+
+@api_router.post("/recurrence/rules", response_model=Dict[str, Any])
+async def create_recurrence_rule(
+    rule_data: RecurrenceRuleCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Criar nova regra de recorrência automática"""
+    try:
+        # Validar padrão de recorrência
+        valid_patterns = ["diario", "semanal", "mensal", "anual"]
+        if rule_data.recurrence_pattern not in valid_patterns:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Padrão inválido. Use: {', '.join(valid_patterns)}"
+            )
+        
+        # Validar tipo de transação
+        if rule_data.transaction_type not in ["Receita", "Despesa"]:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tipo deve ser 'Receita' ou 'Despesa'"
+            )
+        
+        # Verificar se conta existe
+        account = await db.accounts.find_one({
+            "id": rule_data.account_id,
+            "user_id": current_user.id,
+            "is_active": True
+        })
+        if not account:
+            raise HTTPException(status_code=404, detail="Conta não encontrada")
+        
+        # Calcular primeira data de execução
+        next_execution = calculate_next_execution_date(
+            rule_data.start_date, rule_data.recurrence_pattern, 
+            rule_data.interval
+        )
+        
+        # Criar regra de recorrência
+        rule = RecurrenceRule(
+            user_id=current_user.id,
+            next_execution_date=next_execution,
+            **rule_data.dict()
+        )
+        
+        await db.recurrence_rules.insert_one(rule.dict())
+        
+        # Remove MongoDB ObjectId for JSON serialization
+        rule_dict = rule.dict()
+        if "_id" in rule_dict:
+            del rule_dict["_id"]
+        
+        return {
+            "message": "Regra de recorrência criada com sucesso!",
+            "rule": rule_dict,
+            "next_execution_date": next_execution.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar regra: {str(e)}")
+
+@api_router.get("/recurrence/rules", response_model=List[Dict[str, Any]])
+async def list_recurrence_rules(
+    current_user: User = Depends(get_current_user),
+    is_active: Optional[bool] = None,
+    recurrence_pattern: Optional[str] = None
+):
+    """Listar regras de recorrência do usuário"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if is_active is not None:
+            query["is_active"] = is_active
+            
+        if recurrence_pattern:
+            query["recurrence_pattern"] = recurrence_pattern
+        
+        rules = await db.recurrence_rules.find(query).sort("created_at", -1).to_list(100)
+        
+        # Remove MongoDB ObjectId fields and enrich with account info
+        for rule in rules:
+            if "_id" in rule:
+                del rule["_id"]
+            
+            # Adicionar informações da conta
+            account = await db.accounts.find_one({"id": rule["account_id"]})
+            if account:
+                rule["account_name"] = account.get("name", "Conta não encontrada")
+                rule["account_type"] = account.get("type", "N/A")
+            
+            # Adicionar informações da categoria
+            if rule.get("category_id"):
+                category = await db.categories.find_one({"id": rule["category_id"]})
+                if category:
+                    rule["category_name"] = category.get("name", "Categoria não encontrada")
+        
+        return rules
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar regras: {str(e)}")
+
+@api_router.get("/recurrence/rules/{rule_id}", response_model=Dict[str, Any])
+async def get_recurrence_rule(
+    rule_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obter regra de recorrência específica"""
+    try:
+        rule = await db.recurrence_rules.find_one({
+            "id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        if not rule:
+            raise HTTPException(status_code=404, detail="Regra não encontrada")
+        
+        # Remove MongoDB ObjectId
+        if "_id" in rule:
+            del rule["_id"]
+        
+        # Adicionar informações adicionais
+        account = await db.accounts.find_one({"id": rule["account_id"]})
+        if account:
+            rule["account_name"] = account.get("name", "Conta não encontrada")
+            rule["account_type"] = account.get("type", "N/A")
+        
+        if rule.get("category_id"):
+            category = await db.categories.find_one({"id": rule["category_id"]})
+            if category:
+                rule["category_name"] = category.get("name", "Categoria não encontrada")
+        
+        return rule
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar regra: {str(e)}")
+
+@api_router.put("/recurrence/rules/{rule_id}", response_model=Dict[str, Any])
+async def update_recurrence_rule(
+    rule_id: str,
+    rule_update: RecurrenceRuleUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Atualizar regra de recorrência"""
+    try:
+        # Verificar se regra existe
+        existing_rule = await db.recurrence_rules.find_one({
+            "id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        if not existing_rule:
+            raise HTTPException(status_code=404, detail="Regra não encontrada")
+        
+        # Preparar dados para atualização
+        update_data = {}
+        for field, value in rule_update.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        # Se padrão ou intervalo mudaram, recalcular próxima execução
+        if "recurrence_pattern" in update_data or "interval" in update_data:
+            new_pattern = update_data.get("recurrence_pattern", existing_rule["recurrence_pattern"])
+            new_interval = update_data.get("interval", existing_rule["interval"])
+            
+            next_execution = calculate_next_execution_date(
+                existing_rule["next_execution_date"], 
+                new_pattern, 
+                new_interval,
+                existing_rule.get("last_execution_date")
+            )
+            update_data["next_execution_date"] = next_execution
+        
+        update_data["updated_at"] = datetime.utcnow()
+        
+        await db.recurrence_rules.update_one(
+            {"id": rule_id, "user_id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        # Buscar regra atualizada
+        updated_rule = await db.recurrence_rules.find_one({
+            "id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        if "_id" in updated_rule:
+            del updated_rule["_id"]
+        
+        return {
+            "message": "Regra de recorrência atualizada com sucesso!",
+            "rule": updated_rule
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar regra: {str(e)}")
+
+@api_router.delete("/recurrence/rules/{rule_id}", response_model=Dict[str, str])
+async def delete_recurrence_rule(
+    rule_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Deletar regra de recorrência"""
+    try:
+        result = await db.recurrence_rules.delete_one({
+            "id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Regra não encontrada")
+        
+        # Também deletar sugestões pendentes relacionadas
+        await db.pending_recurrences.delete_many({
+            "recurrence_rule_id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        return {"message": "Regra de recorrência deletada com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao deletar regra: {str(e)}")
+
+@api_router.get("/recurrence/rules/{rule_id}/preview", response_model=Dict[str, Any])
+async def preview_recurrence_rule(
+    rule_id: str,
+    current_user: User = Depends(get_current_user),
+    months_ahead: int = 12
+):
+    """Gerar preview das próximas transações de uma regra de recorrência"""
+    try:
+        rule_data = await db.recurrence_rules.find_one({
+            "id": rule_id,
+            "user_id": current_user.id
+        })
+        
+        if not rule_data:
+            raise HTTPException(status_code=404, detail="Regra não encontrada")
+        
+        rule = RecurrenceRule(**rule_data)
+        
+        # Gerar preview
+        preview_transactions = generate_recurrence_preview(rule, months_ahead)
+        
+        return {
+            "rule_id": rule_id,
+            "rule_name": rule.name,
+            "preview_period_months": months_ahead,
+            "total_transactions": len(preview_transactions),
+            "total_value": sum(t["value"] for t in preview_transactions),
+            "transactions": preview_transactions
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar preview: {str(e)}")
+
+@api_router.get("/recurrence/pending", response_model=List[Dict[str, Any]])
+async def list_pending_recurrences(
+    current_user: User = Depends(get_current_user),
+    status: Optional[str] = None
+):
+    """Listar recorrências pendentes de confirmação"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if status:
+            query["status"] = status
+        else:
+            query["status"] = "pending"  # Apenas pendentes por padrão
+        
+        pending = await db.pending_recurrences.find(query).sort("created_at", -1).to_list(100)
+        
+        # Remove MongoDB ObjectId and enrich with rule info
+        for item in pending:
+            if "_id" in item:
+                del item["_id"]
+            
+            # Adicionar informações da regra
+            rule = await db.recurrence_rules.find_one({"id": item["recurrence_rule_id"]})
+            if rule:
+                item["rule_name"] = rule.get("name", "Regra não encontrada")
+                item["rule_pattern"] = rule.get("recurrence_pattern", "N/A")
+        
+        return pending
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar pendências: {str(e)}")
+
+@api_router.post("/recurrence/confirm", response_model=Dict[str, Any])
+async def confirm_pending_recurrences(
+    confirmation: RecurrenceConfirmation,
+    current_user: User = Depends(get_current_user)
+):
+    """Confirmar ou rejeitar recorrências pendentes"""
+    try:
+        results = {
+            "processed": 0,
+            "approved": 0,
+            "rejected": 0,
+            "created_transactions": [],
+            "errors": []
+        }
+        
+        if confirmation.action in ["approve_all", "reject_all"]:
+            # Processar todas as pendências
+            pending_list = await db.pending_recurrences.find({
+                "user_id": current_user.id,
+                "status": "pending"
+            }).to_list(100)
+            
+            pending_ids = [item["id"] for item in pending_list]
+        else:
+            pending_ids = confirmation.pending_recurrence_ids
+        
+        for pending_id in pending_ids:
+            try:
+                pending = await db.pending_recurrences.find_one({
+                    "id": pending_id,
+                    "user_id": current_user.id,
+                    "status": "pending"
+                })
+                
+                if not pending:
+                    results["errors"].append(f"Pendência {pending_id} não encontrada")
+                    continue
+                
+                results["processed"] += 1
+                
+                if confirmation.action in ["approve", "approve_all"]:
+                    # Buscar regra para criar transação
+                    rule = await db.recurrence_rules.find_one({
+                        "id": pending["recurrence_rule_id"]
+                    })
+                    
+                    if rule:
+                        rule_obj = RecurrenceRule(**rule)
+                        transaction_id = await create_transaction_from_recurrence(
+                            rule_obj, pending["suggested_date"], current_user.id
+                        )
+                        
+                        results["created_transactions"].append({
+                            "transaction_id": transaction_id,
+                            "description": pending["transaction_data"]["description"],
+                            "value": pending["transaction_data"]["value"],
+                            "date": pending["suggested_date"]
+                        })
+                        
+                        # Atualizar regra
+                        await db.recurrence_rules.update_one(
+                            {"id": rule["id"]},
+                            {"$set": {
+                                "last_execution_date": pending["suggested_date"],
+                                "total_executions": rule["total_executions"] + 1,
+                                "updated_at": datetime.utcnow()
+                            }}
+                        )
+                    
+                    # Marcar como aprovada
+                    await db.pending_recurrences.update_one(
+                        {"id": pending_id},
+                        {"$set": {"status": "approved"}}
+                    )
+                    results["approved"] += 1
+                    
+                else:  # reject or reject_all
+                    # Marcar como rejeitada
+                    await db.pending_recurrences.update_one(
+                        {"id": pending_id},
+                        {"$set": {"status": "rejected"}}
+                    )
+                    results["rejected"] += 1
+                
+            except Exception as e:
+                error_msg = f"Erro ao processar {pending_id}: {str(e)}"
+                results["errors"].append(error_msg)
+        
+        return {
+            "message": f"Processamento concluído: {results['approved']} aprovadas, {results['rejected']} rejeitadas",
+            "results": results
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro no processamento: {str(e)}")
+
+@api_router.post("/recurrence/process", response_model=Dict[str, Any])
+async def process_user_recurrences(
+    current_user: User = Depends(get_current_user)
+):
+    """Processar todas as recorrências pendentes do usuário (manual trigger)"""
+    try:
+        results = await process_pending_recurrences(current_user.id)
+        
+        return {
+            "message": "Processamento de recorrências concluído!",
+            "results": results,
+            "processed_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro no processamento: {str(e)}")
+
+@api_router.get("/recurrence/statistics", response_model=Dict[str, Any])
+async def get_recurrence_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """Obter estatísticas do sistema de recorrência"""
+    try:
+        # Estatísticas de regras
+        total_rules = await db.recurrence_rules.count_documents({"user_id": current_user.id})
+        active_rules = await db.recurrence_rules.count_documents({
+            "user_id": current_user.id,
+            "is_active": True
+        })
+        
+        # Estatísticas por padrão
+        pattern_stats = await db.recurrence_rules.aggregate([
+            {"$match": {"user_id": current_user.id, "is_active": True}},
+            {"$group": {"_id": "$recurrence_pattern", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]).to_list(10)
+        
+        # Estatísticas de pendências
+        pending_count = await db.pending_recurrences.count_documents({
+            "user_id": current_user.id,
+            "status": "pending"
+        })
+        
+        # Próximas execuções (próximos 7 dias)
+        next_week = datetime.utcnow() + timedelta(days=7)
+        upcoming_executions = await db.recurrence_rules.find({
+            "user_id": current_user.id,
+            "is_active": True,
+            "next_execution_date": {"$lte": next_week}
+        }).sort("next_execution_date", 1).to_list(10)
+        
+        # Remove MongoDB ObjectId fields
+        for execution in upcoming_executions:
+            if "_id" in execution:
+                del execution["_id"]
+        
+        return {
+            "total_rules": total_rules,
+            "active_rules": active_rules,
+            "inactive_rules": total_rules - active_rules,
+            "pattern_distribution": pattern_stats,
+            "pending_confirmations": pending_count,
+            "upcoming_executions": upcoming_executions,
+            "next_7_days_count": len(upcoming_executions)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao obter estatísticas: {str(e)}")
+
+# ============================================================================
 # 🧹 ADMINISTRATIVE DATA CLEANUP ENDPOINTS (TEMPORARY)
 # ============================================================================
 
