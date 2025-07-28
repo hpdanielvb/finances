@@ -5141,6 +5141,101 @@ async def get_petshop_statistics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao obter estatísticas: {str(e)}")
 
+# ============================================================================
+# 📧 EMAIL TEST ENDPOINT
+# ============================================================================
+
+class EmailTestRequest(BaseModel):
+    to: EmailStr
+    subject: Optional[str] = "Teste de E-mail - OrçaZenFinanceiro"
+
+@api_router.post("/test-email")
+async def test_email_sending(
+    email_request: EmailTestRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Test email sending functionality"""
+    try:
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
+                <h2>🎉 Teste de E-mail Bem-sucedido!</h2>
+            </div>
+            <div style="padding: 20px;">
+                <p>Olá!</p>
+                <p>Este é um e-mail de teste do sistema <strong>OrçaZenFinanceiro</strong>.</p>
+                <p>Se você recebeu este e-mail, significa que o sistema de envio está funcionando corretamente!</p>
+                
+                <div style="background: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
+                    <h3>✅ Status do Sistema:</h3>
+                    <ul>
+                        <li><strong>SMTP:</strong> Configurado e funcional</li>
+                        <li><strong>Usuário Teste:</strong> {current_user.email}</li>
+                        <li><strong>Data/Hora:</strong> {datetime.now().strftime('%d/%m/%Y às %H:%M')}</li>
+                        <li><strong>Servidor:</strong> {SMTP_SERVER}:{SMTP_PORT}</li>
+                    </ul>
+                </div>
+                
+                <p>Atenciosamente,<br>
+                <strong>Equipe OrçaZenFinanceiro</strong></p>
+            </div>
+            <div style="background: #6c757d; color: white; text-align: center; padding: 10px; font-size: 12px;">
+                Este é um e-mail automatizado de teste. Não é necessário responder.
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        TESTE DE E-MAIL - ORÇAZENFINANCEIRO
+        
+        Olá!
+        
+        Este é um e-mail de teste do sistema OrçaZenFinanceiro.
+        Se você recebeu este e-mail, o sistema de envio está funcionando corretamente!
+        
+        Status do Sistema:
+        - SMTP: Configurado e funcional  
+        - Usuário Teste: {current_user.email}
+        - Data/Hora: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+        - Servidor: {SMTP_SERVER}:{SMTP_PORT}
+        
+        Atenciosamente,
+        Equipe OrçaZenFinanceiro
+        """
+        
+        # Send test email
+        success = await send_email(
+            to_email=email_request.to,
+            subject=email_request.subject,
+            html_content=html_content,
+            text_content=text_content
+        )
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"E-mail de teste enviado com sucesso para {email_request.to}",
+                "email_enabled": EMAIL_ENABLED,
+                "smtp_server": SMTP_SERVER,
+                "smtp_port": SMTP_PORT,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Falha ao enviar e-mail de teste",
+                "email_enabled": EMAIL_ENABLED
+            }
+            
+    except Exception as e:
+        logger.error(f"Erro no teste de e-mail: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erro interno no envio de e-mail: {str(e)}"
+        )
+
 # Include router
 app.include_router(api_router)
 
