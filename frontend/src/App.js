@@ -2107,8 +2107,6 @@ const Dashboard = () => {
         <main className="flex-1 overflow-auto">
           <div className="p-4 lg:p-8">
             {/* Dashboard and Views will render here */}
-            {activeView === 'dashboard' && (<>
-              {/* ✨ Daily Inspirational Message */}
         {activeView === 'dashboard' && (
           <>
             {/* ✨ Daily Inspirational Message */}
