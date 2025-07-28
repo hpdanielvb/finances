@@ -498,6 +498,105 @@ class StockMovement(BaseModel):
     previous_stock: int
     new_stock: int
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: str  # ID do usuário que fez a movimentação
+
+# ============================================================================
+# 🔄 AUTOMATIC RECURRENCE SYSTEM MODELS - PHASE 2
+# ============================================================================
+
+class RecurrenceRule(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str  # Nome da regra (ex: "Salário Mensal", "Aluguel")
+    description: Optional[str] = None
+    
+    # Dados da transação base
+    transaction_description: str
+    transaction_value: float
+    transaction_type: str  # "Receita" ou "Despesa"
+    account_id: str
+    category_id: Optional[str] = None
+    
+    # Configurações de recorrência
+    recurrence_pattern: str  # "diario", "semanal", "mensal", "anual"
+    interval: int = 1  # A cada X períodos (ex: a cada 2 semanas)
+    start_date: datetime
+    end_date: Optional[datetime] = None  # Se None, recorre indefinidamente
+    next_execution_date: datetime
+    
+    # Configurações de execução
+    auto_create: bool = False  # Se True, cria automaticamente. Se False, apenas sugere
+    require_confirmation: bool = True  # Se True, requer confirmação antes de criar
+    
+    # Estado
+    is_active: bool = True
+    last_execution_date: Optional[datetime] = None
+    total_executions: int = 0
+    max_executions: Optional[int] = None  # Limite de execuções
+    
+    # Observações e tags
+    observation: Optional[str] = None
+    tags: List[str] = []
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class RecurrenceRuleCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    transaction_description: str
+    transaction_value: float
+    transaction_type: str
+    account_id: str
+    category_id: Optional[str] = None
+    recurrence_pattern: str
+    interval: int = 1
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    auto_create: bool = False
+    require_confirmation: bool = True
+    max_executions: Optional[int] = None
+    observation: Optional[str] = None
+    tags: Optional[List[str]] = []
+
+class RecurrenceRuleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    transaction_description: Optional[str] = None
+    transaction_value: Optional[float] = None
+    transaction_type: Optional[str] = None
+    account_id: Optional[str] = None
+    category_id: Optional[str] = None
+    recurrence_pattern: Optional[str] = None
+    interval: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    auto_create: Optional[bool] = None
+    require_confirmation: Optional[bool] = None
+    is_active: Optional[bool] = None
+    max_executions: Optional[int] = None
+    observation: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class PendingRecurrence(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    recurrence_rule_id: str
+    suggested_date: datetime
+    transaction_data: dict  # Dados da transação que será criada
+    status: str = "pending"  # "pending", "approved", "rejected", "expired"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime  # Data de expiração da sugestão
+    
+class RecurrencePreview(BaseModel):
+    recurrence_rule_id: str
+    rule_name: str
+    next_transactions: List[dict]  # Lista de próximas transações (até 12 meses à frente)
+    preview_period_months: int = 12
+    
+class RecurrenceConfirmation(BaseModel):
+    pending_recurrence_ids: List[str]
+    action: str  # "approve", "reject", "approve_all", "reject_all"
     created_by: str  # user_id who made the movement
 
 # Enhanced utility functions with better session management
