@@ -7903,6 +7903,460 @@ const ContractModal = ({ contract, onClose, onCreate, onUpdate }) => {
   );
 };
 
+// 🐾 Pet Shop View Component
+const PetShopView = () => {
+  const [activeSubView, setActiveSubView] = useState('dashboard');
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // States para modais
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  // Estados para filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+
+  // Carregar dados
+  const loadPetShopData = async () => {
+    try {
+      setLoading(true);
+      
+      const [productsRes, salesRes, statsRes] = await Promise.all([
+        axios.get(`${API}/petshop/products`),
+        axios.get(`${API}/petshop/sales`),
+        axios.get(`${API}/petshop/statistics`)
+      ]);
+
+      setProducts(productsRes.data);
+      setSales(salesRes.data);
+      setStatistics(statsRes.data);
+    } catch (error) {
+      console.error('Erro ao carregar dados do Pet Shop:', error);
+      toast.error('Erro ao carregar dados do Pet Shop');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar dados na inicialização
+  React.useEffect(() => {
+    loadPetShopData();
+  }, []);
+
+  // Sub-navegação do Pet Shop
+  const subNavItems = [
+    { id: 'dashboard', label: '📊 Dashboard', icon: BarChart3 },
+    { id: 'products', label: '📦 Produtos', icon: Package },
+    { id: 'sales', label: '🛒 Vendas', icon: ShoppingCart },
+    { id: 'stock-alert', label: '⚠️ Estoque Baixo', icon: AlertTriangle }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header do Pet Shop */}
+      <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+              <span className="text-3xl">🐾</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Pet Shop</h1>
+              <p className="text-pink-100 mt-1">Gestão completa do seu Pet Shop</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-pink-100 text-sm">Total de Produtos</p>
+            <p className="text-3xl font-bold">{products.length}</p>
+          </div>
+        </div>
+
+        {/* Sub-navegação */}
+        <div className="mt-6 flex space-x-2 bg-white bg-opacity-10 rounded-lg p-1">
+          {subNavItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSubView(item.id)}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${
+                activeSubView === item.id
+                  ? 'bg-white text-purple-600 shadow-md'
+                  : 'text-pink-100 hover:bg-white hover:bg-opacity-20'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Area baseado na sub-view selecionada */}
+      {activeSubView === 'dashboard' && (
+        <PetShopDashboard statistics={statistics} products={products} loading={loading} />
+      )}
+
+      {activeSubView === 'products' && (
+        <PetShopProducts 
+          products={products} 
+          loading={loading}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          categoryFilter={categoryFilter}
+          setCategoryFilter={setCategoryFilter}
+          supplierFilter={supplierFilter}
+          setSupplierFilter={setSupplierFilter}
+          onCreateProduct={() => {
+            setEditingProduct(null);
+            setShowProductModal(true);
+          }}
+          onEditProduct={(product) => {
+            setEditingProduct(product);
+            setShowProductModal(true);
+          }}
+          onRefresh={loadPetShopData}
+        />
+      )}
+
+      {activeSubView === 'sales' && (
+        <PetShopSales 
+          sales={sales} 
+          products={products}
+          loading={loading}
+          onCreateSale={() => setShowSaleModal(true)}
+          onRefresh={loadPetShopData}
+        />
+      )}
+
+      {activeSubView === 'stock-alert' && (
+        <PetShopStockAlert 
+          products={products} 
+          loading={loading}
+          onRefresh={loadPetShopData}
+        />
+      )}
+    </div>
+  );
+};
+
+// Dashboard do Pet Shop
+const PetShopDashboard = ({ statistics, products, loading }) => {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  const lowStockProducts = products.filter(p => p.current_quantity <= p.minimum_stock);
+
+  return (
+    <div className="space-y-6">
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-purple-100">
+              <Package className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Total de Produtos</p>
+              <p className="text-2xl font-bold text-gray-900">{statistics?.total_products || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100">
+              <BarChart3 className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Quantidade em Estoque</p>
+              <p className="text-2xl font-bold text-gray-900">{statistics?.total_quantity || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-red-100">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Estoque Baixo</p>
+              <p className="text-2xl font-bold text-gray-900">{statistics?.low_stock_products || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100">
+              <DollarSign className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Receita Total</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(statistics?.total_revenue || 0)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Produtos com Estoque Baixo */}
+      {lowStockProducts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Produtos com Estoque Baixo</h2>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="space-y-3">
+              {lowStockProducts.map((product) => (
+                <div key={product.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
+                  <div>
+                    <p className="font-medium text-gray-900">{product.name}</p>
+                    <p className="text-sm text-gray-600">SKU: {product.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-red-600 font-medium">
+                      Estoque: {product.current_quantity} / Mínimo: {product.minimum_stock}
+                    </p>
+                    <p className="text-xs text-gray-500">{product.category}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Componente de Produtos
+const PetShopProducts = ({ 
+  products, 
+  loading, 
+  searchTerm, 
+  setSearchTerm, 
+  categoryFilter, 
+  setCategoryFilter, 
+  supplierFilter, 
+  setSupplierFilter,
+  onCreateProduct, 
+  onEditProduct, 
+  onRefresh 
+}) => {
+  // Filtrar produtos
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !categoryFilter || product.category === categoryFilter;
+    const matchesSupplier = !supplierFilter || product.supplier === supplierFilter;
+    
+    return matchesSearch && matchesCategory && matchesSupplier;
+  });
+
+  // Obter categorias únicas
+  const categories = [...new Set(products.map(p => p.category))];
+  const suppliers = [...new Set(products.map(p => p.supplier))];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Gerenciar Produtos</h2>
+          <button
+            onClick={onCreateProduct}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Novo Produto
+          </button>
+        </div>
+
+        {/* Filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar produtos..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="">Todas as categorias</option>
+            {categories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+            value={supplierFilter}
+            onChange={(e) => setSupplierFilter(e.target.value)}
+          >
+            <option value="">Todos os fornecedores</option>
+            {suppliers.map(supplier => (
+              <option key={supplier} value={supplier}>{supplier}</option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setCategoryFilter('');
+                setSupplierFilter('');
+              }}
+              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+            >
+              <Filter size={16} />
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Preço Venda</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estoque</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredProducts.map((product) => (
+              <tr key={product.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-sm text-gray-500">{product.supplier}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {product.sku}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {product.category}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                  {formatCurrency(product.sale_price)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-medium ${
+                      product.current_quantity <= product.minimum_stock 
+                        ? 'text-red-600' 
+                        : 'text-gray-900'
+                    }`}>
+                      {product.current_quantity}
+                    </span>
+                    <span className="text-xs text-gray-500">Mín: {product.minimum_stock}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    product.current_quantity <= product.minimum_stock
+                      ? 'bg-red-100 text-red-800'
+                      : product.current_quantity <= product.minimum_stock * 2
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {product.current_quantity <= product.minimum_stock
+                      ? 'Estoque Baixo'
+                      : product.current_quantity <= product.minimum_stock * 2
+                      ? 'Atenção'
+                      : 'Normal'
+                    }
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <div className="flex justify-center space-x-2">
+                    <button
+                      onClick={() => onEditProduct(product)}
+                      className="text-purple-600 hover:text-purple-900"
+                      title="Editar produto"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      className="text-green-600 hover:text-green-900"
+                      title="Adicionar estoque"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-12">
+          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 mb-4">Nenhum produto encontrado</p>
+          <button
+            onClick={onCreateProduct}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Adicionar primeiro produto
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Placeholder para os outros componentes (implementaremos nas próximas fases)
+const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+    <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+    <h3 className="text-lg font-medium text-gray-900 mb-2">Sistema de Vendas</h3>
+    <p className="text-gray-500 mb-4">Em desenvolvimento - Fase 4</p>
+  </div>
+);
+
+const PetShopStockAlert = ({ products, loading, onRefresh }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+    <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+    <h3 className="text-lg font-medium text-gray-900 mb-2">Alertas de Estoque</h3>
+    <p className="text-gray-500 mb-4">Em desenvolvimento - Será implementado junto com o sistema de produtos</p>
+  </div>
+);
+
 function AppWrapper() {
   return (
     <AuthProvider>
