@@ -612,6 +612,17 @@ const Dashboard = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState([]);
 
+  // 🏠 Contracts States
+  const [contracts, setContracts] = useState([]);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [editingContract, setEditingContract] = useState(null);
+  const [contractsLoading, setContractsLoading] = useState(false);
+  const [contractFilters, setContractFilters] = useState({
+    tipo: '',
+    status: ''
+  });
+  const [contractStats, setContractStats] = useState({});
+
   const { user, logout } = useAuth();
 
   const loadDashboard = async () => {
