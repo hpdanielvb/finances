@@ -4495,6 +4495,10 @@ async def create_product(
         
         await db.products.insert_one(product)
         
+        # Remove MongoDB ObjectId for JSON serialization
+        if "_id" in product:
+            del product["_id"]
+        
         return {
             "message": "Produto criado com sucesso!",
             "product": product
