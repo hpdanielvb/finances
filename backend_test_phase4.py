@@ -202,9 +202,10 @@ def test_automatic_recurrence_system():
                                                  json=update_data, headers=headers)
                     
                     if update_response.status_code == 200:
-                        updated_rule = update_response.json()
+                        update_result = update_response.json()
+                        updated_rule = update_result.get("rule", {})
                         print_test_result("UPDATE RECURRENCE RULE", True, 
-                                        f"Rule updated: {updated_rule['name']}")
+                                        f"Rule updated: {updated_rule.get('name', 'Unknown')}")
                         test_results["rules_crud"] = True
                     else:
                         print_test_result("UPDATE RECURRENCE RULE", False, 
