@@ -493,30 +493,33 @@ const LoginForm = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Digite seu nome completo"
-                required
+                required={!isLogin}
               />
             </div>
           )}
           
           <div>
             <label className="block text-gray-700 text-sm font-medium mb-2">Email</label>
-            <EmailInput
+            <input
+              type="email"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               value={formData.email}
-              onChange={(email) => setFormData({...formData, email: email})}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
               placeholder="seu@email.com"
               required
-              className="px-4 py-3"
             />
           </div>
           
           {!showForgotPassword && (
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Senha</label>
-              <PasswordInput
+              <input
+                type="password"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 value={formData.password}
-                onChange={(password) => setFormData({...formData, password: password})}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Sua senha"
-                required
+                required={!showForgotPassword}
               />
             </div>
           )}
@@ -524,13 +527,13 @@ const LoginForm = () => {
           {!isLogin && !showForgotPassword && (
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Confirmar Senha</label>
-              <PasswordInput
+              <input
+                type="password"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 value={formData.confirmPassword}
-                onChange={(password) => setFormData({...formData, confirmPassword: password})}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 placeholder="Confirme sua senha"
-                confirm={true}
-                confirmValue={formData.password}
-                required
+                required={!isLogin}
               />
             </div>
           )}
