@@ -2577,6 +2577,22 @@ const Dashboard = () => {
             onReset={resetImport}
           />
         )}
+
+        {/* 🏠 CONTRACTS VIEW */}
+        {activeView === 'contracts' && (
+          <ContractsView
+            contracts={contracts}
+            contractStats={contractStats}
+            contractFilters={contractFilters}
+            contractsLoading={contractsLoading}
+            onLoadContracts={loadContracts}
+            onLoadStats={loadContractStats}
+            onFiltersChange={setContractFilters}
+            onCreateContract={openContractModal}
+            onEditContract={openContractModal}
+            onDeleteContract={handleDeleteContract}
+          />
+        )}
       </div>
 
       {/* Fixed Quick Actions - Show when scrolled on dashboard */}
