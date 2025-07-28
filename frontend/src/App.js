@@ -1555,6 +1555,16 @@ const Dashboard = () => {
                 >
                   📄 Importar
                 </button>
+
+                {/* Contracts Button */}
+                <button
+                  onClick={() => setActiveView('contracts')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeView === 'contracts' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  🏠 Contratos
+                </button>
               </div>
             </div>
             
