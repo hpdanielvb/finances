@@ -8193,6 +8193,18 @@ const PetShopView = () => {
           onUpdate={handleUpdateProduct}
         />
       )}
+
+      {/* Modal de Movimentação de Estoque */}
+      {showStockModal && (
+        <PetShopStockModal
+          product={stockProduct}
+          onClose={() => {
+            setShowStockModal(false);
+            setStockProduct(null);
+          }}
+          onMovement={handleStockMovement}
+        />
+      )}
     </div>
   );
 };
