@@ -522,6 +522,21 @@ backend:
         - agent: "testing"
         - comment: "✅ TESTED SUCCESSFULLY: Password Recovery and Email Confirmation system working perfectly! Comprehensive testing completed with all scenarios passing: (1) Registration & Email Verification Flow - User registration requires email verification, login blocked until verified, email verification endpoint working with real tokens extracted from logs (2) Password Recovery Flow - Forgot password endpoint generates secure tokens, reset password endpoint validates tokens and updates passwords, complete flow tested end-to-end (3) Security & Edge Cases - Invalid tokens rejected, password confirmation validation working, consistent responses for security, duplicate email registration prevented (4) Complete Flow Testing - Full registration→verification→login flow tested successfully, complete password recovery→reset→login flow tested successfully, token expiry behavior working correctly. All 7 test suites passed (17/17 individual tests). Email system properly simulated with tokens logged. System is production-ready and secure!"
 
+  - task: "Real Email Sending with Gmail Credentials"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Configured Gmail SMTP credentials for real email sending. Updated backend/.env with EMAIL_ENABLED=true, SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER=hpdanielvb@gmail.com, SMTP_PASSWORD=pETro2005Yo#13. Email system should now send real emails instead of simulation mode."
+        - working: false
+        - agent: "testing"
+        - comment: "📧 REAL EMAIL SENDING COMPREHENSIVE TESTING COMPLETED! Mixed results with critical Gmail authentication issue identified: ✅ WORKING FEATURES: User authentication successful (hpdanielvb@gmail.com / 123456), POST /api/test-email endpoint accessible and functional, EMAIL_ENABLED=true confirmed (real sending mode, not simulation), Response structure partially valid (success, message, email_enabled fields present), Backend logs show detailed SMTP error for troubleshooting. ❌ CRITICAL ISSUE: Gmail App Password Required - Backend logs show exact error: '(534, b'5.7.9 Application-specific password required. For more information, go to 5.7.9 https://support.google.com/mail/?p=InvalidSecondFactor')'. Email sending fails because Gmail account has 2-factor authentication enabled and requires App Password instead of regular password. ❌ MISSING RESPONSE FIELDS: smtp_server, smtp_port, and timestamp missing from error response (only present in success response). 🔍 ROOT CAUSE IDENTIFIED: Gmail security requires App Password for SMTP authentication when 2FA is enabled. Current password 'pETro2005Yo#13' is regular password, not App Password. SOLUTION REQUIRED: Generate App Password in Gmail settings and update SMTP_PASSWORD in backend/.env. Email system architecture is working correctly but needs proper Gmail App Password authentication."
+
 frontend:
   - task: "Complete OrçaZenFinanceiro Application Testing - JSX Structure Fixes"
     implemented: true
