@@ -618,6 +618,21 @@ const Dashboard = () => {
 
   // Mobile menu state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  // Dashboard customization state
+  const [dashboardWidgets, setDashboardWidgets] = useState([
+    'recent_transactions',
+    'total_balance', 
+    'budgets_overview',
+    'petshop_summary',
+    'alerts'
+  ]);
   const [contracts, setContracts] = useState([]);
   const [showContractModal, setShowContractModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
