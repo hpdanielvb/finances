@@ -381,28 +381,40 @@ const LoginForm = () => {
         toast.success('Instruções enviadas para seu email!');
         setShowForgotPassword(false);
         setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+        setLoading(false);
       } else if (!isLogin && formData.password !== formData.confirmPassword) {
         setError('Senhas não coincidem');
         setLoading(false);
         return;
       } else {
+        console.log('🚀 Iniciando processo de login/registro...');
         const result = isLogin 
           ? await login(formData.email, formData.password)
           : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
 
+        console.log('📝 Resultado do login/registro:', result);
+
         if (!result.success) {
+          console.log('❌ Login/registro falhou:', result.message);
           setError(result.message);
           toast.error(result.message);
           setLoading(false);
         } else {
-          // Login successful - reset loading after success
-          setLoading(false);
-          // The AuthContext will handle the user state update and UI will re-render
+          console.log('✅ Login/registro bem-sucedido! Aguardando redirecionamento...');
+          // Success - loading will be handled by auth context
+          // Don't set loading to false here for successful login
+          // The AuthContext update will trigger a re-render
+          if (isLogin) {
+            // For login, the AuthContext will handle the state
+            console.log('✅ Login concluído, aguardando atualização do contexto...');
+          } else {
+            // For registration, reset loading
+            setLoading(false);
+          }
         }
       }
-      // Don't set loading to false here - let the context handle the redirect
     } catch (error) {
-      console.error('Form submit error:', error);
+      console.error('❌ Form submit error:', error);
       const errorMessage = error.response?.data?.detail || 'Erro interno. Tente novamente.';
       setError(errorMessage);
       toast.error(errorMessage);
