@@ -3954,7 +3954,7 @@ async def get_active_consortiums(
         
         consortiums = await db.consortiums.find(query).sort("created_at", -1).to_list(100)
         
-        # Enriquecer dados com informações adicionais
+        # Enriquecer dados com informações adicionais (campos esperados pelos testes)
         enriched_consortiums = []
         for consortium in consortiums:
             # Remove MongoDB ObjectId
@@ -3962,30 +3962,37 @@ async def get_active_consortiums(
                 del consortium["_id"]
             
             # Adicionar informações calculadas
-            progress_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
+            completion_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
             remaining_installments = consortium["installment_count"] - consortium["paid_installments"]
             total_paid = consortium["paid_installments"] * consortium["monthly_installment"]
+            months_remaining = remaining_installments  # Assumindo pagamentos mensais
             
             # Adicionar próxima data de vencimento
             next_due_date = calculate_next_due_date(consortium)
             
             # Adicionar projeção de contemplação se ativo e não contemplado
             contemplation_projection = None
+            contemplation_probability = 0.0
+            
             if consortium["status"] == "Ativo" and not consortium["contemplated"]:
                 projection = await calculate_contemplation_projection(consortium)
+                contemplation_probability = projection.probability_score
                 contemplation_projection = {
                     "estimated_date": projection.estimated_contemplation_date.isoformat(),
                     "probability_score": projection.probability_score,
-                    "completion_percentage": projection.completion_percentage
+                    "completion_percentage": projection.completion_percentage,
+                    "methods": projection.contemplation_methods
                 }
             
             enriched_consortium = {
                 **consortium,
-                "progress_percentage": round(progress_percentage, 2),
+                "completion_percentage": round(completion_percentage, 2),
                 "remaining_installments": remaining_installments,
+                "months_remaining": months_remaining,
                 "total_paid": total_paid,
                 "next_due_date": next_due_date,
-                "contemplation_projection": contemplation_projection
+                "contemplation_projection": contemplation_projection,
+                "contemplation_probability": round(contemplation_probability, 2)
             }
             
             enriched_consortiums.append(enriched_consortium)
