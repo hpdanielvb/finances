@@ -46,21 +46,29 @@ const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('🔄 Tentando login para:', email);
       const response = await axios.post(`${API}/auth/login`, { email, password });
       const { access_token, user } = response.data;
       
+      console.log('✅ Login response:', { access_token: access_token ? 'received' : 'missing', user });
+      
+      // Update state immediately and synchronously
       setToken(access_token);
       setUser(user);
       localStorage.setItem('token', access_token);
       localStorage.setItem('user', JSON.stringify(user));
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      console.log('Login successful:', user);
+      console.log('✅ Login successful, state updated:', user);
       toast.success(`Bem-vindo, ${user.name}!`);
+      
+      // Force a re-render by triggering a state change
+      setLoading(false);
       
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      setLoading(false);
       return { success: false, message: error.response?.data?.detail || 'Erro no login' };
     }
   };
