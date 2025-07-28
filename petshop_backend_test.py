@@ -178,25 +178,29 @@ def test_petshop_backend_comprehensive():
             print_test_result("PRODUCT CREATION", True, f"✅ Created {created_count} new products, using {len(test_results['created_products'])} total for testing")
         
         # Test SKU uniqueness validation
-        duplicate_sku_product = {
-            "sku": "RAC001",  # Duplicate SKU
-            "name": "Duplicate SKU Test Product",
-            "cost_price": 10.00,
-            "sale_price": 20.00,
-            "current_stock": 10,
-            "minimum_stock": 5,
-            "category": "Test"
-        }
-        
-        dup_response = requests.post(f"{BACKEND_URL}/petshop/products", 
-                                   json=duplicate_sku_product, headers=headers)
-        
-        if dup_response.status_code == 400:
-            error_detail = dup_response.json().get("detail", "")
-            if "SKU já existe" in error_detail or "already exists" in error_detail.lower():
-                products_crud_tests["sku_validation"] = True
-                print_test_result("SKU UNIQUENESS VALIDATION", True, 
-                                f"✅ Duplicate SKU properly rejected")
+        if test_results["created_products"]:
+            # Use an existing SKU to test uniqueness
+            existing_sku = test_results["created_products"][0].get("sku", "TEST001")
+            
+            duplicate_sku_product = {
+                "sku": existing_sku,  # Duplicate SKU
+                "name": "Duplicate SKU Test Product",
+                "cost_price": 10.00,
+                "sale_price": 20.00,
+                "current_stock": 10,
+                "minimum_stock": 5,
+                "category": "Test"
+            }
+            
+            dup_response = requests.post(f"{BACKEND_URL}/petshop/products", 
+                                       json=duplicate_sku_product, headers=headers)
+            
+            if dup_response.status_code == 400:
+                error_detail = dup_response.json().get("detail", "")
+                if "SKU já existe" in error_detail or "already exists" in error_detail.lower():
+                    products_crud_tests["sku_validation"] = True
+                    print_test_result("SKU UNIQUENESS VALIDATION", True, 
+                                    f"✅ Duplicate SKU properly rejected")
         
         # 2.2: READ - GET /api/petshop/products
         print(f"\n   2.2: READ Products - GET /api/petshop/products")
