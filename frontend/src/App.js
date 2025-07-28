@@ -381,9 +381,12 @@ const LoginForm = () => {
   const { login, register } = useAuth();
 
   const handleSubmit = async (e) => {
+    console.log('🚨 handleSubmit CALLED! Event:', e);
     e.preventDefault();
+    console.log('🚨 preventDefault executed, setting loading...');
     setLoading(true);
     setError('');
+    console.log('🚨 Form data:', formData);
 
     try {
       if (showForgotPassword) {
