@@ -8997,26 +8997,29 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - FIXED QUICK ACTIONS FOCUS")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - REAL EMAIL SENDING TEST")
     print("="*80)
-    print("Testing backend APIs that support the Fixed Quick Actions feature")
-    print("Focus: Login, Dashboard, Transaction Creation, Transfers, Reports")
+    print("Testing real email sending functionality with Gmail credentials")
+    print("Focus: POST /api/test-email with EMAIL_ENABLED=true")
+    print("Target: hpdanielvb@gmail.com")
     print("="*80)
     
-    # Run the Fixed Quick Actions backend support test
-    print("\n🎯 RUNNING FIXED QUICK ACTIONS BACKEND SUPPORT TEST...")
-    quick_actions_success = test_fixed_quick_actions_backend_support()
+    # Run the Real Email Sending test
+    print("\n📧 RUNNING REAL EMAIL SENDING TEST...")
+    email_success = test_real_email_sending()
     
     # Summary
     print("\n" + "="*80)
-    print("📊 FIXED QUICK ACTIONS BACKEND TESTING SUMMARY")
+    print("📊 REAL EMAIL SENDING TESTING SUMMARY")
     print("="*80)
     
-    if quick_actions_success:
-        print("🎉 FIXED QUICK ACTIONS BACKEND TESTING COMPLETED SUCCESSFULLY!")
-        print("✅ All backend APIs supporting the Fixed Quick Actions feature are working correctly")
-        print("✅ Ready for frontend Fixed Quick Actions integration")
-        print("\n🚀 BACKEND APIS VERIFIED:")
+    if email_success:
+        print("🎉 REAL EMAIL SENDING TESTING COMPLETED SUCCESSFULLY!")
+        print("✅ Gmail credentials working properly with EMAIL_ENABLED=true")
+        print("✅ Test email sent successfully to hpdanielvb@gmail.com")
+        print("✅ SMTP configuration correct (smtp.gmail.com:587)")
+        print("✅ Real email sending confirmed (not simulation)")
+        print("\n📧 EMAIL SYSTEM VERIFIED:")
         print("   - User authentication (hpdanielvb@gmail.com / 123456)")
         print("   - Dashboard loading with data")
         print("   - Income modal API (POST /api/transactions)")
