@@ -683,28 +683,6 @@ const Dashboard = () => {
     }
   };
 
-  // Debounced search
-  React.useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleGlobalSearch(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, transactions, accounts]);
-
-  // Load dashboard preferences
-  React.useEffect(() => {
-    const savedWidgets = localStorage.getItem('dashboardWidgets');
-    if (savedWidgets) {
-      setDashboardWidgets(JSON.parse(savedWidgets));
-    }
-    
-    const sidebarState = localStorage.getItem('sidebarCollapsed');
-    if (sidebarState !== null) {
-      setSidebarCollapsed(JSON.parse(sidebarState));
-    }
-  }, []);
-
   // 🏠 Consortium States
   const [showConsortiumModal, setShowConsortiumModal] = useState(false);
   const [showConsortiumDetails, setShowConsortiumDetails] = useState(false);
