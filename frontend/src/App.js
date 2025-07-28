@@ -150,10 +150,6 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('pt-BR');
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-
 const formatDateForInput = (date) => {
   return new Date(date).toISOString().split('T')[0];
 };
