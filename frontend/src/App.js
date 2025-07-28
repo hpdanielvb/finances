@@ -135,11 +135,19 @@ const parseBrazilianCurrency = (formattedValue) => {
   return isNaN(numericValue) ? 0 : numericValue;
 };
 
+// Format currency (Brazilian Real)
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value || 0);
+};
+
+// Format date (Brazilian format)
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR');
 };
 
 const formatDate = (date) => {
