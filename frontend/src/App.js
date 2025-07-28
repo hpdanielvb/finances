@@ -2788,6 +2788,11 @@ const Dashboard = () => {
             onDeleteContract={handleDeleteContract}
           />
         )}
+
+        {/* 🐾 PET SHOP VIEW */}
+        {activeView === 'petshop' && (
+          <PetShopView />
+        )}
       </div>
 
       {/* Fixed Quick Actions - Show when scrolled on dashboard */}
