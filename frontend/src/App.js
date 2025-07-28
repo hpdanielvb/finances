@@ -7018,6 +7018,12 @@ const PaymentFormModal = ({ consortiumId, onClose, onSubmit }) => {
 function App() {
   const { user, loading } = useAuth();
 
+  // Monitor user state changes in App component
+  useEffect(() => {
+    console.log('🎯 App component - User state:', user);
+    console.log('🎯 App component - Loading state:', loading);
+  }, [user, loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
@@ -7028,6 +7034,8 @@ function App() {
       </div>
     );
   }
+
+  console.log('🎯 App render decision - User exists:', !!user, 'Will show:', user ? 'Dashboard' : 'LoginForm');
 
   return (
     <div className="App">
