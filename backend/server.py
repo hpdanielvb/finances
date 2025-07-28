@@ -4019,23 +4019,47 @@ async def get_contemplation_projections(
         projections = []
         for consortium in active_consortiums:
             projection = await calculate_contemplation_projection(consortium)
-            projection_dict = projection.dict()
+            
+            # Calcular campos adicionais solicitados pelos testes
+            months_remaining = consortium["installment_count"] - consortium["paid_installments"]
+            completion_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
+            
+            # Gerar recomendação baseada na probabilidade
+            if projection.probability_score >= 80:
+                recommendation = "Alta probabilidade - Considere lance para acelerar contemplação"
+            elif projection.probability_score >= 60:
+                recommendation = "Boa probabilidade - Continue com pagamentos regulares"
+            elif projection.probability_score >= 40:
+                recommendation = "Probabilidade moderada - Considere estratégias de lance"
+            else:
+                recommendation = "Baixa probabilidade - Avalie viabilidade do consórcio"
+            
+            projection_dict = {
+                "consortium_id": projection.consortium_id,
+                "consortium_name": projection.consortium_name,
+                "consortium_type": consortium["type"],
+                "administrator": consortium["administrator"],
+                "total_value": consortium["total_value"],
+                "group_number": consortium.get("group_number"),
+                "quota_number": consortium.get("quota_number"),
+                "current_installment": projection.current_installment,
+                "total_installments": projection.total_installments,
+                "completion_percentage": round(completion_percentage, 2),
+                "estimated_contemplation_date": projection.estimated_contemplation_date.isoformat(),
+                "contemplation_probability": round(projection.probability_score, 2),
+                "monthly_installment": projection.monthly_installment,
+                "total_remaining": projection.total_remaining,
+                "available_methods": projection.contemplation_methods,
+                "months_remaining": months_remaining,
+                "recommendation": recommendation
+            }
             
             # Aplicar filtro de probabilidade mínima
             if min_probability is None or projection.probability_score >= min_probability:
-                # Enriquecer com dados do consórcio
-                projection_dict.update({
-                    "consortium_type": consortium["type"],
-                    "administrator": consortium["administrator"],
-                    "total_value": consortium["total_value"],
-                    "group_number": consortium.get("group_number"),
-                    "quota_number": consortium.get("quota_number")
-                })
-                
                 projections.append(projection_dict)
         
         # Ordenar por probabilidade (maior primeiro)
-        projections.sort(key=lambda x: x["probability_score"], reverse=True)
+        projections.sort(key=lambda x: x["contemplation_probability"], reverse=True)
         
         # Aplicar limite
         if limit:
