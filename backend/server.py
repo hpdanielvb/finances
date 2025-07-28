@@ -415,6 +415,90 @@ class ContractUpdate(BaseModel):
     status: Optional[str] = None
     observacoes: Optional[str] = None
 
+# ============================================================================
+# 🐾 PET SHOP MODULE MODELS - PHASE 3
+# ============================================================================
+
+class Product(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    sku: str
+    name: str
+    description: Optional[str] = None
+    cost_price: float  # Preço de custo
+    sale_price: float  # Preço de venda
+    current_stock: int
+    minimum_stock: int = 10
+    expiry_date: Optional[datetime] = None
+    supplier: Optional[str] = None
+    category: str = "Geral"  # Categoria do produto
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ProductCreate(BaseModel):
+    sku: str
+    name: str
+    description: Optional[str] = None
+    cost_price: float
+    sale_price: float
+    current_stock: int
+    minimum_stock: int = 10
+    expiry_date: Optional[datetime] = None
+    supplier: Optional[str] = None
+    category: str = "Geral"
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cost_price: Optional[float] = None
+    sale_price: Optional[float] = None
+    current_stock: Optional[int] = None
+    minimum_stock: Optional[int] = None
+    expiry_date: Optional[datetime] = None
+    supplier: Optional[str] = None
+    category: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class Sale(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    items: List[dict]  # List of {product_id, product_name, quantity, unit_price, total}
+    subtotal: float
+    discount: float = 0.0
+    total: float
+    payment_method: str  # "Dinheiro", "Cartão de Débito", "Cartão de Crédito", "PIX"
+    payment_status: str = "Pago"  # "Pago", "Pendente"
+    sale_date: datetime = Field(default_factory=datetime.utcnow)
+    receipt_number: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SaleCreate(BaseModel):
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    items: List[dict]
+    subtotal: float
+    discount: float = 0.0
+    total: float
+    payment_method: str
+    payment_status: str = "Pago"
+    notes: Optional[str] = None
+
+class StockMovement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    product_id: str
+    movement_type: str  # "entrada", "saída", "ajuste", "venda"
+    quantity: int
+    reason: str
+    previous_stock: int
+    new_stock: int
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: str  # user_id who made the movement
+
 # Enhanced utility functions with better session management
 def create_access_token(data: dict):
     to_encode = data.copy()
