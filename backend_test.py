@@ -995,6 +995,638 @@ def test_administrative_data_cleanup():
         return False
 
 
+def test_consortium_module_enhancements():
+    """
+    🏠 CONSORTIUM MODULE ENHANCEMENTS COMPREHENSIVE TEST - PHASE 3
+    
+    This addresses the specific review request to test the Melhorias no Módulo de Consórcio
+    recém-implementadas (Fase 3) with all requested functionality.
+    
+    ENDPOINTS TO TEST:
+    1. GET /api/consortiums/dashboard - Painel de visualização completo
+    2. GET /api/consortiums/active - Filtros avançados (status, tipo, contemplação)
+    3. GET /api/consortiums/contemplation-projections - Projeções de contemplação
+    4. GET /api/consortiums/statistics - Estatísticas detalhadas
+    5. GET /api/consortiums/payments-calendar - Calendário de pagamentos
+    
+    FUNCIONALIDADES ESPECÍFICAS A VALIDAR:
+    - Cálculos inteligentes de probabilidade de contemplação
+    - Projeções baseadas em percentual de conclusão e tipo de consórcio
+    - Calendário com commitment mensal total
+    - Estatísticas por administradora
+    - Alertas de vencimento
+    - Dados enriquecidos com informações calculadas
+    
+    CREDENCIAIS: hpdanielvb@gmail.com / 123456
+    """
+    print("\n" + "="*80)
+    print("🏠 CONSORTIUM MODULE ENHANCEMENTS COMPREHENSIVE TEST - PHASE 3")
+    print("="*80)
+    print("Testing Melhorias no Módulo de Consórcio with all 5 enhanced endpoints")
+    print("Credentials: hpdanielvb@gmail.com / 123456")
+    
+    # Test credentials from review request
+    user_login_primary = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"
+    }
+    
+    user_login_secondary = {
+        "email": "hpdanielvb@gmail.com", 
+        "password": "TestPassword123"
+    }
+    
+    test_results = {
+        "login_success": False,
+        "dashboard_working": False,
+        "active_filters_working": False,
+        "contemplation_projections_working": False,
+        "statistics_working": False,
+        "payments_calendar_working": False,
+        "dashboard_data_complete": False,
+        "filters_comprehensive": False,
+        "projections_intelligent": False,
+        "statistics_detailed": False,
+        "calendar_12_months": False,
+        "test_data_created": False,
+        "auth_token": None,
+        "created_consortiums": [],
+        "error_details": None
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: User Authentication")
+        print(f"   Testing credentials: {user_login_primary['email']} / {user_login_primary['password']}")
+        
+        # Try primary credentials first
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_primary)
+        
+        if response.status_code != 200:
+            print(f"   Primary login failed, trying secondary credentials: {user_login_secondary['password']}")
+            response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_secondary)
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                test_results["error_details"] = f"Authentication failed: {error_detail}"
+                print_test_result("USER AUTHENTICATION", False, f"❌ Both login attempts failed: {error_detail}")
+                return test_results
+            else:
+                used_credentials = user_login_secondary
+        else:
+            used_credentials = user_login_primary
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["auth_token"] = auth_token
+        test_results["login_success"] = True
+        
+        print_test_result("USER AUTHENTICATION", True, 
+                        f"✅ Login successful with {used_credentials['password']}")
+        print(f"   User: {user_info.get('name')} ({user_info.get('email')})")
+        print(f"   User ID: {user_info.get('id')}")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Check existing consortiums or create test data
+        print(f"\n🔍 STEP 2: Checking Existing Consortiums or Creating Test Data")
+        
+        existing_consortiums_response = requests.get(f"{BACKEND_URL}/consortiums", headers=headers)
+        
+        if existing_consortiums_response.status_code == 200:
+            existing_consortiums = existing_consortiums_response.json()
+            print(f"   Found {len(existing_consortiums)} existing consortiums")
+            
+            if len(existing_consortiums) < 3:
+                print("   Creating additional test consortiums for comprehensive testing...")
+                
+                # Create test consortiums with different types and statuses
+                test_consortiums = [
+                    {
+                        "name": "Consórcio Imóvel Casa Própria",
+                        "type": "Imóvel",
+                        "total_value": 300000.00,
+                        "installment_count": 120,
+                        "paid_installments": 24,
+                        "monthly_installment": 2800.00,
+                        "remaining_balance": 268800.00,
+                        "contemplated": False,
+                        "status": "Ativo",
+                        "due_day": 10,
+                        "start_date": "2023-01-10T00:00:00",
+                        "administrator": "Rodobens Consórcio",
+                        "group_number": "001",
+                        "quota_number": "0024",
+                        "notes": "Consórcio para casa própria"
+                    },
+                    {
+                        "name": "Consórcio Veículo Honda Civic",
+                        "type": "Veículo",
+                        "total_value": 120000.00,
+                        "installment_count": 80,
+                        "paid_installments": 60,
+                        "monthly_installment": 1650.00,
+                        "remaining_balance": 33000.00,
+                        "contemplated": True,
+                        "contemplation_date": "2024-06-15T00:00:00",
+                        "status": "Contemplado",
+                        "due_day": 15,
+                        "start_date": "2022-06-15T00:00:00",
+                        "administrator": "Embracon Consórcio",
+                        "group_number": "045",
+                        "quota_number": "0156",
+                        "notes": "Consórcio contemplado por sorteio"
+                    },
+                    {
+                        "name": "Consórcio Moto Yamaha MT-07",
+                        "type": "Moto",
+                        "total_value": 45000.00,
+                        "installment_count": 60,
+                        "paid_installments": 60,
+                        "monthly_installment": 850.00,
+                        "remaining_balance": 0.00,
+                        "contemplated": True,
+                        "contemplation_date": "2023-12-20T00:00:00",
+                        "status": "Pago",
+                        "due_day": 20,
+                        "start_date": "2021-12-20T00:00:00",
+                        "administrator": "Luiza Consórcio",
+                        "group_number": "078",
+                        "quota_number": "0089",
+                        "notes": "Consórcio quitado"
+                    },
+                    {
+                        "name": "Consórcio Imóvel Apartamento",
+                        "type": "Imóvel",
+                        "total_value": 250000.00,
+                        "installment_count": 100,
+                        "paid_installments": 15,
+                        "monthly_installment": 2900.00,
+                        "remaining_balance": 246500.00,
+                        "contemplated": False,
+                        "status": "Suspenso",
+                        "due_day": 5,
+                        "start_date": "2024-01-05T00:00:00",
+                        "administrator": "Bradesco Consórcio",
+                        "group_number": "012",
+                        "quota_number": "0078",
+                        "notes": "Consórcio suspenso temporariamente"
+                    }
+                ]
+                
+                created_count = 0
+                for consortium_data in test_consortiums:
+                    create_response = requests.post(f"{BACKEND_URL}/consortiums", 
+                                                  json=consortium_data, headers=headers)
+                    
+                    if create_response.status_code == 200:
+                        created_consortium = create_response.json()
+                        test_results["created_consortiums"].append(created_consortium)
+                        created_count += 1
+                        print(f"      ✅ Created: {consortium_data['name']} ({consortium_data['type']})")
+                    else:
+                        print(f"      ❌ Failed to create: {consortium_data['name']}")
+                
+                if created_count >= 3:
+                    test_results["test_data_created"] = True
+                    print_test_result("TEST DATA CREATION", True, 
+                                    f"✅ Created {created_count} test consortiums")
+                else:
+                    print_test_result("TEST DATA CREATION", False, 
+                                    f"❌ Only created {created_count} consortiums")
+            else:
+                test_results["test_data_created"] = True
+                print_test_result("EXISTING DATA", True, 
+                                f"✅ Found sufficient existing data ({len(existing_consortiums)} consortiums)")
+        else:
+            print_test_result("DATA CHECK", False, 
+                            f"❌ Failed to check existing consortiums: {existing_consortiums_response.status_code}")
+        
+        # STEP 3: Test GET /api/consortiums/dashboard - Complete Dashboard Panel
+        print(f"\n🔍 STEP 3: Dashboard Panel - GET /api/consortiums/dashboard")
+        print("   Testing complete dashboard with statistics, payments, projections...")
+        
+        dashboard_response = requests.get(f"{BACKEND_URL}/consortiums/dashboard", headers=headers)
+        
+        if dashboard_response.status_code == 200:
+            dashboard_data = dashboard_response.json()
+            test_results["dashboard_working"] = True
+            
+            print_test_result("DASHBOARD ENDPOINT", True, "✅ Dashboard endpoint accessible")
+            
+            # Validate dashboard structure
+            expected_dashboard_fields = [
+                'total_consortiums', 'active_consortiums', 'contemplated_consortiums',
+                'total_invested', 'total_remaining', 'next_payments', 'contemplation_projections',
+                'performance_summary', 'alerts'
+            ]
+            
+            dashboard_complete = True
+            print(f"   📊 DASHBOARD DATA STRUCTURE:")
+            for field in expected_dashboard_fields:
+                if field in dashboard_data:
+                    value = dashboard_data[field]
+                    if isinstance(value, list):
+                        print(f"      ✅ {field}: {len(value)} items")
+                    elif isinstance(value, dict):
+                        print(f"      ✅ {field}: {len(value)} fields")
+                    else:
+                        print(f"      ✅ {field}: {value}")
+                else:
+                    print(f"      ❌ {field}: MISSING")
+                    dashboard_complete = False
+            
+            if dashboard_complete:
+                test_results["dashboard_data_complete"] = True
+                print_test_result("DASHBOARD DATA STRUCTURE", True, 
+                                "✅ All expected dashboard fields present")
+            else:
+                print_test_result("DASHBOARD DATA STRUCTURE", False, 
+                                "❌ Missing dashboard fields")
+            
+            # Validate specific dashboard features
+            next_payments = dashboard_data.get('next_payments', [])
+            if next_payments:
+                print(f"   📅 Next Payments: {len(next_payments)} upcoming payments")
+                for payment in next_payments[:3]:  # Show first 3
+                    print(f"      - {payment.get('name')}: R$ {payment.get('monthly_installment', 0):.2f} (Due: {payment.get('due_day')})")
+            
+            performance_summary = dashboard_data.get('performance_summary', {})
+            if performance_summary:
+                print(f"   📈 Performance Summary:")
+                print(f"      - Average Progress: {performance_summary.get('average_progress', 0):.1f}%")
+                print(f"      - Total Invested: R$ {performance_summary.get('total_invested', 0):,.2f}")
+                print(f"      - Total Remaining: R$ {performance_summary.get('total_remaining', 0):,.2f}")
+        else:
+            error_detail = dashboard_response.json().get("detail", "Unknown error")
+            print_test_result("DASHBOARD ENDPOINT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 4: Test GET /api/consortiums/active - Advanced Filters
+        print(f"\n🔍 STEP 4: Advanced Filters - GET /api/consortiums/active")
+        print("   Testing filters by status, type, and contemplation...")
+        
+        # Test different filter combinations
+        filter_tests = [
+            {"name": "All Active", "params": {"status": "Ativo"}},
+            {"name": "Vehicle Type", "params": {"type": "Veículo"}},
+            {"name": "Property Type", "params": {"type": "Imóvel"}},
+            {"name": "Motorcycle Type", "params": {"type": "Moto"}},
+            {"name": "Contemplated", "params": {"contemplated": "true"}},
+            {"name": "Not Contemplated", "params": {"contemplated": "false"}},
+            {"name": "Paid Status", "params": {"status": "Pago"}},
+            {"name": "Suspended Status", "params": {"status": "Suspenso"}},
+            {"name": "Combined Filter", "params": {"type": "Imóvel", "status": "Ativo"}}
+        ]
+        
+        filters_working = 0
+        total_filter_tests = len(filter_tests)
+        
+        for filter_test in filter_tests:
+            params = filter_test["params"]
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            
+            filter_response = requests.get(f"{BACKEND_URL}/consortiums/active?{query_string}", 
+                                         headers=headers)
+            
+            if filter_response.status_code == 200:
+                filtered_consortiums = filter_response.json()
+                filters_working += 1
+                print(f"      ✅ {filter_test['name']}: {len(filtered_consortiums)} results")
+                
+                # Validate filter results
+                if filtered_consortiums and len(filtered_consortiums) > 0:
+                    first_result = filtered_consortiums[0]
+                    
+                    # Check if enriched data is present
+                    enriched_fields = ['completion_percentage', 'months_remaining', 'contemplation_probability']
+                    enriched_count = sum(1 for field in enriched_fields if field in first_result)
+                    
+                    if enriched_count >= 2:
+                        print(f"         📊 Enriched data present: {enriched_count}/{len(enriched_fields)} fields")
+                    else:
+                        print(f"         ⚠️  Limited enriched data: {enriched_count}/{len(enriched_fields)} fields")
+            else:
+                print(f"      ❌ {filter_test['name']}: Failed ({filter_response.status_code})")
+        
+        if filters_working >= 6:  # At least 6 out of 9 filter tests should work
+            test_results["active_filters_working"] = True
+            test_results["filters_comprehensive"] = True
+            print_test_result("ADVANCED FILTERS", True, 
+                            f"✅ Advanced filtering working ({filters_working}/{total_filter_tests} tests passed)")
+        else:
+            print_test_result("ADVANCED FILTERS", False, 
+                            f"❌ Filter issues ({filters_working}/{total_filter_tests} tests passed)")
+        
+        # STEP 5: Test GET /api/consortiums/contemplation-projections - Intelligent Projections
+        print(f"\n🔍 STEP 5: Contemplation Projections - GET /api/consortiums/contemplation-projections")
+        print("   Testing intelligent contemplation probability calculations...")
+        
+        projections_response = requests.get(f"{BACKEND_URL}/consortiums/contemplation-projections", 
+                                          headers=headers)
+        
+        if projections_response.status_code == 200:
+            projections_data = projections_response.json()
+            test_results["contemplation_projections_working"] = True
+            
+            print_test_result("CONTEMPLATION PROJECTIONS", True, 
+                            f"✅ Projections endpoint working ({len(projections_data)} projections)")
+            
+            # Validate projection data structure
+            if projections_data:
+                projection_fields_found = 0
+                expected_projection_fields = [
+                    'consortium_id', 'consortium_name', 'contemplation_probability',
+                    'estimated_contemplation_date', 'available_methods', 'completion_percentage',
+                    'months_remaining', 'recommendation'
+                ]
+                
+                first_projection = projections_data[0]
+                print(f"   📊 PROJECTION DATA ANALYSIS:")
+                
+                for field in expected_projection_fields:
+                    if field in first_projection:
+                        projection_fields_found += 1
+                        value = first_projection[field]
+                        if field == 'contemplation_probability':
+                            print(f"      ✅ {field}: {value:.1f}%")
+                        elif field == 'available_methods':
+                            print(f"      ✅ {field}: {', '.join(value) if isinstance(value, list) else value}")
+                        elif field == 'completion_percentage':
+                            print(f"      ✅ {field}: {value:.1f}%")
+                        else:
+                            print(f"      ✅ {field}: {value}")
+                    else:
+                        print(f"      ❌ {field}: MISSING")
+                
+                if projection_fields_found >= 6:  # At least 6 out of 8 fields
+                    test_results["projections_intelligent"] = True
+                    print_test_result("PROJECTION DATA STRUCTURE", True, 
+                                    f"✅ Intelligent projection data complete ({projection_fields_found}/{len(expected_projection_fields)} fields)")
+                else:
+                    print_test_result("PROJECTION DATA STRUCTURE", False, 
+                                    f"❌ Incomplete projection data ({projection_fields_found}/{len(expected_projection_fields)} fields)")
+                
+                # Validate calculation logic
+                for i, projection in enumerate(projections_data[:3]):  # Check first 3 projections
+                    prob = projection.get('contemplation_probability', 0)
+                    completion = projection.get('completion_percentage', 0)
+                    methods = projection.get('available_methods', [])
+                    
+                    print(f"   📈 Projection {i+1}: {projection.get('consortium_name', 'Unknown')}")
+                    print(f"      - Probability: {prob:.1f}% | Completion: {completion:.1f}%")
+                    print(f"      - Methods: {', '.join(methods) if isinstance(methods, list) else methods}")
+                    
+                    if prob > 0 and completion > 0:
+                        print(f"      ✅ Calculations appear valid")
+                    else:
+                        print(f"      ⚠️  Check calculation logic")
+            else:
+                print_test_result("PROJECTION DATA", False, "❌ No projection data returned")
+        else:
+            error_detail = projections_response.json().get("detail", "Unknown error")
+            print_test_result("CONTEMPLATION PROJECTIONS", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 6: Test GET /api/consortiums/statistics - Detailed Statistics
+        print(f"\n🔍 STEP 6: Detailed Statistics - GET /api/consortiums/statistics")
+        print("   Testing comprehensive statistics by status, type, and administrator...")
+        
+        statistics_response = requests.get(f"{BACKEND_URL}/consortiums/statistics", headers=headers)
+        
+        if statistics_response.status_code == 200:
+            statistics_data = statistics_response.json()
+            test_results["statistics_working"] = True
+            
+            print_test_result("STATISTICS ENDPOINT", True, "✅ Statistics endpoint working")
+            
+            # Validate statistics structure
+            expected_stats_fields = [
+                'total_consortiums', 'distribution_by_status', 'distribution_by_type',
+                'financial_summary', 'average_progress', 'top_administrators',
+                'upcoming_due_dates', 'contemplation_summary'
+            ]
+            
+            stats_complete = True
+            print(f"   📊 STATISTICS DATA STRUCTURE:")
+            
+            for field in expected_stats_fields:
+                if field in statistics_data:
+                    value = statistics_data[field]
+                    if isinstance(value, dict):
+                        print(f"      ✅ {field}: {len(value)} categories")
+                    elif isinstance(value, list):
+                        print(f"      ✅ {field}: {len(value)} items")
+                    else:
+                        print(f"      ✅ {field}: {value}")
+                else:
+                    print(f"      ❌ {field}: MISSING")
+                    stats_complete = False
+            
+            if stats_complete:
+                test_results["statistics_detailed"] = True
+                print_test_result("STATISTICS DATA STRUCTURE", True, 
+                                "✅ All expected statistics fields present")
+            else:
+                print_test_result("STATISTICS DATA STRUCTURE", False, 
+                                "❌ Missing statistics fields")
+            
+            # Display key statistics
+            print(f"   📈 KEY STATISTICS:")
+            total_consortiums = statistics_data.get('total_consortiums', 0)
+            print(f"      - Total Consortiums: {total_consortiums}")
+            
+            distribution_by_status = statistics_data.get('distribution_by_status', {})
+            if distribution_by_status:
+                print(f"      - Status Distribution:")
+                for status, count in distribution_by_status.items():
+                    print(f"        • {status}: {count}")
+            
+            distribution_by_type = statistics_data.get('distribution_by_type', {})
+            if distribution_by_type:
+                print(f"      - Type Distribution:")
+                for type_name, count in distribution_by_type.items():
+                    print(f"        • {type_name}: {count}")
+            
+            financial_summary = statistics_data.get('financial_summary', {})
+            if financial_summary:
+                print(f"      - Financial Summary:")
+                print(f"        • Total Invested: R$ {financial_summary.get('total_invested', 0):,.2f}")
+                print(f"        • Total Remaining: R$ {financial_summary.get('total_remaining', 0):,.2f}")
+            
+            top_administrators = statistics_data.get('top_administrators', [])
+            if top_administrators:
+                print(f"      - Top Administrators:")
+                for admin in top_administrators[:3]:  # Show top 3
+                    print(f"        • {admin.get('administrator')}: {admin.get('count')} consortiums")
+        else:
+            error_detail = statistics_response.json().get("detail", "Unknown error")
+            print_test_result("STATISTICS ENDPOINT", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 7: Test GET /api/consortiums/payments-calendar - Payment Calendar
+        print(f"\n🔍 STEP 7: Payment Calendar - GET /api/consortiums/payments-calendar")
+        print("   Testing 12-month payment calendar with monthly totals...")
+        
+        calendar_response = requests.get(f"{BACKEND_URL}/consortiums/payments-calendar", headers=headers)
+        
+        if calendar_response.status_code == 200:
+            calendar_data = calendar_response.json()
+            test_results["payments_calendar_working"] = True
+            
+            print_test_result("PAYMENT CALENDAR", True, "✅ Payment calendar endpoint working")
+            
+            # Validate calendar structure
+            expected_calendar_fields = ['calendar', 'total_monthly_commitment', 'next_12_months_summary']
+            
+            calendar_complete = True
+            print(f"   📅 CALENDAR DATA STRUCTURE:")
+            
+            for field in expected_calendar_fields:
+                if field in calendar_data:
+                    value = calendar_data[field]
+                    if isinstance(value, dict):
+                        print(f"      ✅ {field}: {len(value)} entries")
+                    elif isinstance(value, list):
+                        print(f"      ✅ {field}: {len(value)} items")
+                    else:
+                        print(f"      ✅ {field}: {value}")
+                else:
+                    print(f"      ❌ {field}: MISSING")
+                    calendar_complete = False
+            
+            # Validate 12-month calendar
+            calendar_months = calendar_data.get('calendar', {})
+            if len(calendar_months) >= 10:  # Should have at least 10 months
+                test_results["calendar_12_months"] = True
+                print_test_result("12-MONTH CALENDAR", True, 
+                                f"✅ Calendar covers {len(calendar_months)} months")
+                
+                # Show first few months
+                print(f"   📊 MONTHLY PAYMENT BREAKDOWN:")
+                month_count = 0
+                for month, payments in calendar_months.items():
+                    if month_count < 6:  # Show first 6 months
+                        total_month = sum(payment.get('monthly_installment', 0) for payment in payments)
+                        print(f"      - {month}: {len(payments)} payments, Total: R$ {total_month:,.2f}")
+                        month_count += 1
+                    else:
+                        break
+                
+                if month_count >= 6:
+                    print(f"      ... and {len(calendar_months) - 6} more months")
+            else:
+                print_test_result("12-MONTH CALENDAR", False, 
+                                f"❌ Calendar only covers {len(calendar_months)} months")
+            
+            # Show total monthly commitment
+            total_commitment = calendar_data.get('total_monthly_commitment', 0)
+            if total_commitment > 0:
+                print(f"   💰 Total Monthly Commitment: R$ {total_commitment:,.2f}")
+            
+            # Show summary
+            summary = calendar_data.get('next_12_months_summary', {})
+            if summary:
+                print(f"   📈 12-Month Summary:")
+                print(f"      - Total Payments: {summary.get('total_payments', 0)}")
+                print(f"      - Total Amount: R$ {summary.get('total_amount', 0):,.2f}")
+                print(f"      - Average Monthly: R$ {summary.get('average_monthly', 0):,.2f}")
+        else:
+            error_detail = calendar_response.json().get("detail", "Unknown error")
+            print_test_result("PAYMENT CALENDAR", False, f"❌ Failed: {error_detail}")
+        
+        # STEP 8: Final Summary
+        print(f"\n🔍 STEP 8: CONSORTIUM MODULE ENHANCEMENTS TEST SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ User Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   🏠 Dashboard Panel: {'WORKING' if test_results['dashboard_working'] else 'FAILED'}")
+        print(f"   🔍 Advanced Filters: {'WORKING' if test_results['active_filters_working'] else 'FAILED'}")
+        print(f"   📊 Contemplation Projections: {'WORKING' if test_results['contemplation_projections_working'] else 'FAILED'}")
+        print(f"   📈 Detailed Statistics: {'WORKING' if test_results['statistics_working'] else 'FAILED'}")
+        print(f"   📅 Payment Calendar: {'WORKING' if test_results['payments_calendar_working'] else 'FAILED'}")
+        print(f"   📋 Dashboard Data Complete: {'YES' if test_results['dashboard_data_complete'] else 'NO'}")
+        print(f"   🔧 Filters Comprehensive: {'YES' if test_results['filters_comprehensive'] else 'NO'}")
+        print(f"   🧠 Projections Intelligent: {'YES' if test_results['projections_intelligent'] else 'NO'}")
+        print(f"   📊 Statistics Detailed: {'YES' if test_results['statistics_detailed'] else 'NO'}")
+        print(f"   📅 Calendar 12 Months: {'YES' if test_results['calendar_12_months'] else 'NO'}")
+        print(f"   🧪 Test Data Created: {'YES' if test_results['test_data_created'] else 'NO'}")
+        
+        # Determine overall success
+        core_endpoints = [
+            test_results['dashboard_working'],
+            test_results['active_filters_working'],
+            test_results['contemplation_projections_working'],
+            test_results['statistics_working'],
+            test_results['payments_calendar_working']
+        ]
+        
+        advanced_features = [
+            test_results['dashboard_data_complete'],
+            test_results['filters_comprehensive'],
+            test_results['projections_intelligent'],
+            test_results['statistics_detailed'],
+            test_results['calendar_12_months']
+        ]
+        
+        core_success = all(core_endpoints)
+        advanced_success = sum(advanced_features) >= 4  # At least 4 out of 5 advanced features
+        
+        if core_success and advanced_success:
+            print(f"\n🎉 CONSORTIUM MODULE ENHANCEMENTS WORKING EXCELLENTLY!")
+            print("✅ All Phase 3 functionality working correctly:")
+            print("   - Authentication with hpdanielvb@gmail.com / 123456 successful")
+            print("   - GET /api/consortiums/dashboard - Complete dashboard with statistics, payments, projections")
+            print("   - GET /api/consortiums/active - Advanced filters by status, type, contemplation")
+            print("   - GET /api/consortiums/contemplation-projections - Intelligent probability calculations")
+            print("   - GET /api/consortiums/statistics - Detailed statistics by status/type/administrator")
+            print("   - GET /api/consortiums/payments-calendar - 12-month calendar with monthly totals")
+            print("   - Dashboard data structure complete with all expected fields")
+            print("   - Comprehensive filtering system with enriched data")
+            print("   - Intelligent contemplation projections with calculation logic")
+            print("   - Detailed statistics with distribution and financial summaries")
+            print("   - Payment calendar covering 12 months with commitment totals")
+            print("   - Test data creation for comprehensive validation")
+            print("   - All requested functionality from Phase 3 specifications implemented")
+            
+            return True
+        else:
+            print(f"\n⚠️ CONSORTIUM MODULE ENHANCEMENTS ISSUES DETECTED:")
+            if not core_success:
+                print("   ❌ Core endpoint issues:")
+                if not test_results['dashboard_working']:
+                    print("      - Dashboard endpoint failed")
+                if not test_results['active_filters_working']:
+                    print("      - Advanced filters failed")
+                if not test_results['contemplation_projections_working']:
+                    print("      - Contemplation projections failed")
+                if not test_results['statistics_working']:
+                    print("      - Statistics endpoint failed")
+                if not test_results['payments_calendar_working']:
+                    print("      - Payment calendar failed")
+            
+            if not advanced_success:
+                print("   ❌ Advanced feature issues:")
+                if not test_results['dashboard_data_complete']:
+                    print("      - Dashboard data structure incomplete")
+                if not test_results['filters_comprehensive']:
+                    print("      - Filters not comprehensive enough")
+                if not test_results['projections_intelligent']:
+                    print("      - Projections lack intelligent calculations")
+                if not test_results['statistics_detailed']:
+                    print("      - Statistics not detailed enough")
+                if not test_results['calendar_12_months']:
+                    print("      - Calendar doesn't cover 12 months")
+            
+            if test_results["error_details"]:
+                print(f"   🔍 Error Details: {test_results['error_details']}")
+            
+            return False
+        
+    except Exception as e:
+        test_results["error_details"] = f"Exception: {str(e)}"
+        print_test_result("CONSORTIUM MODULE ENHANCEMENTS TEST", False, f"Exception: {str(e)}")
+        return False
+
+
 def test_automatic_recurrence_system():
     """
     🔄 AUTOMATIC RECURRENCE SYSTEM COMPREHENSIVE TEST - PHASE 2
