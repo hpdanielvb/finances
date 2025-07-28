@@ -3010,6 +3010,19 @@ const Dashboard = () => {
         />
       )}
 
+      {/* 🐾 Pet Shop Product Modal */}
+      {showProductModal && (
+        <PetShopProductModal
+          product={editingProduct}
+          onClose={() => {
+            setShowProductModal(false);
+            setEditingProduct(null);
+          }}
+          onCreate={handleCreateProduct}
+          onUpdate={handleUpdateProduct}
+        />
+      )}
+
       <Toaster position="top-right" />
     </div>
   );
