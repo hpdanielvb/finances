@@ -8093,8 +8093,10 @@ const PetShopView = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [stockProduct, setStockProduct] = useState(null);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
 
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
