@@ -4820,6 +4820,10 @@ async def get_receipt(
         if not sale:
             raise HTTPException(status_code=404, detail="Comprovante não encontrado")
         
+        # Remove MongoDB ObjectId for JSON serialization
+        if "_id" in sale:
+            del sale["_id"]
+        
         return {
             "sale": sale,
             "business_info": {
