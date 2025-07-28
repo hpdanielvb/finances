@@ -284,8 +284,9 @@ def test_automatic_recurrence_system():
                                            json=pattern_rule_data, headers=headers)
             
             if pattern_response.status_code == 200:
-                pattern_rule = pattern_response.json()
-                created_pattern_rules.append(pattern_rule["id"])
+                pattern_result = pattern_response.json()
+                pattern_rule = pattern_result.get("rule", {})
+                created_pattern_rules.append(pattern_rule.get("id"))
                 patterns_working += 1
                 print_test_result(f"PATTERN {pattern_test['pattern'].upper()}", True, 
                                 f"{pattern_test['name']} created successfully")
