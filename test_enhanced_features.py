@@ -9,7 +9,7 @@ import json
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://64374cf7-c2c8-4cbb-a105-e6948a5cd79d.preview.emergentagent.com/api"
+BACKEND_URL = "https://090d9661-b0bc-4e2d-9602-1953ab347935.preview.emergentagent.com/api"
 
 def print_test_result(test_name, success, details=""):
     """Print formatted test results"""
