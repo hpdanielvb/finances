@@ -8630,13 +8630,231 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => 
   </div>
 );
 
-const PetShopStockAlert = ({ products, loading, onRefresh }) => (
-  <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-    <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-medium text-gray-900 mb-2">Alertas de Estoque</h3>
-    <p className="text-gray-500 mb-4">Em desenvolvimento - Será implementado junto com o sistema de produtos</p>
-  </div>
-);
+const PetShopStockAlert = ({ products, loading, onRefresh }) => {
+  // Filtrar produtos com estoque baixo
+  const lowStockProducts = products.filter(product => 
+    product.current_quantity <= product.minimum_stock
+  );
+
+  // Filtrar produtos sem estoque
+  const outOfStockProducts = products.filter(product => 
+    product.current_quantity <= 0
+  );
+
+  // Filtrar produtos próximos do vencimento (30 dias)
+  const expiringProducts = products.filter(product => {
+    if (!product.expiration_date) return false;
+    
+    const expDate = new Date(product.expiration_date);
+    const today = new Date();
+    const diffTime = expDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays <= 30 && diffDays >= 0;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <span className="ml-3 text-gray-600">Carregando alertas...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header com Resumo */}
+      <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-xl shadow-lg p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">Alertas de Estoque</h2>
+              <p className="text-red-100 mt-1">Produtos que requerem atenção</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-red-100">Sem Estoque</p>
+                <p className="text-2xl font-bold">{outOfStockProducts.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-red-100">Estoque Baixo</p>
+                <p className="text-2xl font-bold">{lowStockProducts.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-red-100">Vencendo</p>
+                <p className="text-2xl font-bold">{expiringProducts.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Produtos Sem Estoque */}
+      {outOfStockProducts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                🚨 Produtos Sem Estoque ({outOfStockProducts.length})
+              </h3>
+              <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                CRÍTICO
+              </span>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {outOfStockProducts.map((product) => (
+                <div key={product.id} className="flex items-center justify-between p-4 border-2 border-red-200 rounded-lg bg-red-50">
+                  <div>
+                    <p className="font-semibold text-gray-900">{product.name}</p>
+                    <p className="text-sm text-gray-600">SKU: {product.sku}</p>
+                    <p className="text-sm text-gray-600 capitalize">{product.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-red-600">0</p>
+                    <p className="text-xs text-gray-500">unidades</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Produtos com Estoque Baixo */}
+      {lowStockProducts.filter(p => p.current_quantity > 0).length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-orange-600 flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                ⚠️ Estoque Baixo ({lowStockProducts.filter(p => p.current_quantity > 0).length})
+              </h3>
+              <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                ATENÇÃO
+              </span>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Produto</th>
+                    <th className="px-4 py-2 text-center text-sm font-medium text-gray-500">Estoque Atual</th>
+                    <th className="px-4 py-2 text-center text-sm font-medium text-gray-500">Estoque Mínimo</th>
+                    <th className="px-4 py-2 text-center text-sm font-medium text-gray-500">Diferença</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {lowStockProducts.filter(p => p.current_quantity > 0).map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{product.name}</p>
+                          <p className="text-sm text-gray-500">SKU: {product.sku}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-lg font-bold text-orange-600">
+                          {product.current_quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-gray-700">{product.minimum_stock}</span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-red-600 font-medium">
+                          -{(product.minimum_stock - product.current_quantity)} un.
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Produtos Próximos do Vencimento */}
+      {expiringProducts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-yellow-600 flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                🕒 Produtos Próximos do Vencimento ({expiringProducts.length})
+              </h3>
+              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                ATENÇÃO
+              </span>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="space-y-3">
+              {expiringProducts
+                .sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date))
+                .map((product) => {
+                  const expDate = new Date(product.expiration_date);
+                  const today = new Date();
+                  const diffTime = expDate - today;
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  return (
+                    <div key={product.id} className="flex items-center justify-between p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+                      <div>
+                        <p className="font-semibold text-gray-900">{product.name}</p>
+                        <p className="text-sm text-gray-600">SKU: {product.sku}</p>
+                        <p className="text-sm text-gray-600">Estoque: {product.current_quantity} unidades</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Vence em:</p>
+                        <p className={`text-lg font-bold ${
+                          diffDays <= 7 ? 'text-red-600' : 'text-yellow-600'
+                        }`}>
+                          {diffDays} dias
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatDate(product.expiration_date)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estado sem alertas */}
+      {lowStockProducts.length === 0 && expiringProducts.length === 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">✅ Tudo em Ordem!</h3>
+          <p className="text-gray-600 mb-4">
+            Não há produtos com estoque baixo ou próximos do vencimento no momento.
+          </p>
+          <button
+            onClick={onRefresh}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+          >
+            <Clock size={16} />
+            Atualizar Lista
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 🐾 Pet Shop Product Modal Component
 const PetShopProductModal = ({ product, onClose, onCreate, onUpdate }) => {
