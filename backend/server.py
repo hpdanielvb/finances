@@ -2275,14 +2275,27 @@ async def get_credit_card_invoices(
     enriched_invoices = []
     for invoice in invoices:
         account = account_lookup.get(invoice['account_id'])
+        
+        # Convert invoice to proper format, handling ObjectId and datetime serialization
         enriched_invoice = {
-            **invoice,
+            "id": invoice.get('id'),
+            "user_id": invoice.get('user_id'),
+            "account_id": invoice.get('account_id'),
+            "invoice_month": invoice.get('invoice_month'),
+            "due_date": invoice.get('due_date').isoformat() if invoice.get('due_date') else None,
+            "closing_date": invoice.get('closing_date').isoformat() if invoice.get('closing_date') else None,
+            "total_amount": invoice.get('total_amount', 0),
+            "paid_amount": invoice.get('paid_amount', 0),
+            "status": invoice.get('status', 'Pending'),
+            "transactions": invoice.get('transactions', []),
+            "created_at": invoice.get('created_at').isoformat() if invoice.get('created_at') else None,
+            "paid_at": invoice.get('paid_at').isoformat() if invoice.get('paid_at') else None,
             "account_name": account['name'] if account else 'N/A',
             "account_color": account['color_hex'] if account else '#6B7280'
         }
         enriched_invoices.append(enriched_invoice)
     
-    return {"invoices": enriched_invoices}
+    return enriched_invoices
 
 @api_router.patch("/credit-cards/invoices/{invoice_id}/pay")
 async def pay_credit_card_invoice(
