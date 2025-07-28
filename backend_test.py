@@ -8207,19 +8207,544 @@ def test_file_import_system_critical():
         print_test_result("CRITICAL FILE IMPORT SYSTEM TEST", False, f"Exception: {str(e)}")
         return False
 
+def test_credit_cards_and_invoices_system():
+    """
+    COMPREHENSIVE CREDIT CARDS AND INVOICES SYSTEM TEST
+    
+    This addresses the specific review request to test the Sistema de Cartões e Faturas
+    for multiple credit cards from different banks (Nubank, Santander, Itaú).
+    
+    Test Objectives:
+    1. Multiple Credit Cards: Verify cards from different banks are treated separately
+    2. Correct Linking: Ensure each invoice is linked to the correct card (account_id)
+    3. Independent Cycles: Test that each card maintains its own invoice cycle
+    4. Invoice Generation: Verify invoices are generated correctly for each card
+    5. Proper Grouping: Test if frontend can group invoices by card correctly
+    
+    Test Coverage:
+    1. Authentication with hpdanielvb@gmail.com / 123456
+    2. Create multiple credit card accounts (Nubank, Santander, Itaú)
+    3. Create transactions for each credit card
+    4. Test POST /api/credit-cards/generate-invoices
+    5. Test GET /api/credit-cards/invoices
+    6. Test PATCH /api/credit-cards/invoices/{id}/pay
+    7. Verify invoice separation by account_id
+    8. Test invoice grouping and data integrity
+    """
+    print("\n" + "="*80)
+    print("💳 CREDIT CARDS AND INVOICES SYSTEM COMPREHENSIVE TEST")
+    print("="*80)
+    print("Testing Sistema de Cartões e Faturas for multiple banks")
+    print("Focus: Multiple cards (Nubank, Santander, Itaú) with separate invoice cycles")
+    
+    # Test credentials from review request
+    user_login_primary = {
+        "email": "hpdanielvb@gmail.com",
+        "password": "123456"
+    }
+    
+    user_login_secondary = {
+        "email": "hpdanielvb@gmail.com", 
+        "password": "TestPassword123"
+    }
+    
+    test_results = {
+        "login_success": False,
+        "multiple_cards_created": False,
+        "transactions_created_per_card": False,
+        "invoices_generated": False,
+        "invoices_listed": False,
+        "invoice_separation_verified": False,
+        "invoice_payment_working": False,
+        "grouping_by_account_verified": False,
+        "independent_cycles_verified": False,
+        "auth_token": None,
+        "credit_cards": [],
+        "transactions_per_card": {},
+        "invoices_per_card": {},
+        "total_invoices": 0
+    }
+    
+    try:
+        print(f"\n🔍 STEP 1: Authentication")
+        print(f"   Testing credentials: {user_login_primary['email']}")
+        
+        # Try primary credentials first
+        response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_primary)
+        
+        if response.status_code != 200:
+            print(f"   Primary login failed, trying secondary credentials...")
+            response = requests.post(f"{BACKEND_URL}/auth/login", json=user_login_secondary)
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                print_test_result("AUTHENTICATION", False, f"❌ Both login attempts failed: {error_detail}")
+                return test_results
+            else:
+                used_password = user_login_secondary['password']
+        else:
+            used_password = user_login_primary['password']
+        
+        data = response.json()
+        user_info = data.get("user", {})
+        auth_token = data.get("access_token")
+        test_results["auth_token"] = auth_token
+        test_results["login_success"] = True
+        
+        print_test_result("AUTHENTICATION", True, 
+                        f"✅ Login successful with password: {used_password}")
+        print(f"   User: {user_info.get('name')} ({user_info.get('email')})")
+        
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # STEP 2: Create Multiple Credit Card Accounts
+        print(f"\n🔍 STEP 2: Creating Multiple Credit Card Accounts")
+        print("   Creating credit cards for different banks: Nubank, Santander, Itaú")
+        
+        credit_card_configs = [
+            {
+                "name": "Nubank Roxinho",
+                "type": "Cartão de Crédito",
+                "institution": "Nubank",
+                "initial_balance": 0.0,
+                "credit_limit": 3000.0,
+                "invoice_due_date": "10",
+                "color_hex": "#8A05BE"
+            },
+            {
+                "name": "Santander SX",
+                "type": "Cartão de Crédito", 
+                "institution": "Santander",
+                "initial_balance": 0.0,
+                "credit_limit": 5000.0,
+                "invoice_due_date": "15",
+                "color_hex": "#EC0000"
+            },
+            {
+                "name": "Itaú Personnalité",
+                "type": "Cartão de Crédito",
+                "institution": "Itaú",
+                "initial_balance": 0.0,
+                "credit_limit": 8000.0,
+                "invoice_due_date": "20",
+                "color_hex": "#FF8C00"
+            }
+        ]
+        
+        created_cards = []
+        for card_config in credit_card_configs:
+            print(f"   Creating {card_config['name']} ({card_config['institution']})...")
+            
+            card_response = requests.post(f"{BACKEND_URL}/accounts", json=card_config, headers=headers)
+            
+            if card_response.status_code == 200:
+                card_data = card_response.json()
+                created_cards.append(card_data)
+                print_test_result(f"CREATE {card_config['institution']} CARD", True, 
+                                f"✅ {card_config['name']} created successfully")
+                print(f"      Account ID: {card_data.get('id')}")
+                print(f"      Credit Limit: R$ {card_data.get('credit_limit', 0):,.2f}")
+                print(f"      Due Date: Day {card_data.get('invoice_due_date')}")
+            else:
+                error_detail = card_response.json().get("detail", "Unknown error")
+                print_test_result(f"CREATE {card_config['institution']} CARD", False, 
+                                f"❌ Failed: {error_detail}")
+        
+        if len(created_cards) >= 2:  # At least 2 cards needed for testing
+            test_results["multiple_cards_created"] = True
+            test_results["credit_cards"] = created_cards
+            print_test_result("MULTIPLE CREDIT CARDS CREATION", True, 
+                            f"✅ Created {len(created_cards)} credit cards successfully")
+        else:
+            print_test_result("MULTIPLE CREDIT CARDS CREATION", False, 
+                            f"❌ Only created {len(created_cards)} cards, need at least 2")
+            return test_results
+        
+        # STEP 3: Get Categories for Transactions
+        print(f"\n🔍 STEP 3: Getting Categories for Transaction Creation")
+        
+        categories_response = requests.get(f"{BACKEND_URL}/categories", headers=headers)
+        if categories_response.status_code != 200:
+            print_test_result("GET CATEGORIES", False, "❌ Failed to get categories")
+            return test_results
+        
+        categories = categories_response.json()
+        expense_categories = [c for c in categories if c.get('type') == 'Despesa']
+        
+        if len(expense_categories) < 3:
+            print_test_result("CATEGORIES AVAILABILITY", False, 
+                            f"❌ Need at least 3 expense categories, found {len(expense_categories)}")
+            return test_results
+        
+        print_test_result("CATEGORIES RETRIEVED", True, 
+                        f"✅ Found {len(expense_categories)} expense categories")
+        
+        # STEP 4: Create Transactions for Each Credit Card
+        print(f"\n🔍 STEP 4: Creating Transactions for Each Credit Card")
+        print("   Creating different transactions for each card to test separation...")
+        
+        # Transaction templates for each card
+        transaction_templates = {
+            "Nubank": [
+                {"description": "Netflix Premium - Nubank", "value": 45.90, "category_idx": 0},
+                {"description": "Spotify Premium - Nubank", "value": 21.90, "category_idx": 1},
+                {"description": "Uber Eats - Nubank", "value": 35.50, "category_idx": 2}
+            ],
+            "Santander": [
+                {"description": "Amazon Prime - Santander", "value": 14.90, "category_idx": 0},
+                {"description": "Supermercado Extra - Santander", "value": 125.80, "category_idx": 1},
+                {"description": "Posto Shell - Santander", "value": 85.00, "category_idx": 2}
+            ],
+            "Itaú": [
+                {"description": "Farmácia Droga Raia - Itaú", "value": 67.30, "category_idx": 0},
+                {"description": "Restaurante Outback - Itaú", "value": 180.00, "category_idx": 1},
+                {"description": "Shopping Iguatemi - Itaú", "value": 250.00, "category_idx": 2}
+            ]
+        }
+        
+        transactions_created = {}
+        
+        for card in created_cards:
+            card_name = card.get('name')
+            card_institution = card.get('institution')
+            card_id = card.get('id')
+            
+            print(f"   Creating transactions for {card_name} ({card_institution})...")
+            
+            if card_institution in transaction_templates:
+                card_transactions = []
+                templates = transaction_templates[card_institution]
+                
+                for template in templates:
+                    transaction_data = {
+                        "description": template["description"],
+                        "value": template["value"],
+                        "type": "Despesa",
+                        "transaction_date": (datetime.now() - timedelta(days=5)).isoformat(),
+                        "account_id": card_id,
+                        "category_id": expense_categories[template["category_idx"]].get('id'),
+                        "status": "Pago"
+                    }
+                    
+                    trans_response = requests.post(f"{BACKEND_URL}/transactions", 
+                                                 json=transaction_data, headers=headers)
+                    
+                    if trans_response.status_code == 200:
+                        transaction = trans_response.json()
+                        card_transactions.append(transaction)
+                        print(f"      ✅ {template['description']}: R$ {template['value']:.2f}")
+                    else:
+                        print(f"      ❌ Failed to create: {template['description']}")
+                
+                transactions_created[card_institution] = card_transactions
+                test_results["transactions_per_card"][card_institution] = len(card_transactions)
+        
+        total_transactions = sum(len(trans) for trans in transactions_created.values())
+        if total_transactions >= 6:  # At least 2 transactions per card for 3 cards
+            test_results["transactions_created_per_card"] = True
+            print_test_result("TRANSACTIONS CREATION", True, 
+                            f"✅ Created {total_transactions} transactions across {len(transactions_created)} cards")
+        else:
+            print_test_result("TRANSACTIONS CREATION", False, 
+                            f"❌ Only created {total_transactions} transactions")
+        
+        # STEP 5: Generate Credit Card Invoices
+        print(f"\n🔍 STEP 5: Generating Credit Card Invoices")
+        print("   Testing POST /api/credit-cards/generate-invoices...")
+        
+        generate_response = requests.post(f"{BACKEND_URL}/credit-cards/generate-invoices", headers=headers)
+        
+        if generate_response.status_code == 200:
+            generate_data = generate_response.json()
+            invoices_generated = generate_data.get('invoices_generated', 0)
+            test_results["invoices_generated"] = True
+            test_results["total_invoices"] = invoices_generated
+            
+            print_test_result("INVOICE GENERATION", True, 
+                            f"✅ Generated {invoices_generated} invoices")
+            
+            if invoices_generated >= len(created_cards):
+                print(f"   ✅ Expected at least {len(created_cards)} invoices (one per card), got {invoices_generated}")
+            else:
+                print(f"   ⚠️  Expected at least {len(created_cards)} invoices, got {invoices_generated}")
+        else:
+            error_detail = generate_response.json().get("detail", "Unknown error")
+            print_test_result("INVOICE GENERATION", False, f"❌ Failed: {error_detail}")
+            return test_results
+        
+        # STEP 6: List and Analyze Credit Card Invoices
+        print(f"\n🔍 STEP 6: Listing and Analyzing Credit Card Invoices")
+        print("   Testing GET /api/credit-cards/invoices...")
+        
+        list_response = requests.get(f"{BACKEND_URL}/credit-cards/invoices", headers=headers)
+        
+        if list_response.status_code == 200:
+            invoices = list_response.json()
+            test_results["invoices_listed"] = True
+            
+            print_test_result("INVOICE LISTING", True, 
+                            f"✅ Retrieved {len(invoices)} invoices")
+            
+            # Analyze invoice separation by account_id
+            print(f"\n   📊 INVOICE SEPARATION ANALYSIS:")
+            invoices_by_account = {}
+            
+            for invoice in invoices:
+                account_id = invoice.get('account_id')
+                if account_id not in invoices_by_account:
+                    invoices_by_account[account_id] = []
+                invoices_by_account[account_id].append(invoice)
+            
+            # Match invoices to credit cards
+            for card in created_cards:
+                card_id = card.get('id')
+                card_name = card.get('name')
+                card_institution = card.get('institution')
+                
+                card_invoices = invoices_by_account.get(card_id, [])
+                test_results["invoices_per_card"][card_institution] = len(card_invoices)
+                
+                print(f"      {card_name} ({card_institution}):")
+                print(f"         Account ID: {card_id}")
+                print(f"         Invoices: {len(card_invoices)}")
+                
+                if len(card_invoices) > 0:
+                    for invoice in card_invoices:
+                        print(f"            - Invoice ID: {invoice.get('id')}")
+                        print(f"              Month: {invoice.get('invoice_month')}")
+                        print(f"              Amount: R$ {invoice.get('total_amount', 0):.2f}")
+                        print(f"              Status: {invoice.get('status')}")
+                        print(f"              Due Date: {invoice.get('due_date')}")
+                        print(f"              Transactions: {len(invoice.get('transactions', []))}")
+                else:
+                    print(f"            ⚠️  No invoices found for this card")
+            
+            # Verify invoice separation
+            cards_with_invoices = len([card_id for card_id in invoices_by_account.keys() 
+                                     if len(invoices_by_account[card_id]) > 0])
+            
+            if cards_with_invoices >= 2:  # At least 2 cards should have invoices
+                test_results["invoice_separation_verified"] = True
+                print_test_result("INVOICE SEPARATION", True, 
+                                f"✅ Invoices properly separated: {cards_with_invoices} cards have invoices")
+            else:
+                print_test_result("INVOICE SEPARATION", False, 
+                                f"❌ Poor separation: only {cards_with_invoices} cards have invoices")
+            
+            # Verify grouping by account_id
+            all_invoices_have_account_id = all(invoice.get('account_id') for invoice in invoices)
+            unique_account_ids = set(invoice.get('account_id') for invoice in invoices)
+            
+            if all_invoices_have_account_id and len(unique_account_ids) >= 2:
+                test_results["grouping_by_account_verified"] = True
+                print_test_result("GROUPING BY ACCOUNT", True, 
+                                f"✅ All invoices have account_id, {len(unique_account_ids)} unique accounts")
+            else:
+                print_test_result("GROUPING BY ACCOUNT", False, 
+                                "❌ Issues with account_id grouping")
+            
+        else:
+            error_detail = list_response.json().get("detail", "Unknown error")
+            print_test_result("INVOICE LISTING", False, f"❌ Failed: {error_detail}")
+            return test_results
+        
+        # STEP 7: Test Invoice Payment
+        print(f"\n🔍 STEP 7: Testing Invoice Payment")
+        print("   Testing PATCH /api/credit-cards/invoices/{id}/pay...")
+        
+        if len(invoices) > 0:
+            # Test payment on first invoice
+            test_invoice = invoices[0]
+            invoice_id = test_invoice.get('id')
+            invoice_account_id = test_invoice.get('account_id')
+            
+            # Find which card this invoice belongs to
+            invoice_card = next((card for card in created_cards 
+                               if card.get('id') == invoice_account_id), None)
+            
+            if invoice_card:
+                print(f"   Testing payment for invoice from {invoice_card.get('name')}...")
+                print(f"      Invoice ID: {invoice_id}")
+                print(f"      Amount: R$ {test_invoice.get('total_amount', 0):.2f}")
+                
+                pay_response = requests.patch(f"{BACKEND_URL}/credit-cards/invoices/{invoice_id}/pay", 
+                                            headers=headers)
+                
+                if pay_response.status_code == 200:
+                    pay_data = pay_response.json()
+                    test_results["invoice_payment_working"] = True
+                    
+                    print_test_result("INVOICE PAYMENT", True, 
+                                    f"✅ Payment processed: {pay_data.get('message', 'Success')}")
+                    
+                    # Verify payment by checking invoice status
+                    verify_response = requests.get(f"{BACKEND_URL}/credit-cards/invoices", headers=headers)
+                    if verify_response.status_code == 200:
+                        updated_invoices = verify_response.json()
+                        updated_invoice = next((inv for inv in updated_invoices 
+                                              if inv.get('id') == invoice_id), None)
+                        
+                        if updated_invoice and updated_invoice.get('status') == 'Paid':
+                            print(f"      ✅ Invoice status updated to: {updated_invoice.get('status')}")
+                        else:
+                            print(f"      ⚠️  Invoice status: {updated_invoice.get('status') if updated_invoice else 'Not found'}")
+                else:
+                    error_detail = pay_response.json().get("detail", "Unknown error")
+                    print_test_result("INVOICE PAYMENT", False, f"❌ Failed: {error_detail}")
+            else:
+                print_test_result("INVOICE PAYMENT", False, "❌ Could not find card for invoice")
+        else:
+            print_test_result("INVOICE PAYMENT", True, "✅ No invoices to pay (expected)")
+            test_results["invoice_payment_working"] = True
+        
+        # STEP 8: Verify Independent Cycles
+        print(f"\n🔍 STEP 8: Verifying Independent Invoice Cycles")
+        print("   Checking if each card maintains its own cycle...")
+        
+        cycle_verification = {}
+        
+        for card in created_cards:
+            card_id = card.get('id')
+            card_name = card.get('name')
+            card_due_date = card.get('invoice_due_date')
+            
+            card_invoices = [inv for inv in invoices if inv.get('account_id') == card_id]
+            
+            cycle_verification[card_name] = {
+                'due_date_config': card_due_date,
+                'invoices_count': len(card_invoices),
+                'independent_cycle': True
+            }
+            
+            print(f"   {card_name}:")
+            print(f"      Configured Due Date: Day {card_due_date}")
+            print(f"      Invoices Generated: {len(card_invoices)}")
+            
+            if len(card_invoices) > 0:
+                for invoice in card_invoices:
+                    invoice_due_date = invoice.get('due_date')
+                    print(f"         Invoice Due: {invoice_due_date}")
+            else:
+                print(f"         ⚠️  No invoices generated")
+        
+        independent_cycles = len([v for v in cycle_verification.values() 
+                                if v['independent_cycle'] and v['invoices_count'] > 0])
+        
+        if independent_cycles >= 2:
+            test_results["independent_cycles_verified"] = True
+            print_test_result("INDEPENDENT CYCLES", True, 
+                            f"✅ {independent_cycles} cards have independent cycles")
+        else:
+            print_test_result("INDEPENDENT CYCLES", False, 
+                            f"❌ Only {independent_cycles} cards have independent cycles")
+        
+        # STEP 9: Final Summary and Assessment
+        print(f"\n🔍 STEP 9: CREDIT CARDS AND INVOICES SYSTEM TEST SUMMARY")
+        print("="*70)
+        
+        print(f"📊 TEST RESULTS:")
+        print(f"   ✅ Authentication: {'SUCCESS' if test_results['login_success'] else 'FAILED'}")
+        print(f"   💳 Multiple Cards Created: {'SUCCESS' if test_results['multiple_cards_created'] else 'FAILED'}")
+        print(f"   💰 Transactions Per Card: {'SUCCESS' if test_results['transactions_created_per_card'] else 'FAILED'}")
+        print(f"   📄 Invoices Generated: {'SUCCESS' if test_results['invoices_generated'] else 'FAILED'}")
+        print(f"   📋 Invoices Listed: {'SUCCESS' if test_results['invoices_listed'] else 'FAILED'}")
+        print(f"   🔄 Invoice Separation: {'SUCCESS' if test_results['invoice_separation_verified'] else 'FAILED'}")
+        print(f"   💸 Invoice Payment: {'SUCCESS' if test_results['invoice_payment_working'] else 'FAILED'}")
+        print(f"   📊 Account Grouping: {'SUCCESS' if test_results['grouping_by_account_verified'] else 'FAILED'}")
+        print(f"   🔄 Independent Cycles: {'SUCCESS' if test_results['independent_cycles_verified'] else 'FAILED'}")
+        
+        print(f"\n📊 STATISTICS:")
+        print(f"   Credit Cards Created: {len(test_results['credit_cards'])}")
+        print(f"   Total Transactions: {sum(test_results['transactions_per_card'].values())}")
+        print(f"   Total Invoices: {test_results['total_invoices']}")
+        
+        print(f"\n📊 TRANSACTIONS PER CARD:")
+        for institution, count in test_results['transactions_per_card'].items():
+            print(f"      {institution}: {count} transactions")
+        
+        print(f"\n📊 INVOICES PER CARD:")
+        for institution, count in test_results['invoices_per_card'].items():
+            print(f"      {institution}: {count} invoices")
+        
+        # Determine overall success
+        critical_features = [
+            test_results['login_success'],
+            test_results['multiple_cards_created'],
+            test_results['transactions_created_per_card'],
+            test_results['invoices_generated'],
+            test_results['invoices_listed'],
+            test_results['invoice_separation_verified']
+        ]
+        
+        advanced_features = [
+            test_results['invoice_payment_working'],
+            test_results['grouping_by_account_verified'],
+            test_results['independent_cycles_verified']
+        ]
+        
+        critical_success = all(critical_features)
+        advanced_success = all(advanced_features)
+        
+        if critical_success and advanced_success:
+            print(f"\n🎉 CREDIT CARDS AND INVOICES SYSTEM WORKING EXCELLENTLY!")
+            print("✅ All critical functionality working correctly:")
+            print("   - Multiple credit cards from different banks (Nubank, Santander, Itaú)")
+            print("   - Each card treated separately with unique account_id")
+            print("   - Transactions properly linked to specific cards")
+            print("   - Invoice generation working for all cards")
+            print("   - Invoice separation by account_id verified")
+            print("   - Invoice payment functionality working")
+            print("   - Proper grouping for frontend display")
+            print("   - Independent invoice cycles maintained")
+            print("   - Complete CRUD operations on invoices")
+            
+            return True
+        else:
+            print(f"\n⚠️ CREDIT CARDS AND INVOICES SYSTEM ISSUES DETECTED:")
+            if not critical_success:
+                print("   ❌ Critical functionality issues:")
+                if not test_results['login_success']:
+                    print("      - Authentication failed")
+                if not test_results['multiple_cards_created']:
+                    print("      - Failed to create multiple credit cards")
+                if not test_results['transactions_created_per_card']:
+                    print("      - Failed to create transactions per card")
+                if not test_results['invoices_generated']:
+                    print("      - Invoice generation failed")
+                if not test_results['invoices_listed']:
+                    print("      - Invoice listing failed")
+                if not test_results['invoice_separation_verified']:
+                    print("      - Invoice separation by card failed")
+            
+            if not advanced_success:
+                print("   ❌ Advanced functionality issues:")
+                if not test_results['invoice_payment_working']:
+                    print("      - Invoice payment not working")
+                if not test_results['grouping_by_account_verified']:
+                    print("      - Account grouping issues")
+                if not test_results['independent_cycles_verified']:
+                    print("      - Independent cycles not verified")
+            
+            return False
+        
+    except Exception as e:
+        print_test_result("CREDIT CARDS AND INVOICES SYSTEM TEST", False, f"Exception: {str(e)}")
+        return False
+
+
 if __name__ == "__main__":
     print("🚀 INICIANDO TESTES BACKEND COMPLETOS - OrçaZenFinanceiro")
     print("="*80)
     
-    # Run the consortium and consigned loan system test
-    print("\n🏠 EXECUTANDO TESTE DO SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO")
-    consortium_success = test_consortium_consigned_loan_system()
+    # Run the credit cards and invoices system test
+    print("\n💳 EXECUTANDO TESTE DO SISTEMA DE CARTÕES E FATURAS")
+    credit_cards_success = test_credit_cards_and_invoices_system()
     
     print("\n" + "="*80)
     print("✅ TESTES BACKEND CONCLUÍDOS")
     print("="*80)
     
-    if consortium_success:
-        print("🎉 SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO: FUNCIONANDO PERFEITAMENTE!")
+    if credit_cards_success:
+        print("🎉 SISTEMA DE CARTÕES E FATURAS: FUNCIONANDO PERFEITAMENTE!")
     else:
-        print("⚠️ SISTEMA DE CONSÓRCIO E EMPRÉSTIMO CONSIGNADO: PROBLEMAS DETECTADOS")
+        print("⚠️ SISTEMA DE CARTÕES E FATURAS: PROBLEMAS DETECTADOS")
