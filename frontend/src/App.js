@@ -7146,6 +7146,563 @@ const FileImportView = ({
   );
 };
 
+// 🏠 Contracts View Component
+const ContractsView = ({ 
+  contracts, 
+  contractStats, 
+  contractFilters, 
+  contractsLoading, 
+  onLoadContracts, 
+  onLoadStats,
+  onFiltersChange, 
+  onCreateContract, 
+  onEditContract, 
+  onDeleteContract 
+}) => {
+  React.useEffect(() => {
+    onLoadContracts();
+    onLoadStats();
+  }, [contractFilters]);
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'ativo': return 'bg-green-100 text-green-800';
+      case 'quitado': return 'bg-blue-100 text-blue-800';
+      case 'cancelado': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeIcon = (tipo) => {
+    return tipo === 'consórcio' ? '🏠' : '💼';
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">🏠 Contratos</h1>
+            <p className="text-gray-600">
+              Gerencie seus consórcios e empréstimos consignados
+            </p>
+          </div>
+          <button
+            onClick={() => onCreateContract()}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Contrato
+          </button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-purple-100">
+              <FileText className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total de Contratos</p>
+              <p className="text-2xl font-bold text-gray-900">{contractStats.total_contracts || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Contratos Ativos</p>
+              <p className="text-2xl font-bold text-gray-900">{contractStats.active_contracts || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100">
+              <DollarSign className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Valor Total</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(contractStats.total_value_sum || 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-orange-100">
+              <Clock className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Valor Restante</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(contractStats.total_remaining_sum || 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+            <select
+              value={contractFilters.tipo}
+              onChange={(e) => onFiltersChange({ ...contractFilters, tipo: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+            >
+              <option value="">Todos os tipos</option>
+              <option value="consórcio">Consórcio</option>
+              <option value="consignado">Empréstimo Consignado</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select
+              value={contractFilters.status}
+              onChange={(e) => onFiltersChange({ ...contractFilters, status: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+            >
+              <option value="">Todos os status</option>
+              <option value="ativo">Ativo</option>
+              <option value="quitado">Quitado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => onFiltersChange({ tipo: '', status: '' })}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Contracts List */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Lista de Contratos</h3>
+        </div>
+
+        <div className="p-6">
+          {contractsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+              <p className="text-gray-500 mt-4">Carregando contratos...</p>
+            </div>
+          ) : contracts.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum contrato encontrado</h3>
+              <p className="text-gray-500 mb-4">Crie seu primeiro contrato para começar</p>
+              <button
+                onClick={() => onCreateContract()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Criar Contrato
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contracts.map((contract) => (
+                <div 
+                  key={contract.id}
+                  className="border border-gray-200 rounded-lg p-6 hover:border-purple-300 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-2xl">{getTypeIcon(contract.tipo)}</span>
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900">{contract.nome}</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 capitalize">{contract.tipo}</span>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+                              {contract.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Valor Total</p>
+                          <p className="font-semibold text-gray-900">{formatCurrency(contract.valor_total_final || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Parcela Mensal</p>
+                          <p className="font-semibold text-gray-900">{formatCurrency(contract.parcela_mensal)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Progresso</p>
+                          <p className="font-semibold text-gray-900">
+                            {contract.parcela_atual}/{contract.quantidade_parcelas} 
+                            <span className="text-sm text-gray-500 ml-1">
+                              ({(contract.progresso_percentual || 0).toFixed(1)}%)
+                            </span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Vencimento</p>
+                          <p className="font-semibold text-gray-900">{formatDate(contract.data_vencimento)}</p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.min(contract.progresso_percentual || 0, 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {contract.observacoes && (
+                        <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                          <p className="text-sm text-gray-600">
+                            <strong>Observações:</strong> {contract.observacoes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => onEditContract(contract)}
+                        className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                        title="Editar contrato"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteContract(contract.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Excluir contrato"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 🏠 Contract Modal Component
+const ContractModal = ({ contract, onClose, onCreate, onUpdate }) => {
+  const [formData, setFormData] = useState({
+    tipo: 'consórcio',
+    nome: '',
+    valor_total: '',
+    parcela_mensal: '',
+    quantidade_parcelas: '',
+    parcela_atual: '0',
+    juros_mensal: '',
+    taxa_administrativa: '',
+    seguro: '',
+    data_inicio: '',
+    data_vencimento: '',
+    status: 'ativo',
+    observacoes: ''
+  });
+
+  React.useEffect(() => {
+    if (contract) {
+      setFormData({
+        tipo: contract.tipo || 'consórcio',
+        nome: contract.nome || '',
+        valor_total: contract.valor_total?.toString() || '',
+        parcela_mensal: contract.parcela_mensal?.toString() || '',
+        quantidade_parcelas: contract.quantidade_parcelas?.toString() || '',
+        parcela_atual: contract.parcela_atual?.toString() || '0',
+        juros_mensal: contract.juros_mensal?.toString() || '',
+        taxa_administrativa: contract.taxa_administrativa?.toString() || '',
+        seguro: contract.seguro?.toString() || '',
+        data_inicio: contract.data_inicio ? new Date(contract.data_inicio).toISOString().split('T')[0] : '',
+        data_vencimento: contract.data_vencimento ? new Date(contract.data_vencimento).toISOString().split('T')[0] : '',
+        status: contract.status || 'ativo',
+        observacoes: contract.observacoes || ''
+      });
+    }
+  }, [contract]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    const contractData = {
+      ...formData,
+      valor_total: parseFloat(formData.valor_total),
+      parcela_mensal: parseFloat(formData.parcela_mensal),
+      quantidade_parcelas: parseInt(formData.quantidade_parcelas),
+      parcela_atual: parseInt(formData.parcela_atual),
+      juros_mensal: parseFloat(formData.juros_mensal),
+      taxa_administrativa: parseFloat(formData.taxa_administrativa),
+      seguro: parseFloat(formData.seguro),
+      data_inicio: new Date(formData.data_inicio).toISOString(),
+      data_vencimento: new Date(formData.data_vencimento).toISOString()
+    };
+
+    if (contract) {
+      onUpdate(contract.id, contractData);
+    } else {
+      onCreate(contractData);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {contract ? 'Editar Contrato' : 'Novo Contrato'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tipo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo *</label>
+              <select
+                required
+                value={formData.tipo}
+                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              >
+                <option value="consórcio">Consórcio</option>
+                <option value="consignado">Empréstimo Consignado</option>
+              </select>
+            </div>
+
+            {/* Nome */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Contrato *</label>
+              <input
+                type="text"
+                required
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="Ex: Consórcio Casa Própria"
+              />
+            </div>
+
+            {/* Valor Total */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valor Total *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.valor_total}
+                onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Parcela Mensal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Parcela Mensal *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.parcela_mensal}
+                onChange={(e) => setFormData({ ...formData, parcela_mensal: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Quantidade de Parcelas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Parcelas *</label>
+              <input
+                type="number"
+                required
+                value={formData.quantidade_parcelas}
+                onChange={(e) => setFormData({ ...formData, quantidade_parcelas: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="240"
+              />
+            </div>
+
+            {/* Parcela Atual */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Parcela Atual</label>
+              <input
+                type="number"
+                value={formData.parcela_atual}
+                onChange={(e) => setFormData({ ...formData, parcela_atual: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Juros Mensal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Juros Mensal (%) *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.juros_mensal}
+                onChange={(e) => setFormData({ ...formData, juros_mensal: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="1.2"
+              />
+            </div>
+
+            {/* Taxa Administrativa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Taxa Administrativa *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.taxa_administrativa}
+                onChange={(e) => setFormData({ ...formData, taxa_administrativa: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Seguro */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Seguro *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.seguro}
+                onChange={(e) => setFormData({ ...formData, seguro: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Data de Início */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data de Início *</label>
+              <input
+                type="date"
+                required
+                value={formData.data_inicio}
+                onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Data de Vencimento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento *</label>
+              <input
+                type="date"
+                required
+                value={formData.data_vencimento}
+                onChange={(e) => setFormData({ ...formData, data_vencimento: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              >
+                <option value="ativo">Ativo</option>
+                <option value="quitado">Quitado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+            <textarea
+              rows={4}
+              value={formData.observacoes}
+              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              placeholder="Observações adicionais sobre o contrato..."
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              {contract ? 'Atualizar' : 'Criar'} Contrato
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
