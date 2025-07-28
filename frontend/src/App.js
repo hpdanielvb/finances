@@ -8414,6 +8414,326 @@ const PetShopStockAlert = ({ products, loading, onRefresh }) => (
   </div>
 );
 
+// 🐾 Pet Shop Product Modal Component
+const PetShopProductModal = ({ product, onClose, onCreate, onUpdate }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    category: 'ração',
+    supplier: '',
+    current_quantity: '',
+    cost_price: '',
+    sale_price: '',
+    expiration_date: '',
+    minimum_stock: '',
+    description: ''
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // Categorias do Pet Shop
+  const petCategories = [
+    'ração', 'petisco', 'higiene', 'brinquedos', 'acessórios', 
+    'medicamentos', 'camas', 'coleiras', 'comedouros', 'outros'
+  ];
+
+  // Preencher formulário se editando produto
+  React.useEffect(() => {
+    if (product) {
+      setFormData({
+        name: product.name || '',
+        sku: product.sku || '',
+        category: product.category || 'ração',
+        supplier: product.supplier || '',
+        current_quantity: product.current_quantity?.toString() || '',
+        cost_price: product.cost_price?.toString() || '',
+        sale_price: product.sale_price?.toString() || '',
+        expiration_date: product.expiration_date ? new Date(product.expiration_date).toISOString().split('T')[0] : '',
+        minimum_stock: product.minimum_stock?.toString() || '',
+        description: product.description || ''
+      });
+    }
+  }, [product]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validações
+      if (!formData.name.trim()) {
+        toast.error('Nome do produto é obrigatório');
+        return;
+      }
+
+      if (!formData.sku.trim()) {
+        toast.error('SKU é obrigatório');
+        return;
+      }
+
+      if (!formData.sale_price || parseFloat(formData.sale_price) <= 0) {
+        toast.error('Preço de venda deve ser maior que zero');
+        return;
+      }
+
+      const productData = {
+        name: formData.name.trim(),
+        sku: formData.sku.trim().toUpperCase(),
+        category: formData.category,
+        supplier: formData.supplier.trim(),
+        current_quantity: parseInt(formData.current_quantity) || 0,
+        cost_price: parseFloat(formData.cost_price) || 0,
+        sale_price: parseFloat(formData.sale_price),
+        expiration_date: formData.expiration_date ? new Date(formData.expiration_date).toISOString() : null,
+        minimum_stock: parseInt(formData.minimum_stock) || 0,
+        description: formData.description.trim()
+      };
+
+      if (product) {
+        await onUpdate(product.id, productData);
+      } else {
+        await onCreate(productData);
+      }
+    } catch (error) {
+      console.error('Erro no formulário:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Package className="w-6 h-6 text-purple-600" />
+              {product ? 'Editar Produto' : 'Novo Produto'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Nome e SKU */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome do Produto *
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Ex: Ração Premium para Cães"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SKU (Código Único) *
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.sku}
+                onChange={(e) => setFormData({...formData, sku: e.target.value.toUpperCase()})}
+                placeholder="Ex: RAC001"
+                style={{ textTransform: 'uppercase' }}
+              />
+            </div>
+          </div>
+
+          {/* Categoria e Fornecedor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categoria *
+              </label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+              >
+                {petCategories.map(category => (
+                  <option key={category} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fornecedor
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.supplier}
+                onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                placeholder="Nome do fornecedor"
+              />
+            </div>
+          </div>
+
+          {/* Quantidade e Estoque Mínimo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quantidade Atual
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.current_quantity}
+                onChange={(e) => setFormData({...formData, current_quantity: e.target.value})}
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estoque Mínimo
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.minimum_stock}
+                onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})}
+                placeholder="5"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Alerta quando estoque atingir este valor
+              </p>
+            </div>
+          </div>
+
+          {/* Preços */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preço de Custo (R$)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.cost_price}
+                onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                placeholder="0,00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preço de Venda (R$) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.sale_price}
+                onChange={(e) => setFormData({...formData, sale_price: e.target.value})}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+
+          {/* Data de Validade */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data de Validade (se aplicável)
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                value={formData.expiration_date}
+                onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Deixe em branco se não tem validade
+              </p>
+            </div>
+
+            {/* Margem de Lucro (calculada) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Margem de Lucro
+              </label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-sm text-gray-700">
+                  {formData.cost_price && formData.sale_price 
+                    ? `${(((parseFloat(formData.sale_price) - parseFloat(formData.cost_price)) / parseFloat(formData.sale_price)) * 100).toFixed(1)}%`
+                    : 'Digite os preços para calcular'
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrição do Produto
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Descrição detalhada do produto..."
+              rows="3"
+            />
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  {product ? 'Atualizar' : 'Criar'} Produto
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
