@@ -10619,35 +10619,39 @@ def test_new_enhanced_features():
         return False
 
 if __name__ == "__main__":
-    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - REAL EMAIL SENDING TEST")
+    print("🚀 OrçaZenFinanceiro Backend API Testing Suite - CONSORTIUM MODULE ENHANCEMENTS TEST")
     print("="*80)
-    print("Testing real email sending functionality with Gmail credentials")
-    print("Focus: POST /api/test-email with EMAIL_ENABLED=true")
-    print("Target: hpdanielvb@gmail.com")
+    print("Testing Melhorias no Módulo de Consórcio recém-implementadas (Fase 3)")
+    print("Focus: Dashboard, Filters, Projections, Statistics, Calendar")
+    print("Credentials: hpdanielvb@gmail.com / 123456")
     print("="*80)
     
-    # Run the Real Email Sending test
-    print("\n📧 RUNNING REAL EMAIL SENDING TEST...")
-    email_success = test_real_email_sending()
+    # Run the Consortium Module Enhancements test
+    print("\n🏠 RUNNING CONSORTIUM MODULE ENHANCEMENTS TEST...")
+    consortium_success = test_consortium_module_enhancements()
     
     # Summary
     print("\n" + "="*80)
-    print("📊 REAL EMAIL SENDING TESTING SUMMARY")
+    print("📊 CONSORTIUM MODULE ENHANCEMENTS TESTING SUMMARY")
     print("="*80)
     
-    if email_success:
-        print("🎉 REAL EMAIL SENDING TESTING COMPLETED SUCCESSFULLY!")
-        print("✅ Gmail credentials working properly with EMAIL_ENABLED=true")
-        print("✅ Test email sent successfully to hpdanielvb@gmail.com")
-        print("✅ SMTP configuration correct (smtp.gmail.com:587)")
-        print("✅ Real email sending confirmed (not simulation)")
-        print("\n📧 EMAIL SYSTEM VERIFIED:")
-        print("   - User authentication (hpdanielvb@gmail.com / 123456)")
-        print("   - Dashboard loading with data")
-        print("   - Income modal API (POST /api/transactions)")
-        print("   - Expense modal API (POST /api/transactions)")
-        print("   - Transfer modal API (POST /api/transfers)")
-        print("   - Reports modal API (GET /api/reports)")
+    if consortium_success:
+        print("🎉 CONSORTIUM MODULE ENHANCEMENTS TESTING COMPLETED SUCCESSFULLY!")
+        print("✅ All 5 enhanced endpoints working correctly:")
+        print("   - GET /api/consortiums/dashboard - Complete dashboard panel")
+        print("   - GET /api/consortiums/active - Advanced filters (status, type, contemplation)")
+        print("   - GET /api/consortiums/contemplation-projections - Intelligent projections")
+        print("   - GET /api/consortiums/statistics - Detailed statistics")
+        print("   - GET /api/consortiums/payments-calendar - 12-month calendar")
+        print("✅ Advanced functionality verified:")
+        print("   - Intelligent contemplation probability calculations")
+        print("   - Projeções baseadas em percentual de conclusão")
+        print("   - Calendário com commitment mensal total")
+        print("   - Estatísticas por administradora")
+        print("   - Dados enriquecidos com informações calculadas")
+        print("✅ Authentication with hpdanielvb@gmail.com / 123456 successful")
+        print("✅ Test data creation and validation working")
+        print("\n🏠 CONSORTIUM SYSTEM PHASE 3 VERIFIED AND READY FOR PRODUCTION!")
         print("   - Data integrity and API stability")
     else:
         print("⚠️ FIXED QUICK ACTIONS BACKEND TESTING ISSUES DETECTED!")
