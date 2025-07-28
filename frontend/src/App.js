@@ -1727,10 +1727,8 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center justify-between w-full">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                <h1 className="text-2xl font-bold">OrçaZenFinanceiro</h1>
-              </div>
-                
+              <h1 className="text-2xl font-bold">OrçaZenFinanceiro</h1>
+              
               {/* Mobile Menu Button */}
               <button 
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -1741,9 +1739,9 @@ const Dashboard = () => {
                 </svg>
               </button>
             </div>
-              
+            
             {/* Desktop Navigation */}
-              <div className="hidden md:flex space-x-1">
+            <div className="hidden md:flex space-x-1">
                 <button
                   onClick={() => setActiveView('dashboard')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
