@@ -10233,29 +10233,38 @@ def test_credit_cards_and_invoices_system():
 if __name__ == "__main__":
     print("🚀 INICIANDO TESTES BACKEND COMPLETOS - OrçaZenFinanceiro")
     print("="*80)
-    print("🐾 FOCO: MÓDULO PET SHOP - FASE 3")
-    print("Testando funcionalidades completas do Pet Shop com controle de estoque e integração financeira")
+    print("🧹 FOCO: ENDPOINT ADMINISTRATIVO DE LIMPEZA DE DADOS - FASE 1")
+    print("Testando limpeza de dados de exemplo mantendo apenas usuário hpdanielvb@gmail.com")
     print("="*80)
     
-    # Run the Pet Shop Module - Phase 3 test
-    print("\n🐾 EXECUTANDO TESTE ABRANGENTE DO MÓDULO PET SHOP - FASE 3")
-    petshop_success = test_petshop_module_phase3()
+    # Run the Administrative Data Cleanup test
+    print("\n🧹 EXECUTANDO TESTE ABRANGENTE DO ENDPOINT ADMINISTRATIVO DE LIMPEZA")
+    cleanup_success = test_administrative_data_cleanup()
     
     print("\n" + "="*80)
     print("✅ TESTES BACKEND CONCLUÍDOS")
     print("="*80)
     
-    if petshop_success:
-        print("🎉 MÓDULO PET SHOP - FASE 3: FUNCIONANDO PERFEITAMENTE!")
+    if cleanup_success:
+        print("🎉 ENDPOINT ADMINISTRATIVO DE LIMPEZA: FUNCIONANDO PERFEITAMENTE!")
         print("✅ Todas as funcionalidades críticas testadas e aprovadas:")
-        print("   - Gestão completa de produtos (CRUD)")
-        print("   - Sistema de vendas com subtração automática de estoque")
-        print("   - Integração financeira (vendas viram receitas)")
-        print("   - Dashboard com estatísticas e alertas")
-        print("   - Geração de comprovantes únicos")
-        print("   - Controle de estoque baixo")
-        print("   - Validações de SKU e regras de negócio")
+        print("   - Autenticação com hpdanielvb@gmail.com / 123456")
+        print("   - Segurança: apenas usuário principal pode executar limpeza")
+        print("   - Execução da limpeza com POST /api/admin/cleanup-data")
+        print("   - Outros usuários foram removidos")
+        print("   - Dados relacionados foram limpos (transações, contas, categorias, etc.)")
+        print("   - Usuário principal foi preservado com seus dados")
+        print("   - Resumo da limpeza está correto e detalhado")
+        print("   - Integridade dos dados mantida após limpeza")
+        print("   - Controle de acesso funcionando (403 para outros usuários)")
+        print("\n🎯 FASE 1 DO PLANO APROVADO: CONCLUÍDA COM SUCESSO!")
     else:
-        print("⚠️ MÓDULO PET SHOP - FASE 3: PROBLEMAS DETECTADOS")
+        print("⚠️ ENDPOINT ADMINISTRATIVO DE LIMPEZA: PROBLEMAS DETECTADOS")
         print("❌ Algumas funcionalidades precisam de correção")
         print("📋 Verifique os detalhes dos testes acima para identificar os problemas")
+        print("🔍 Possíveis causas:")
+        print("   - Credenciais de login incorretas")
+        print("   - Endpoint não implementado ou inacessível")
+        print("   - Problemas de segurança/autorização")
+        print("   - Falhas na execução da limpeza")
+        print("   - Dados do usuário principal não preservados")
