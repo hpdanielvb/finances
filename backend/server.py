@@ -4321,7 +4321,7 @@ async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
                 performance_summary={}
             )
         
-        # Calcular estatísticas
+        # Calcular estatísticas básicas
         total_consortiums = len(consortiums)
         active_consortiums = len([c for c in consortiums if c["status"] == "Ativo"])
         contemplated_consortiums = len([c for c in consortiums if c["contemplated"]])
@@ -4350,7 +4350,9 @@ async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
                     "due_date": next_due.isoformat(),
                     "amount": consortium["monthly_installment"],
                     "installment_number": consortium["paid_installments"] + 1,
-                    "days_until_due": (next_due - datetime.utcnow()).days
+                    "days_until_due": (next_due - datetime.utcnow()).days,
+                    "type": consortium["type"],
+                    "administrator": consortium["administrator"]
                 })
         
         # Ordenar por data de vencimento
@@ -4361,7 +4363,16 @@ async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
         for consortium in consortiums:
             if consortium["status"] == "Ativo" and not consortium["contemplated"]:
                 projection = await calculate_contemplation_projection(consortium)
-                contemplation_projections.append(projection.dict())
+                contemplation_projections.append({
+                    "consortium_id": projection.consortium_id,
+                    "consortium_name": projection.consortium_name,
+                    "completion_percentage": projection.completion_percentage,
+                    "estimated_contemplation_date": projection.estimated_contemplation_date.isoformat(),
+                    "probability_score": projection.probability_score,
+                    "contemplation_methods": projection.contemplation_methods,
+                    "monthly_installment": projection.monthly_installment,
+                    "total_remaining": projection.total_remaining
+                })
         
         # Ordenar por probabilidade (maior primeiro)
         contemplation_projections.sort(key=lambda x: x["probability_score"], reverse=True)
@@ -4374,7 +4385,9 @@ async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
             "average_completion_percentage": round(avg_completion, 2),
             "average_monthly_payment": round(avg_monthly_payment, 2),
             "total_portfolio_value": sum(c["total_value"] for c in consortiums),
-            "contemplation_rate": (contemplated_consortiums / total_consortiums * 100) if total_consortiums > 0 else 0
+            "contemplation_rate": (contemplated_consortiums / total_consortiums * 100) if total_consortiums > 0 else 0,
+            "average_installment_count": sum(c["installment_count"] for c in consortiums) / len(consortiums),
+            "total_monthly_commitment": sum(c["monthly_installment"] for c in consortiums if c["status"] == "Ativo")
         }
         
         return ConsortiumDashboard(
@@ -4385,7 +4398,7 @@ async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
             suspended_consortiums=suspended_consortiums,
             total_invested=total_invested,
             total_pending=total_pending,
-            next_payments=next_payments[:5],  # Próximos 5 pagamentos
+            next_payments=next_payments[:10],  # Próximos 10 pagamentos
             contemplation_projections=contemplation_projections,
             performance_summary=performance_summary
         )
