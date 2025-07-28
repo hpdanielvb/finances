@@ -41,12 +41,13 @@ SECRET_KEY = "orçazen_financeiro_secret_key_2025_ultra_secure_brasil"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30  # 30 days for better persistence
 
-# Email Configuration (para MVP - usar simulado)
-EMAIL_FROM = "noreply@orcazenfinanceiro.com.br"
-SMTP_SERVER = "smtp.gmail.com"  # Simulado para MVP
-SMTP_PORT = 587
-SMTP_USERNAME = os.environ.get('SMTP_USERNAME', 'demo@orcazen.com')
+# Email Configuration
+EMAIL_FROM = os.environ.get('EMAIL_FROM', "OrçaZenFinanceiro <noreply@orcazenfinanceiro.com>")
+SMTP_SERVER = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+SMTP_USERNAME = os.environ.get('SMTP_USER', 'demo@orcazen.com')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'demo_password')
+EMAIL_ENABLED = os.environ.get('EMAIL_ENABLED', 'false').lower() == 'true'
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://orcazenfinanceiro.com.br')
 
 app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
