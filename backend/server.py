@@ -4731,6 +4731,11 @@ async def list_sales(
         
         sales = await db.sales.find(query).sort("sale_date", -1).to_list(100)
         
+        # Remove MongoDB ObjectId fields for JSON serialization
+        for sale in sales:
+            if "_id" in sale:
+                del sale["_id"]
+        
         return sales
         
     except Exception as e:
