@@ -10365,6 +10365,254 @@ OrçaZen Pet Shop
   );
 };
 
+// 🔍 Global Search Bar Component
+const GlobalSearchBar = ({ isVisible, onToggle, searchQuery, onSearchChange, searchResults }) => {
+  const searchRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (isVisible && searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, [isVisible]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        onToggle();
+      }
+    };
+
+    if (isVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isVisible, onToggle]);
+
+  return (
+    <div className="flex-1 max-w-2xl mx-4">
+      <div className="relative" ref={searchRef}>
+        {!isVisible ? (
+          <button
+            onClick={onToggle}
+            className="w-full flex items-center px-4 py-2 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Search className="w-5 h-5 mr-3" />
+            <span>Buscar produtos, clientes, módulos...</span>
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center bg-white border-2 border-blue-500 rounded-lg shadow-lg">
+              <Search className="w-5 h-5 ml-3 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder="Digite para buscar..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full px-3 py-3 bg-transparent outline-none text-gray-900"
+              />
+              <button
+                onClick={onToggle}
+                className="p-2 m-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Results Dropdown */}
+            {searchResults.length > 0 && (
+              <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-xl border max-h-96 overflow-y-auto">
+                {searchResults.map((category, categoryIndex) => (
+                  <div key={categoryIndex} className="p-2">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase bg-gray-50 rounded-t">
+                      {category.category}
+                    </div>
+                    {category.items.map((item, itemIndex) => (
+                      <button
+                        key={itemIndex}
+                        onClick={item.action}
+                        className="w-full text-left px-3 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      >
+                        <div className="flex items-center">
+                          {item.icon && <span className="mr-3 text-lg">{item.icon}</span>}
+                          <div>
+                            <div className="font-medium text-gray-900">{item.title}</div>
+                            <div className="text-sm text-gray-600">{item.subtitle}</div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                
+                {searchQuery && searchResults.length === 0 && (
+                  <div className="p-4 text-center text-gray-500">
+                    <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p>Nenhum resultado encontrado</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 📱 Sidebar Component
+const SidebarComponent = ({ collapsed, onToggle, activeView, onViewChange, onCreditCardsClick }) => {
+  const [showPetShopSubmenu, setShowPetShopSubmenu] = useState(false);
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'blue' },
+    { id: 'transactions', label: 'Transações', icon: CreditCard, color: 'green' },
+    { id: 'accounts', label: 'Contas', icon: PiggyBank, color: 'purple' },
+    { id: 'goals', label: 'Metas', icon: Target, color: 'pink' },
+    { id: 'budgets', label: 'Orçamentos', icon: TrendingUp, color: 'orange' },
+    { id: 'ai', label: 'IA Financeira', icon: Settings, color: 'indigo', emoji: '🧠' },
+    { id: 'consortiums', label: 'Consórcios', icon: DollarSign, color: 'emerald', emoji: '🏠' },
+    { id: 'credit-cards', label: 'Cartões', icon: CreditCard, color: 'amber', emoji: '💳', action: onCreditCardsClick },
+    { id: 'profile', label: 'Perfil', icon: Settings, color: 'slate', emoji: '👤' },
+    { id: 'import', label: 'Importar', icon: Upload, color: 'teal', emoji: '📄' },
+    { id: 'contracts', label: 'Contratos', icon: FileText, color: 'violet', emoji: '🏠' }
+  ];
+
+  const petShopSubmenu = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'products', label: 'Produtos', icon: Package },
+    { id: 'sales', label: 'Vendas', icon: ShoppingCart },
+    { id: 'stock-alert', label: 'Estoque Baixo', icon: AlertTriangle }
+  ];
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Sidebar Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          {!collapsed && (
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">O</span>
+              </div>
+              <span className="font-bold text-gray-900">OrçaZen</span>
+            </div>
+          )}
+          <button
+            onClick={onToggle}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {collapsed ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Menu */}
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeView === item.id;
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => item.action ? item.action() : onViewChange(item.id)}
+              className={`w-full flex items-center ${collapsed ? 'justify-center p-3' : 'px-3 py-3'} rounded-lg transition-all group ${
+                isActive 
+                  ? `bg-${item.color}-100 text-${item.color}-700 shadow-sm`
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              title={collapsed ? item.label : undefined}
+            >
+              {item.emoji ? (
+                <span className="text-xl">{item.emoji}</span>
+              ) : (
+                <Icon className={`w-5 h-5 ${collapsed ? '' : 'mr-3'}`} />
+              )}
+              {!collapsed && (
+                <span className="font-medium">{item.label}</span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Pet Shop com Submenu */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              if (collapsed) {
+                onViewChange('petshop');
+              } else {
+                setShowPetShopSubmenu(!showPetShopSubmenu);
+              }
+            }}
+            className={`w-full flex items-center ${collapsed ? 'justify-center p-3' : 'px-3 py-3 justify-between'} rounded-lg transition-all group ${
+              activeView === 'petshop'
+                ? 'bg-pink-100 text-pink-700 shadow-sm'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+            title={collapsed ? 'Pet Shop' : undefined}
+          >
+            <div className="flex items-center">
+              <span className="text-xl">🐾</span>
+              {!collapsed && <span className="font-medium ml-3">Pet Shop</span>}
+            </div>
+            {!collapsed && (
+              <svg 
+                className={`w-4 h-4 transition-transform ${showPetShopSubmenu ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            )}
+          </button>
+
+          {/* Pet Shop Submenu */}
+          {showPetShopSubmenu && !collapsed && (
+            <div className="ml-6 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+              {petShopSubmenu.map((subItem) => {
+                const SubIcon = subItem.icon;
+                return (
+                  <button
+                    key={subItem.id}
+                    onClick={() => {
+                      onViewChange('petshop');
+                      // Aqui você pode adicionar lógica para definir a sub-view do pet shop
+                    }}
+                    className="w-full flex items-center px-3 py-2 rounded-lg transition-all text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <SubIcon className="w-4 h-4 mr-2" />
+                    <span>{subItem.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Sidebar Footer */}
+      {!collapsed && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="text-xs text-gray-500 text-center">
+            <p>OrçaZen Financeiro</p>
+            <p>v1.0.0 - PWA</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
