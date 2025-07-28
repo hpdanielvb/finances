@@ -9163,7 +9163,22 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onSho
           ) : (
             <div className="space-y-3">
               {sales.slice(0, 5).map((sale) => (
-                <div key={sale.id} className="p-3 border border-gray-200 rounded-lg">
+                <div key={sale.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                     onClick={() => {
+                       const receiptData = {
+                         id: sale.id,
+                         receipt_number: `VD${String(sale.id).padStart(4, '0')}`,
+                         customer: sale.customer || 'Cliente não informado',
+                         payment_method: sale.payment_method,
+                         subtotal: sale.subtotal || sale.total,
+                         discount: sale.discount || 0,
+                         total: sale.total,
+                         notes: sale.notes || '',
+                         items: sale.items || [],
+                         created_at: sale.created_at
+                       };
+                       onShowReceipt(receiptData);
+                     }}>
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-900">
@@ -9186,6 +9201,9 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onSho
                       </p>
                       <p className="text-xs text-gray-500">
                         {sale.items?.length || 0} itens
+                      </p>
+                      <p className="text-xs text-blue-600 hover:text-blue-800 mt-1">
+                        Ver comprovante →
                       </p>
                     </div>
                   </div>
