@@ -4557,6 +4557,10 @@ async def get_product(
         if not product:
             raise HTTPException(status_code=404, detail="Produto não encontrado")
         
+        # Remove MongoDB ObjectId for JSON serialization
+        if "_id" in product:
+            del product["_id"]
+        
         return product
         
     except HTTPException:
