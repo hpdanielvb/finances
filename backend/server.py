@@ -4462,6 +4462,337 @@ async def delete_contract(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao deletar contrato: {str(e)}")
 
+# ============================================================================
+# 🐾 PET SHOP ENDPOINTS - PHASE 3
+# ============================================================================
+
+@api_router.post("/petshop/products", response_model=Dict[str, Any])
+async def create_product(
+    product_data: ProductCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Criar novo produto para o pet shop"""
+    try:
+        # Verificar se SKU já existe
+        existing_product = await db.products.find_one({
+            "user_id": current_user.id,
+            "sku": product_data.sku
+        })
+        
+        if existing_product:
+            raise HTTPException(status_code=400, detail="SKU já existe para este usuário")
+        
+        # Criar produto
+        product = Product(
+            user_id=current_user.id,
+            **product_data.dict()
+        ).dict()
+        
+        await db.products.insert_one(product)
+        
+        return {
+            "message": "Produto criado com sucesso!",
+            "product": product
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar produto: {str(e)}")
+
+@api_router.get("/petshop/products", response_model=List[Dict[str, Any]])
+async def list_products(
+    current_user: User = Depends(get_current_user),
+    category: Optional[str] = None,
+    low_stock: bool = False,
+    active_only: bool = True
+):
+    """Listar produtos do pet shop com filtros"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if category:
+            query["category"] = category
+            
+        if active_only:
+            query["is_active"] = True
+            
+        if low_stock:
+            # Produtos com estoque baixo
+            products = await check_low_stock_products(current_user.id)
+        else:
+            products = await db.products.find(query).sort("name", 1).to_list(100)
+        
+        return products
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar produtos: {str(e)}")
+
+@api_router.get("/petshop/products/{product_id}", response_model=Dict[str, Any])
+async def get_product(
+    product_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obter produto específico"""
+    try:
+        product = await db.products.find_one({
+            "id": product_id,
+            "user_id": current_user.id
+        })
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+        
+        return product
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar produto: {str(e)}")
+
+@api_router.put("/petshop/products/{product_id}", response_model=Dict[str, Any])
+async def update_product(
+    product_id: str,
+    product_update: ProductUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Atualizar produto"""
+    try:
+        existing_product = await db.products.find_one({
+            "id": product_id,
+            "user_id": current_user.id
+        })
+        
+        if not existing_product:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+        
+        # Preparar dados para atualização
+        update_data = {}
+        for field, value in product_update.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        update_data["updated_at"] = datetime.utcnow()
+        
+        await db.products.update_one(
+            {"id": product_id, "user_id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        # Buscar produto atualizado
+        updated_product = await db.products.find_one({
+            "id": product_id,
+            "user_id": current_user.id
+        })
+        
+        return {
+            "message": "Produto atualizado com sucesso!",
+            "product": updated_product
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar produto: {str(e)}")
+
+@api_router.delete("/petshop/products/{product_id}", response_model=Dict[str, str])
+async def delete_product(
+    product_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Deletar produto (soft delete)"""
+    try:
+        result = await db.products.update_one(
+            {"id": product_id, "user_id": current_user.id},
+            {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+        
+        return {"message": "Produto removido com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao remover produto: {str(e)}")
+
+@api_router.post("/petshop/sales", response_model=Dict[str, Any])
+async def create_sale(
+    sale_data: SaleCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Criar nova venda"""
+    try:
+        # Verificar estoque dos produtos
+        for item in sale_data.items:
+            product = await db.products.find_one({
+                "id": item["product_id"],
+                "user_id": current_user.id
+            })
+            
+            if not product:
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Produto {item.get('product_name', 'desconhecido')} não encontrado"
+                )
+            
+            if product["current_stock"] < item["quantity"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Estoque insuficiente para {product['name']}. Disponível: {product['current_stock']}"
+                )
+        
+        # Criar venda
+        sale = Sale(
+            user_id=current_user.id,
+            receipt_number=generate_receipt_number(),
+            **sale_data.dict()
+        ).dict()
+        
+        await db.sales.insert_one(sale)
+        
+        # Atualizar estoque dos produtos
+        for item in sale_data.items:
+            await update_product_stock(
+                item["product_id"], 
+                current_user.id, 
+                item["quantity"],
+                f"Venda {sale['receipt_number']}"
+            )
+        
+        # Criar transação financeira automática
+        try:
+            transaction_id = await create_financial_transaction_from_sale(sale, current_user.id)
+            sale["financial_transaction_id"] = transaction_id
+        except Exception as e:
+            print(f"Erro ao criar transação financeira: {e}")
+            # Venda continua mesmo se transação financeira falhar
+        
+        return {
+            "message": "Venda realizada com sucesso!",
+            "sale": sale,
+            "receipt_number": sale["receipt_number"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar venda: {str(e)}")
+
+@api_router.get("/petshop/sales", response_model=List[Dict[str, Any]])
+async def list_sales(
+    current_user: User = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    payment_method: Optional[str] = None
+):
+    """Listar vendas com filtros"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        # Filtro por data
+        if start_date or end_date:
+            date_filter = {}
+            if start_date:
+                date_filter["$gte"] = datetime.fromisoformat(start_date)
+            if end_date:
+                date_filter["$lte"] = datetime.fromisoformat(end_date)
+            query["sale_date"] = date_filter
+        
+        if payment_method:
+            query["payment_method"] = payment_method
+        
+        sales = await db.sales.find(query).sort("sale_date", -1).to_list(100)
+        
+        return sales
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar vendas: {str(e)}")
+
+@api_router.get("/petshop/dashboard", response_model=Dict[str, Any])
+async def get_petshop_dashboard(
+    current_user: User = Depends(get_current_user)
+):
+    """Dashboard do pet shop com estatísticas"""
+    try:
+        # Estatísticas de produtos
+        total_products = await db.products.count_documents({
+            "user_id": current_user.id,
+            "is_active": True
+        })
+        
+        low_stock_products = await check_low_stock_products(current_user.id)
+        
+        # Estatísticas de vendas (últimos 30 dias)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        recent_sales = await db.sales.find({
+            "user_id": current_user.id,
+            "sale_date": {"$gte": thirty_days_ago}
+        }).to_list(1000)
+        
+        total_sales_count = len(recent_sales)
+        total_revenue = sum(sale["total"] for sale in recent_sales)
+        
+        # Top produtos vendidos
+        product_sales = {}
+        for sale in recent_sales:
+            for item in sale["items"]:
+                product_name = item["product_name"]
+                if product_name not in product_sales:
+                    product_sales[product_name] = {"quantity": 0, "revenue": 0}
+                product_sales[product_name]["quantity"] += item["quantity"]
+                product_sales[product_name]["revenue"] += item["total"]
+        
+        top_products = sorted(
+            product_sales.items(), 
+            key=lambda x: x[1]["quantity"], 
+            reverse=True
+        )[:5]
+        
+        return {
+            "total_products": total_products,
+            "low_stock_count": len(low_stock_products),
+            "low_stock_products": low_stock_products,
+            "total_sales_30_days": total_sales_count,
+            "total_revenue_30_days": total_revenue,
+            "top_products": top_products,
+            "recent_sales": recent_sales[:10]  # Últimas 10 vendas
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao carregar dashboard: {str(e)}")
+
+@api_router.get("/petshop/receipt/{receipt_number}", response_model=Dict[str, Any])
+async def get_receipt(
+    receipt_number: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obter comprovante de venda"""
+    try:
+        sale = await db.sales.find_one({
+            "receipt_number": receipt_number,
+            "user_id": current_user.id
+        })
+        
+        if not sale:
+            raise HTTPException(status_code=404, detail="Comprovante não encontrado")
+        
+        return {
+            "sale": sale,
+            "business_info": {
+                "name": "Pet Shop",
+                "owner": current_user.name,
+                "date": sale["sale_date"].isoformat()
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar comprovante: {str(e)}")
+
 # Include router
 app.include_router(api_router)
 
