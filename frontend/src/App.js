@@ -8139,6 +8139,19 @@ const PetShopView = () => {
           onRefresh={loadPetShopData}
         />
       )}
+
+      {/* Modal de Produto */}
+      {showProductModal && (
+        <PetShopProductModal
+          product={editingProduct}
+          onClose={() => {
+            setShowProductModal(false);
+            setEditingProduct(null);
+          }}
+          onCreate={handleCreateProduct}
+          onUpdate={handleUpdateProduct}
+        />
+      )}
     </div>
   );
 };
