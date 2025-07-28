@@ -616,7 +616,8 @@ const Dashboard = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState([]);
 
-  // 🏠 Contracts States
+  // Mobile menu state
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [contracts, setContracts] = useState([]);
   const [showContractModal, setShowContractModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
