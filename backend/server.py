@@ -5236,6 +5236,113 @@ async def test_email_sending(
             detail=f"Erro interno no envio de e-mail: {str(e)}"
         )
 
+# ============================================================================
+# 🧹 ADMINISTRATIVE DATA CLEANUP ENDPOINTS (TEMPORARY)
+# ============================================================================
+
+@api_router.post("/admin/cleanup-data")
+async def cleanup_example_data(current_user: User = Depends(get_current_user)):
+    """
+    Endpoint administrativo temporário para limpeza de dados de exemplo.
+    Mantém apenas o usuário hpdanielvb@gmail.com e remove todos os outros usuários e dados relacionados.
+    """
+    try:
+        # Verificar se o usuário atual é o usuário principal
+        if current_user.email != "hpdanielvb@gmail.com":
+            raise HTTPException(
+                status_code=403, 
+                detail="Acesso negado. Apenas o usuário principal pode executar esta operação."
+            )
+        
+        cleanup_summary = {
+            "users_removed": 0,
+            "transactions_removed": 0,
+            "accounts_removed": 0,
+            "categories_removed": 0,
+            "goals_removed": 0,
+            "budgets_removed": 0,
+            "sales_removed": 0,
+            "products_removed": 0,
+            "contracts_removed": 0,
+            "import_sessions_removed": 0,
+            "stock_movements_removed": 0,
+            "main_user_kept": current_user.email
+        }
+        
+        print(f"[CLEANUP] Iniciando limpeza de dados de exemplo...")
+        print(f"[CLEANUP] Usuário principal mantido: {current_user.email}")
+        
+        # Buscar todos os usuários exceto o principal
+        other_users = await db.users.find({"email": {"$ne": "hpdanielvb@gmail.com"}}).to_list(1000)
+        other_user_ids = [user["id"] for user in other_users]
+        
+        print(f"[CLEANUP] Encontrados {len(other_users)} usuários para remoção")
+        
+        if other_user_ids:
+            # Remover transações de outros usuários
+            transactions_result = await db.transactions.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["transactions_removed"] = transactions_result.deleted_count
+            
+            # Remover contas de outros usuários
+            accounts_result = await db.accounts.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["accounts_removed"] = accounts_result.deleted_count
+            
+            # Remover categorias de outros usuários (exceto categorias customizadas importantes)
+            categories_result = await db.categories.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["categories_removed"] = categories_result.deleted_count
+            
+            # Remover metas de outros usuários
+            goals_result = await db.goals.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["goals_removed"] = goals_result.deleted_count
+            
+            # Remover orçamentos de outros usuários
+            budgets_result = await db.budgets.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["budgets_removed"] = budgets_result.deleted_count
+            
+            # Remover vendas de outros usuários
+            sales_result = await db.sales.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["sales_removed"] = sales_result.deleted_count
+            
+            # Remover produtos de outros usuários
+            products_result = await db.products.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["products_removed"] = products_result.deleted_count
+            
+            # Remover contratos de outros usuários
+            contracts_result = await db.contracts.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["contracts_removed"] = contracts_result.deleted_count
+            
+            # Remover sessões de importação de outros usuários
+            import_sessions_result = await db.import_sessions.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["import_sessions_removed"] = import_sessions_result.deleted_count
+            
+            # Remover movimentações de estoque de outros usuários
+            stock_movements_result = await db.stock_movements.delete_many({"user_id": {"$in": other_user_ids}})
+            cleanup_summary["stock_movements_removed"] = stock_movements_result.deleted_count
+            
+            # Por último, remover os outros usuários
+            users_result = await db.users.delete_many({"id": {"$in": other_user_ids}})
+            cleanup_summary["users_removed"] = users_result.deleted_count
+        
+        print(f"[CLEANUP] Limpeza concluída com sucesso!")
+        print(f"[CLEANUP] Resumo: {cleanup_summary}")
+        
+        return {
+            "message": "Limpeza de dados de exemplo concluída com sucesso!",
+            "summary": cleanup_summary,
+            "main_user_preserved": {
+                "email": current_user.email,
+                "name": current_user.name,
+                "id": current_user.id
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CLEANUP ERROR] {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro durante limpeza: {str(e)}")
+
 # Include router
 app.include_router(api_router)
 
