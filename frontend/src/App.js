@@ -616,6 +616,10 @@ const Dashboard = () => {
   const [contracts, setContracts] = useState([]);
   const [showContractModal, setShowContractModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
+
+  // 🐾 Pet Shop states
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [contractsLoading, setContractsLoading] = useState(false);
   const [contractFilters, setContractFilters] = useState({
     tipo: '',
