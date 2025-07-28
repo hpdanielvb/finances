@@ -7968,7 +7968,7 @@ const PetShopView = () => {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // States para modais
+  // States para modais locais
   const [showProductModal, setShowProductModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -7997,6 +7997,49 @@ const PetShopView = () => {
       toast.error('Erro ao carregar dados do Pet Shop');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Funções para gerenciar produtos
+  const handleCreateProduct = async (productData) => {
+    try {
+      console.log('Creating product:', productData);
+      const response = await axios.post(`${API}/petshop/products`, productData);
+      
+      toast.success('Produto criado com sucesso!');
+      setShowProductModal(false);
+      setEditingProduct(null);
+      
+      // Recarregar dados
+      await loadPetShopData();
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      if (error.response?.data?.detail?.includes('SKU')) {
+        toast.error('SKU já existe! Use um código único.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Erro ao criar produto');
+      }
+    }
+  };
+
+  const handleUpdateProduct = async (productId, productData) => {
+    try {
+      console.log('Updating product:', productId, productData);
+      const response = await axios.put(`${API}/petshop/products/${productId}`, productData);
+      
+      toast.success('Produto atualizado com sucesso!');
+      setShowProductModal(false);
+      setEditingProduct(null);
+      
+      // Recarregar dados
+      await loadPetShopData();
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      if (error.response?.data?.detail?.includes('SKU')) {
+        toast.error('SKU já existe! Use um código único.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Erro ao atualizar produto');
+      }
     }
   };
 
