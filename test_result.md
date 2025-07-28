@@ -105,6 +105,18 @@
 user_problem_statement: "Implementar OrçaZenFinanceiro COMPLETO com TODAS as funcionalidades: autenticação robusta com persistência de sessão, gestão completa de contas, transações avançadas com recorrência, orçamentos, relatórios com gráficos, transferências entre contas, upload de comprovantes, categorias brasileiras abrangentes, e interface premium responsiva"
 
 backend:
+  - task: "Administrative Data Cleanup - Phase 1"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "FASE I INICIADA: Implementação de endpoint administrativo temporário para limpeza de dados de exemplo. Criado POST /api/admin/cleanup-data que remove todos os usuários exceto hpdanielvb@gmail.com e todos os dados relacionados (transações, contas, categorias, metas, orçamentos, vendas, produtos, contratos, sessões de importação, movimentações de estoque). Endpoint com verificação de segurança - apenas usuário principal pode executar. Pronto para teste da limpeza de dados."
+
   - task: "File Import System Backend API"
     implemented: true
     working: true
