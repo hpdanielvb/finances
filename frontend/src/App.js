@@ -8844,7 +8844,7 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onSho
         }))
       };
 
-      const response = await axios.post(`${API}/petshop/sales`, saleData);
+      toast.success('Venda realizada com sucesso! 🎉');
       
       // Preparar dados do comprovante
       const receiptData = {
@@ -8864,11 +8864,8 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh, onSho
         created_at: new Date().toISOString()
       };
       
-      toast.success('Venda realizada com sucesso! 🎉');
-      
       // Mostrar comprovante
-      setCurrentReceipt(receiptData);
-      setShowReceiptModal(true);
+      onShowReceipt(receiptData);
       
       // Limpar carrinho e formulário
       setCart([]);
