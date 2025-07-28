@@ -8958,6 +8958,276 @@ const PetShopProductModal = ({ product, onClose, onCreate, onUpdate }) => {
   );
 };
 
+// 🐾 Pet Shop Stock Movement Modal Component
+const PetShopStockModal = ({ product, onClose, onMovement }) => {
+  const [formData, setFormData] = useState({
+    type: 'entrada',
+    quantity: '',
+    reason: '',
+    notes: ''
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // Razões pré-definidas para movimentação
+  const entryReasons = [
+    'Compra', 'Devolução de cliente', 'Ajuste de inventário', 
+    'Transferência', 'Promoção', 'Outros'
+  ];
+
+  const exitReasons = [
+    'Venda', 'Avaria', 'Vencimento', 'Perda', 
+    'Transferência', 'Amostra', 'Outros'
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validações
+      if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
+        toast.error('Quantidade deve ser maior que zero');
+        return;
+      }
+
+      if (!formData.reason) {
+        toast.error('Selecione um motivo para a movimentação');
+        return;
+      }
+
+      // Validação para saída (não pode ser maior que estoque atual)
+      if (formData.type === 'saida' && parseFloat(formData.quantity) > product.current_quantity) {
+        toast.error(`Quantidade não pode ser maior que o estoque atual (${product.current_quantity})`);
+        return;
+      }
+
+      const movementData = {
+        product_id: product.id,
+        type: formData.type,
+        quantity: parseInt(formData.quantity),
+        reason: formData.reason,
+        notes: formData.notes.trim()
+      };
+
+      await onMovement(movementData);
+    } catch (error) {
+      console.error('Erro no formulário de movimentação:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Package className="w-6 h-6 text-blue-600" />
+              Movimentar Estoque
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* Informações do Produto */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                <p className="text-sm text-gray-600">SKU: {product.sku}</p>
+                <p className="text-sm text-gray-600 capitalize">Categoria: {product.category}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Estoque Atual</p>
+                <p className={`text-2xl font-bold ${
+                  product.current_quantity <= product.minimum_stock ? 'text-red-600' : 'text-gray-900'
+                }`}>
+                  {product.current_quantity} un.
+                </p>
+                <p className="text-xs text-gray-500">Mín: {product.minimum_stock}</p>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Tipo de Movimentação */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Tipo de Movimentação *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, type: 'entrada', reason: ''})}
+                  className={`p-4 rounded-lg border-2 transition-all text-center ${
+                    formData.type === 'entrada'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 hover:border-green-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Plus className="w-5 h-5" />
+                    <span className="font-medium">ENTRADA</span>
+                  </div>
+                  <p className="text-sm">Adicionar produtos ao estoque</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, type: 'saida', reason: ''})}
+                  className={`p-4 rounded-lg border-2 transition-all text-center ${
+                    formData.type === 'saida'
+                      ? 'border-red-500 bg-red-50 text-red-700'
+                      : 'border-gray-200 hover:border-red-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Trash2 className="w-5 h-5" />
+                    <span className="font-medium">SAÍDA</span>
+                  </div>
+                  <p className="text-sm">Remover produtos do estoque</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Quantidade e Motivo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quantidade *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={formData.type === 'saida' ? product.current_quantity : undefined}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                  placeholder="Digite a quantidade"
+                />
+                {formData.type === 'saida' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Máximo disponível: {product.current_quantity} unidades
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Motivo *
+                </label>
+                <select
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.reason}
+                  onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                >
+                  <option value="">Selecione o motivo</option>
+                  {(formData.type === 'entrada' ? entryReasons : exitReasons).map(reason => (
+                    <option key={reason} value={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Prévia do Novo Estoque */}
+            {formData.quantity && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Prévia da Movimentação:</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Estoque Atual</p>
+                    <p className="font-semibold">{product.current_quantity} un.</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">
+                      {formData.type === 'entrada' ? 'Entrada' : 'Saída'}
+                    </p>
+                    <p className={`font-semibold ${formData.type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                      {formData.type === 'entrada' ? '+' : '-'}{formData.quantity} un.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Novo Estoque</p>
+                    <p className={`font-semibold ${
+                      (formData.type === 'entrada' 
+                        ? product.current_quantity + parseInt(formData.quantity || 0)
+                        : product.current_quantity - parseInt(formData.quantity || 0)
+                      ) <= product.minimum_stock ? 'text-red-600' : 'text-gray-900'
+                    }`}>
+                      {formData.type === 'entrada' 
+                        ? product.current_quantity + parseInt(formData.quantity || 0)
+                        : product.current_quantity - parseInt(formData.quantity || 0)
+                      } un.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Observações */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Observações
+              </label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Observações adicionais sobre a movimentação..."
+                rows="3"
+              />
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className={`px-6 py-2 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                  formData.type === 'entrada'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                    : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700'
+                }`}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    {formData.type === 'entrada' ? 'Confirmar Entrada' : 'Confirmar Saída'}
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
