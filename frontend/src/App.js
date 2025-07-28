@@ -44,6 +44,11 @@ const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // Monitor user state changes
+  useEffect(() => {
+    console.log('🔄 User state changed:', user);
+  }, [user]);
+
   const login = async (email, password) => {
     try {
       console.log('🔄 Tentando login para:', email);
@@ -54,16 +59,24 @@ const AuthProvider = ({ children }) => {
       
       // Update state immediately and synchronously
       setToken(access_token);
-      setUser(user);
       localStorage.setItem('token', access_token);
       localStorage.setItem('user', JSON.stringify(user));
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+      console.log('✅ About to set user state:', user);
+      setUser(user);
+      console.log('✅ User state set, current user:', user);
       
       console.log('✅ Login successful, state updated:', user);
       toast.success(`Bem-vindo, ${user.name}!`);
       
       // Force a re-render by triggering a state change
       setLoading(false);
+      
+      // Add a small delay to ensure state propagation
+      setTimeout(() => {
+        console.log('🔄 Final user state check:', user);
+      }, 100);
       
       return { success: true };
     } catch (error) {
