@@ -9977,6 +9977,202 @@ const PetShopStockModal = ({ product, onClose, onMovement }) => {
   );
 };
 
+// 🧾 Pet Shop Receipt Modal Component
+const PetShopReceiptModal = ({ receipt, onClose }) => {
+  if (!receipt) return null;
+
+  const receiptDate = new Date(receipt.created_at || Date.now());
+  const receiptNumber = receipt.receipt_number || `VD${String(receipt.id || Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('receipt-content');
+    const originalContent = document.body.innerHTML;
+    
+    document.body.innerHTML = printContent.innerHTML;
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+  };
+
+  const handleDownload = () => {
+    const element = document.getElementById('receipt-content');
+    const receiptText = `
+COMPROVANTE DE VENDA - PETSHOP
+==========================================
+Número: ${receiptNumber}
+Data: ${receiptDate.toLocaleDateString('pt-BR')} às ${receiptDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+Cliente: ${receipt.customer || 'Cliente não informado'}
+Forma de Pagamento: ${receipt.payment_method?.replace('_', ' ').toUpperCase() || 'PIX'}
+
+PRODUTOS:
+------------------------------------------
+${receipt.items?.map(item => 
+  `${item.product?.name || 'Produto'} - ${item.quantity}x ${formatCurrency(item.unit_price)} = ${formatCurrency(item.quantity * item.unit_price)}`
+).join('\n') || ''}
+
+------------------------------------------
+Subtotal: ${formatCurrency(receipt.subtotal || 0)}
+Desconto (${receipt.discount || 0}%): -${formatCurrency(((receipt.subtotal || 0) * (receipt.discount || 0)) / 100)}
+TOTAL: ${formatCurrency(receipt.total || 0)}
+
+${receipt.notes ? `Observações: ${receipt.notes}` : ''}
+
+Obrigado pela preferência!
+OrçaZen Pet Shop
+==========================================
+    `.trim();
+
+    const blob = new Blob([receiptText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Comprovante_${receiptNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="w-6 h-6 text-green-600" />
+              Comprovante de Venda
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div id="receipt-content" className="p-8">
+          {/* Header do Comprovante */}
+          <div className="text-center border-b-2 border-gray-200 pb-6 mb-6">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-lg mb-4">
+              <h1 className="text-2xl font-bold">🐾 OrçaZen Pet Shop</h1>
+              <p className="text-purple-100">Tudo para seu melhor amigo</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="text-left">
+                <p className="font-semibold text-gray-900">Comprovante: #{receiptNumber}</p>
+                <p className="text-gray-600">
+                  {receiptDate.toLocaleDateString('pt-BR')} às {receiptDate.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-gray-900">Cliente:</p>
+                <p className="text-gray-600">{receipt.customer || 'Cliente não informado'}</p>
+                <p className="text-xs text-gray-500 mt-1 capitalize">
+                  Pagamento: {receipt.payment_method?.replace('_', ' ') || 'PIX'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de Produtos */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Produtos Vendidos</h3>
+            <div className="space-y-3">
+              {receipt.items?.map((item, index) => (
+                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{item.product?.name || 'Produto'}</p>
+                    <p className="text-sm text-gray-600">
+                      SKU: {item.product?.sku || 'N/A'} | {item.product?.category || 'Categoria'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">
+                      {item.quantity}x {formatCurrency(item.unit_price)}
+                    </p>
+                    <p className="font-bold text-green-600">
+                      {formatCurrency(item.quantity * item.unit_price)}
+                    </p>
+                  </div>
+                </div>
+              )) || []}
+            </div>
+          </div>
+
+          {/* Totais */}
+          <div className="border-t-2 border-gray-200 pt-4 mb-6">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-medium">{formatCurrency(receipt.subtotal || 0)}</span>
+              </div>
+              
+              {receipt.discount > 0 && (
+                <div className="flex justify-between text-red-600">
+                  <span>Desconto ({receipt.discount}%):</span>
+                  <span>-{formatCurrency(((receipt.subtotal || 0) * receipt.discount) / 100)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-xl font-bold border-t pt-2">
+                <span>TOTAL:</span>
+                <span className="text-green-600">{formatCurrency(receipt.total || 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Observações */}
+          {receipt.notes && (
+            <div className="mb-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Observações:</h4>
+              <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{receipt.notes}</p>
+            </div>
+          )}
+
+          {/* Rodapé */}
+          <div className="text-center border-t-2 border-gray-200 pt-4">
+            <p className="text-lg font-semibold text-green-600 mb-2">✨ Obrigado pela preferência! ✨</p>
+            <p className="text-sm text-gray-600">Volte sempre ao OrçaZen Pet Shop</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Comprovante gerado em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}
+            </p>
+          </div>
+        </div>
+
+        {/* Botões de Ação */}
+        <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-200 rounded-b-xl">
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={handleDownload}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Download size={16} />
+              Baixar TXT
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <FileText size={16} />
+              Imprimir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function AppWrapper() {
   return (
     <AuthProvider>
