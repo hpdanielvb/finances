@@ -3015,6 +3015,7 @@ const Dashboard = () => {
           <PetShopView />
         )}
       </div>
+        </main>
 
       {/* Fixed Quick Actions - Show when scrolled on dashboard */}
       {showFixedActions && (
