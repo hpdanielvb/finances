@@ -165,10 +165,14 @@ def test_automatic_recurrence_system():
                                       json=salary_rule_data, headers=headers)
         
         if create_response.status_code == 200:
-            created_rule = create_response.json()
-            rule_id = created_rule["id"]
+            create_result = create_response.json()
+            created_rule = create_result.get("rule", {})
+            rule_id = created_rule.get("id")
+            if not rule_id:
+                print_test_result("CREATE RECURRENCE RULE", False, "No rule ID in response")
+                return False
             print_test_result("CREATE RECURRENCE RULE", True, 
-                            f"Salary rule created: {created_rule['name']}")
+                            f"Salary rule created: {created_rule.get('name', 'Unknown')}")
             
             # GET - List Rules
             list_response = requests.get(f"{BACKEND_URL}/recurrence/rules", headers=headers)
