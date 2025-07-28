@@ -2937,6 +2937,125 @@ async def update_contract_status(contract_id: str, user_id: str):
             )
     return new_status
 
+# ============================================================================
+# 🐾 PET SHOP HELPER FUNCTIONS - PHASE 3
+# ============================================================================
+
+def generate_receipt_number():
+    """
+    Gera número único para comprovante de venda
+    """
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    random_suffix = str(uuid.uuid4())[:4].upper()
+    return f"PS{timestamp}{random_suffix}"
+
+async def update_product_stock(product_id: str, user_id: str, quantity_sold: int, reason: str = "venda"):
+    """
+    Atualiza estoque do produto e registra movimentação
+    """
+    product = await db.products.find_one({"id": product_id, "user_id": user_id})
+    if not product:
+        raise ValueError("Produto não encontrado")
+    
+    previous_stock = product["current_stock"]
+    new_stock = previous_stock - quantity_sold
+    
+    if new_stock < 0:
+        raise ValueError(f"Estoque insuficiente. Disponível: {previous_stock}, Solicitado: {quantity_sold}")
+    
+    # Atualizar estoque do produto
+    await db.products.update_one(
+        {"id": product_id, "user_id": user_id},
+        {"$set": {"current_stock": new_stock, "updated_at": datetime.utcnow()}}
+    )
+    
+    # Registrar movimentação de estoque
+    movement = StockMovement(
+        user_id=user_id,
+        product_id=product_id,
+        movement_type="saída",
+        quantity=quantity_sold,
+        reason=reason,
+        previous_stock=previous_stock,
+        new_stock=new_stock,
+        created_by=user_id
+    )
+    
+    await db.stock_movements.insert_one(movement.dict())
+    
+    return new_stock
+
+async def check_low_stock_products(user_id: str):
+    """
+    Verifica produtos com estoque baixo
+    """
+    products = await db.products.find({
+        "user_id": user_id,
+        "is_active": True,
+        "$expr": {"$lte": ["$current_stock", "$minimum_stock"]}
+    }).to_list(100)
+    
+    return products
+
+async def create_financial_transaction_from_sale(sale: dict, user_id: str):
+    """
+    Cria transação financeira automática a partir de venda do pet shop
+    """
+    # Buscar conta padrão ou primeira conta ativa
+    account = await db.accounts.find_one({
+        "user_id": user_id,
+        "type": {"$ne": "Cartão de Crédito"}
+    })
+    
+    if not account:
+        raise ValueError("Nenhuma conta encontrada para registrar a venda")
+    
+    # Buscar categoria "Pet Shop" ou criar se não existir
+    category = await db.categories.find_one({
+        "user_id": user_id,
+        "name": "Pet Shop"
+    })
+    
+    if not category:
+        # Criar categoria Pet Shop
+        pet_shop_category = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "name": "Pet Shop",
+            "type": "Receita",
+            "parent": None,
+            "created_at": datetime.utcnow()
+        }
+        await db.categories.insert_one(pet_shop_category)
+        category = pet_shop_category
+    
+    # Criar transação financeira
+    transaction = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "account_id": account["id"],
+        "category_id": category["id"],
+        "type": "Receita",
+        "description": f"Venda Pet Shop - {sale['receipt_number']}",
+        "value": sale["total"],
+        "transaction_date": sale["sale_date"],
+        "status": "Pago",
+        "payment_method": sale["payment_method"],
+        "notes": f"Venda automática do Pet Shop. Items: {len(sale['items'])} produto(s)",
+        "created_at": datetime.utcnow(),
+        "recurring": False
+    }
+    
+    await db.transactions.insert_one(transaction)
+    
+    # Atualizar saldo da conta
+    await db.accounts.update_one(
+        {"id": account["id"]},
+        {"$inc": {"current_balance": sale["total"]}}
+    )
+    
+    return transaction["id"]
+
 # Test endpoint for authentication debugging
 @api_router.get("/test/auth", response_model=Dict[str, Any])
 async def test_auth(current_user: User = Depends(get_current_user)):
