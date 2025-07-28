@@ -3949,6 +3949,222 @@ def calculate_next_due_date(consortium: Dict[str, Any]) -> str:
         return "N/A"
 
 # ============================================================================
+# 🔄 AUTOMATIC RECURRENCE SYSTEM HELPER FUNCTIONS
+# ============================================================================
+
+def calculate_next_execution_date(start_date: datetime, pattern: str, interval: int, last_execution: Optional[datetime] = None) -> datetime:
+    """Calcular próxima data de execução baseada no padrão de recorrência"""
+    base_date = last_execution if last_execution else start_date
+    
+    if pattern == "diario":
+        return base_date + timedelta(days=interval)
+    elif pattern == "semanal":
+        return base_date + timedelta(weeks=interval)
+    elif pattern == "mensal":
+        # Adicionar meses mantendo o dia do mês (ou último dia se inválido)
+        try:
+            if base_date.month + interval <= 12:
+                new_month = base_date.month + interval
+                new_year = base_date.year
+            else:
+                months_to_add = interval
+                new_year = base_date.year
+                new_month = base_date.month
+                
+                while months_to_add > 0:
+                    if new_month + months_to_add <= 12:
+                        new_month += months_to_add
+                        months_to_add = 0
+                    else:
+                        months_to_add -= (12 - new_month + 1)
+                        new_year += 1
+                        new_month = 1
+            
+            # Tentar criar data com o mesmo dia
+            try:
+                return base_date.replace(year=new_year, month=new_month)
+            except ValueError:
+                # Se o dia não existe no novo mês (ex: 31 em fevereiro), usar último dia do mês
+                import calendar
+                last_day = calendar.monthrange(new_year, new_month)[1]
+                return base_date.replace(year=new_year, month=new_month, day=last_day)
+        except:
+            return base_date + timedelta(days=30 * interval)  # Fallback
+            
+    elif pattern == "anual":
+        try:
+            return base_date.replace(year=base_date.year + interval)
+        except ValueError:
+            # Para anos bissextos (29 de fevereiro)
+            return base_date.replace(year=base_date.year + interval, day=28)
+    else:
+        raise ValueError(f"Padrão de recorrência inválido: {pattern}")
+
+def generate_recurrence_preview(rule: RecurrenceRule, months_ahead: int = 12) -> List[Dict[str, Any]]:
+    """Gerar preview das próximas transações baseadas na regra de recorrência"""
+    preview_transactions = []
+    current_date = rule.next_execution_date
+    end_preview_date = datetime.utcnow() + timedelta(days=30 * months_ahead)
+    
+    execution_count = 0
+    max_preview_transactions = 50  # Limite de segurança
+    
+    while (current_date <= end_preview_date and 
+           execution_count < max_preview_transactions and
+           (rule.end_date is None or current_date <= rule.end_date) and
+           (rule.max_executions is None or rule.total_executions + execution_count < rule.max_executions)):
+        
+        transaction_preview = {
+            "execution_date": current_date.isoformat(),
+            "description": rule.transaction_description,
+            "value": rule.transaction_value,
+            "type": rule.transaction_type,
+            "account_id": rule.account_id,
+            "category_id": rule.category_id,
+            "execution_number": rule.total_executions + execution_count + 1,
+            "observation": f"Transação recorrente: {rule.name}"
+        }
+        
+        preview_transactions.append(transaction_preview)
+        
+        # Calcular próxima data
+        current_date = calculate_next_execution_date(
+            current_date, rule.recurrence_pattern, rule.interval, current_date
+        )
+        execution_count += 1
+    
+    return preview_transactions
+
+async def create_transaction_from_recurrence(rule: RecurrenceRule, execution_date: datetime, user_id: str) -> str:
+    """Criar transação baseada em regra de recorrência"""
+    try:
+        # Criar transação
+        transaction = Transaction(
+            user_id=user_id,
+            description=rule.transaction_description,
+            value=rule.transaction_value,
+            type=rule.transaction_type,
+            transaction_date=execution_date,
+            account_id=rule.account_id,
+            category_id=rule.category_id,
+            observation=f"Transação recorrente automática: {rule.name}",
+            status="Pago",  # Transações automáticas são criadas como pagas
+            tags=rule.tags,
+            is_recurring=True,
+            recurrence_interval=rule.recurrence_pattern,
+            related_transaction_id=rule.id  # Relacionar com a regra de recorrência
+        )
+        
+        await db.transactions.insert_one(transaction.dict())
+        
+        # Atualizar saldo da conta
+        if rule.transaction_type == "Receita":
+            balance_change = rule.transaction_value
+        else:  # Despesa
+            balance_change = -rule.transaction_value
+            
+        await db.accounts.update_one(
+            {"id": rule.account_id, "user_id": user_id},
+            {"$inc": {"current_balance": balance_change}}
+        )
+        
+        return transaction.id
+        
+    except Exception as e:
+        print(f"[RECURRENCE ERROR] Erro ao criar transação: {e}")
+        raise e
+
+async def process_pending_recurrences(user_id: str) -> Dict[str, Any]:
+    """Processar recorrências pendentes para um usuário"""
+    try:
+        results = {
+            "processed_rules": 0,
+            "created_transactions": 0,
+            "created_suggestions": 0,
+            "errors": []
+        }
+        
+        # Buscar regras ativas que precisam ser executadas
+        active_rules = await db.recurrence_rules.find({
+            "user_id": user_id,
+            "is_active": True,
+            "next_execution_date": {"$lte": datetime.utcnow()}
+        }).to_list(100)
+        
+        for rule_data in active_rules:
+            try:
+                rule = RecurrenceRule(**rule_data)
+                results["processed_rules"] += 1
+                
+                if rule.auto_create and not rule.require_confirmation:
+                    # Criar transação automaticamente
+                    transaction_id = await create_transaction_from_recurrence(
+                        rule, rule.next_execution_date, user_id
+                    )
+                    results["created_transactions"] += 1
+                    
+                    # Atualizar regra
+                    next_date = calculate_next_execution_date(
+                        rule.next_execution_date, rule.recurrence_pattern, 
+                        rule.interval, rule.next_execution_date
+                    )
+                    
+                    await db.recurrence_rules.update_one(
+                        {"id": rule.id},
+                        {"$set": {
+                            "last_execution_date": rule.next_execution_date,
+                            "next_execution_date": next_date,
+                            "total_executions": rule.total_executions + 1,
+                            "updated_at": datetime.utcnow()
+                        }}
+                    )
+                    
+                else:
+                    # Criar sugestão para confirmação
+                    suggestion = PendingRecurrence(
+                        user_id=user_id,
+                        recurrence_rule_id=rule.id,
+                        suggested_date=rule.next_execution_date,
+                        transaction_data={
+                            "description": rule.transaction_description,
+                            "value": rule.transaction_value,
+                            "type": rule.transaction_type,
+                            "account_id": rule.account_id,
+                            "category_id": rule.category_id,
+                            "observation": f"Transação recorrente: {rule.name}"
+                        },
+                        expires_at=datetime.utcnow() + timedelta(days=7)  # Expira em 7 dias
+                    )
+                    
+                    await db.pending_recurrences.insert_one(suggestion.dict())
+                    results["created_suggestions"] += 1
+                    
+                    # Atualizar próxima data de execução da regra
+                    next_date = calculate_next_execution_date(
+                        rule.next_execution_date, rule.recurrence_pattern, 
+                        rule.interval, rule.next_execution_date
+                    )
+                    
+                    await db.recurrence_rules.update_one(
+                        {"id": rule.id},
+                        {"$set": {
+                            "next_execution_date": next_date,
+                            "updated_at": datetime.utcnow()
+                        }}
+                    )
+                    
+            except Exception as e:
+                error_msg = f"Erro ao processar regra {rule_data.get('name', 'desconhecida')}: {str(e)}"
+                results["errors"].append(error_msg)
+                print(f"[RECURRENCE ERROR] {error_msg}")
+        
+        return results
+        
+    except Exception as e:
+        print(f"[RECURRENCE ERROR] Erro geral no processamento: {e}")
+        raise e
+
+# ============================================================================
 # 📁 SISTEMA DE IMPORTAÇÃO DE ARQUIVOS COM OCR
 # ============================================================================
 
