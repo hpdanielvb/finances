@@ -8332,6 +8332,17 @@ const PetShopView = () => {
           onMovement={handleStockMovement}
         />
       )}
+
+      {/* Modal de Comprovante */}
+      {showReceiptModal && (
+        <PetShopReceiptModal
+          receipt={currentReceipt}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCurrentReceipt(null);
+          }}
+        />
+      )}
     </div>
   );
 };
