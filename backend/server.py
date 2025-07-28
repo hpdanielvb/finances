@@ -3893,6 +3893,193 @@ async def get_consortium_summary(consortium_id: str, current_user: User = Depend
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar resumo: {str(e)}")
 
+# ============================================================================
+# 🏠 CONSORTIUM ENHANCEMENTS - PHASE 3 (Additional Models and Functions)
+# ============================================================================
+
+class ConsortiumDashboard(BaseModel):
+    """Modelo para painel de visualização de consórcios"""
+    total_consortiums: int
+    active_consortiums: int
+    contemplated_consortiums: int
+    paid_consortiums: int
+    suspended_consortiums: int
+    total_invested: float
+    total_pending: float
+    next_payments: List[Dict[str, Any]]
+    contemplation_projections: List[Dict[str, Any]]
+    performance_summary: Dict[str, float]
+
+class ConsortiumContemplationProjection(BaseModel):
+    """Modelo para projeção de contemplação"""
+    consortium_id: str
+    consortium_name: str
+    current_installment: int
+    total_installments: int
+    completion_percentage: float
+    estimated_contemplation_date: datetime
+    probability_score: float  # 0-100%
+    monthly_installment: float
+    total_remaining: float
+    contemplation_methods: List[str]  # "sorteio", "lance", "natural"
+
+async def calculate_contemplation_projection(consortium: Dict[str, Any]) -> ConsortiumContemplationProjection:
+    """Calcular projeção de contemplação baseada em dados históricos e padrões"""
+    try:
+        # Calcular percentual de conclusão
+        completion_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
+        
+        # Calcular data estimada de contemplação (baseada no progresso atual)
+        remaining_installments = consortium["installment_count"] - consortium["paid_installments"]
+        
+        # Estimar data baseada na frequência de pagamentos (assumindo mensal)
+        estimated_date = datetime.utcnow() + timedelta(days=30 * remaining_installments)
+        
+        # Calcular probabilidade baseada no progresso e histórico
+        if completion_percentage >= 80:
+            probability_score = 85.0
+        elif completion_percentage >= 60:
+            probability_score = 70.0
+        elif completion_percentage >= 40:
+            probability_score = 55.0
+        elif completion_percentage >= 20:
+            probability_score = 40.0
+        else:
+            probability_score = 25.0
+        
+        # Ajustar probabilidade baseada no tipo de consórcio
+        if consortium["type"] == "Imóvel":
+            probability_score += 5  # Consórcios de imóveis têm maior taxa de conclusão
+        elif consortium["type"] == "Veículo":
+            probability_score += 3
+        
+        # Métodos de contemplação disponíveis
+        contemplation_methods = ["sorteio", "natural"]
+        if consortium["remaining_balance"] > 50000:  # Para valores altos, lance é mais comum
+            contemplation_methods.append("lance")
+        
+        return ConsortiumContemplationProjection(
+            consortium_id=consortium["id"],
+            consortium_name=consortium["name"],
+            current_installment=consortium["paid_installments"],
+            total_installments=consortium["installment_count"],
+            completion_percentage=completion_percentage,
+            estimated_contemplation_date=estimated_date,
+            probability_score=min(100.0, probability_score),
+            monthly_installment=consortium["monthly_installment"],
+            total_remaining=consortium["remaining_balance"],
+            contemplation_methods=contemplation_methods
+        )
+        
+    except Exception as e:
+        print(f"[CONSORTIUM PROJECTION ERROR] {str(e)}")
+        # Fallback com dados básicos
+        return ConsortiumContemplationProjection(
+            consortium_id=consortium.get("id", ""),
+            consortium_name=consortium.get("name", "Consórcio"),
+            current_installment=consortium.get("paid_installments", 0),
+            total_installments=consortium.get("installment_count", 1),
+            completion_percentage=0.0,
+            estimated_contemplation_date=datetime.utcnow() + timedelta(days=365),
+            probability_score=30.0,
+            monthly_installment=consortium.get("monthly_installment", 0),
+            total_remaining=consortium.get("remaining_balance", 0),
+            contemplation_methods=["sorteio", "natural"]
+        )
+
+async def generate_consortium_dashboard(user_id: str) -> ConsortiumDashboard:
+    """Gerar painel completo de consórcios para o usuário"""
+    try:
+        # Buscar todos os consórcios do usuário
+        consortiums = await db.consortiums.find({"user_id": user_id}).to_list(100)
+        
+        if not consortiums:
+            return ConsortiumDashboard(
+                total_consortiums=0,
+                active_consortiums=0,
+                contemplated_consortiums=0,
+                paid_consortiums=0,
+                suspended_consortiums=0,
+                total_invested=0.0,
+                total_pending=0.0,
+                next_payments=[],
+                contemplation_projections=[],
+                performance_summary={}
+            )
+        
+        # Calcular estatísticas
+        total_consortiums = len(consortiums)
+        active_consortiums = len([c for c in consortiums if c["status"] == "Ativo"])
+        contemplated_consortiums = len([c for c in consortiums if c["contemplated"]])
+        paid_consortiums = len([c for c in consortiums if c["status"] == "Pago"])
+        suspended_consortiums = len([c for c in consortiums if c["status"] == "Suspenso"])
+        
+        # Calcular valores totais
+        total_invested = sum(c["paid_installments"] * c["monthly_installment"] for c in consortiums)
+        total_pending = sum(c["remaining_balance"] for c in consortiums)
+        
+        # Próximos pagamentos (próximos 30 dias)
+        next_payments = []
+        for consortium in consortiums:
+            if consortium["status"] == "Ativo":
+                # Calcular próxima data de vencimento
+                next_due = datetime.utcnow().replace(day=consortium["due_day"])
+                if next_due <= datetime.utcnow():
+                    if next_due.month == 12:
+                        next_due = next_due.replace(year=next_due.year + 1, month=1)
+                    else:
+                        next_due = next_due.replace(month=next_due.month + 1)
+                
+                next_payments.append({
+                    "consortium_id": consortium["id"],
+                    "consortium_name": consortium["name"],
+                    "due_date": next_due.isoformat(),
+                    "amount": consortium["monthly_installment"],
+                    "installment_number": consortium["paid_installments"] + 1,
+                    "days_until_due": (next_due - datetime.utcnow()).days
+                })
+        
+        # Ordenar por data de vencimento
+        next_payments.sort(key=lambda x: x["days_until_due"])
+        
+        # Projeções de contemplação
+        contemplation_projections = []
+        for consortium in consortiums:
+            if consortium["status"] == "Ativo" and not consortium["contemplated"]:
+                projection = await calculate_contemplation_projection(consortium)
+                contemplation_projections.append(projection.dict())
+        
+        # Ordenar por probabilidade (maior primeiro)
+        contemplation_projections.sort(key=lambda x: x["probability_score"], reverse=True)
+        
+        # Resumo de performance
+        avg_completion = sum(c["paid_installments"] / c["installment_count"] for c in consortiums) / len(consortiums) * 100
+        avg_monthly_payment = sum(c["monthly_installment"] for c in consortiums) / len(consortiums)
+        
+        performance_summary = {
+            "average_completion_percentage": round(avg_completion, 2),
+            "average_monthly_payment": round(avg_monthly_payment, 2),
+            "total_portfolio_value": sum(c["total_value"] for c in consortiums),
+            "contemplation_rate": (contemplated_consortiums / total_consortiums * 100) if total_consortiums > 0 else 0
+        }
+        
+        return ConsortiumDashboard(
+            total_consortiums=total_consortiums,
+            active_consortiums=active_consortiums,
+            contemplated_consortiums=contemplated_consortiums,
+            paid_consortiums=paid_consortiums,
+            suspended_consortiums=suspended_consortiums,
+            total_invested=total_invested,
+            total_pending=total_pending,
+            next_payments=next_payments[:5],  # Próximos 5 pagamentos
+            contemplation_projections=contemplation_projections,
+            performance_summary=performance_summary
+        )
+        
+    except Exception as e:
+        print(f"[CONSORTIUM DASHBOARD ERROR] {str(e)}")
+        raise e
+
 # Helper functions for AI
 async def get_monthly_average_income(user_id: str) -> float:
     """Calcular média mensal de receitas"""
