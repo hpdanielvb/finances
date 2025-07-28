@@ -8737,13 +8737,427 @@ const PetShopProducts = ({
 };
 
 // Placeholder para os outros componentes (implementaremos nas próximas fases)
-const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => (
-  <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-    <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-medium text-gray-900 mb-2">Sistema de Vendas</h3>
-    <p className="text-gray-500 mb-4">Em desenvolvimento - Fase 4</p>
-  </div>
-);
+// Placeholder para os outros componentes (implementaremos nas próximas fases)
+const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => {
+  const [searchProduct, setSearchProduct] = useState('');
+  const [cart, setCart] = useState([]);
+  const [customer, setCustomer] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [discount, setDiscount] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [processingSale, setProcessingSale] = useState(false);
+  const [showProductSearch, setShowProductSearch] = useState(false);
+
+  // Filtrar produtos para busca
+  const filteredProducts = products.filter(product =>
+    product.current_quantity > 0 &&
+    (product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
+     product.sku.toLowerCase().includes(searchProduct.toLowerCase()))
+  ).slice(0, 5); // Mostrar máximo 5 produtos
+
+  // Adicionar produto ao carrinho
+  const addToCart = (product, quantity = 1) => {
+    const existingItem = cart.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      if (existingItem.quantity + quantity > product.current_quantity) {
+        toast.error(`Estoque insuficiente! Disponível: ${product.current_quantity}`);
+        return;
+      }
+      
+      setCart(cart.map(item =>
+        item.product.id === product.id
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      ));
+    } else {
+      if (quantity > product.current_quantity) {
+        toast.error(`Estoque insuficiente! Disponível: ${product.current_quantity}`);
+        return;
+      }
+      
+      setCart([...cart, { product, quantity, unitPrice: product.sale_price }]);
+    }
+
+    setSearchProduct('');
+    setShowProductSearch(false);
+    toast.success(`${product.name} adicionado ao carrinho!`);
+  };
+
+  // Remover produto do carrinho
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.product.id !== productId));
+  };
+
+  // Atualizar quantidade no carrinho
+  const updateCartQuantity = (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+
+    const product = products.find(p => p.id === productId);
+    if (newQuantity > product.current_quantity) {
+      toast.error(`Estoque insuficiente! Disponível: ${product.current_quantity}`);
+      return;
+    }
+
+    setCart(cart.map(item =>
+      item.product.id === productId
+        ? { ...item, quantity: newQuantity }
+        : item
+    ));
+  };
+
+  // Cálculos da venda
+  const subtotal = cart.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+  const discountAmount = (subtotal * discount) / 100;
+  const total = subtotal - discountAmount;
+
+  // Processar venda
+  const handleCompleteSale = async () => {
+    if (cart.length === 0) {
+      toast.error('Adicione produtos ao carrinho antes de finalizar a venda');
+      return;
+    }
+
+    setProcessingSale(true);
+
+    try {
+      const saleData = {
+        customer: customer.trim() || 'Cliente não informado',
+        payment_method: paymentMethod,
+        discount: discount,
+        notes: notes.trim(),
+        items: cart.map(item => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.unitPrice
+        }))
+      };
+
+      const response = await axios.post(`${API}/petshop/sales`, saleData);
+      
+      toast.success('Venda realizada com sucesso! 🎉');
+      
+      // Limpar carrinho e formulário
+      setCart([]);
+      setCustomer('');
+      setDiscount(0);
+      setNotes('');
+      setSearchProduct('');
+      
+      // Recarregar dados
+      await onRefresh();
+      
+    } catch (error) {
+      console.error('Erro ao processar venda:', error);
+      if (error.response?.data?.detail?.includes('estoque')) {
+        toast.error('Estoque insuficiente para alguns produtos');
+      } else {
+        toast.error(error.response?.data?.detail || 'Erro ao processar venda');
+      }
+    } finally {
+      setProcessingSale(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <span className="ml-3 text-gray-600">Carregando sistema de vendas...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Coluna da Esquerda - Busca de Produtos */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Busca de Produtos */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Search className="w-5 h-5 text-green-600" />
+            Buscar Produtos
+          </h3>
+          
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Digite o nome do produto ou SKU..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+              value={searchProduct}
+              onChange={(e) => {
+                setSearchProduct(e.target.value);
+                setShowProductSearch(true);
+              }}
+              onFocus={() => setShowProductSearch(true)}
+            />
+            
+            {/* Dropdown de produtos */}
+            {showProductSearch && searchProduct && filteredProducts.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto">
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-900">{product.name}</p>
+                        <p className="text-sm text-gray-600">
+                          SKU: {product.sku} | {product.category}
+                        </p>
+                        <p className="text-sm text-green-600">
+                          Estoque: {product.current_quantity} unidades
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">
+                          {formatCurrency(product.sale_price)}
+                        </p>
+                        <button className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded mt-1">
+                          Adicionar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {showProductSearch && searchProduct && filteredProducts.length === 0 && (
+              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 p-4 text-center text-gray-500">
+                Nenhum produto encontrado
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Lista do Carrinho */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5 text-green-600" />
+            Carrinho de Compras ({cart.length} itens)
+          </h3>
+
+          {cart.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p>Carrinho vazio</p>
+              <p className="text-sm">Busque produtos acima para adicionar ao carrinho</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cart.map((item) => (
+                <div key={item.product.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{item.product.name}</p>
+                    <p className="text-sm text-gray-600">
+                      SKU: {item.product.sku} | {formatCurrency(item.unitPrice)} cada
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
+                        className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full"
+                      >
+                        -
+                      </button>
+                      <span className="w-12 text-center font-medium">{item.quantity}</span>
+                      <button
+                        onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                        className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full"
+                      >
+                        +
+                      </button>
+                    </div>
+                    
+                    <div className="text-right min-w-[80px]">
+                      <p className="font-bold text-green-600">
+                        {formatCurrency(item.quantity * item.unitPrice)}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => removeFromCart(item.product.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Remover item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Coluna da Direita - Resumo da Venda */}
+      <div className="space-y-6">
+        {/* Resumo da Venda */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-green-600" />
+            Resumo da Venda
+          </h3>
+
+          <div className="space-y-4">
+            {/* Subtotal */}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
+            </div>
+
+            {/* Campo de desconto */}
+            <div>
+              <label className="block text-sm text-gray-600 mb-2">
+                Desconto (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                value={discount}
+                onChange={(e) => setDiscount(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                placeholder="0"
+              />
+            </div>
+
+            {/* Desconto aplicado */}
+            {discount > 0 && (
+              <div className="flex justify-between text-red-600">
+                <span>Desconto ({discount}%):</span>
+                <span>-{formatCurrency(discountAmount)}</span>
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="flex justify-between text-lg font-bold border-t pt-3">
+              <span>Total:</span>
+              <span className="text-green-600">{formatCurrency(total)}</span>
+            </div>
+
+            {/* Forma de pagamento */}
+            <div>
+              <label className="block text-sm text-gray-600 mb-2">
+                Forma de Pagamento
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="pix">PIX</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao_debito">Cartão de Débito</option>
+                <option value="cartao_credito">Cartão de Crédito</option>
+              </select>
+            </div>
+
+            {/* Cliente */}
+            <div>
+              <label className="block text-sm text-gray-600 mb-2">
+                Cliente (opcional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
+                placeholder="Nome do cliente"
+              />
+            </div>
+
+            {/* Observações */}
+            <div>
+              <label className="block text-sm text-gray-600 mb-2">
+                Observações
+              </label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Observações sobre a venda..."
+                rows="2"
+              />
+            </div>
+
+            {/* Botão de finalizar venda */}
+            <button
+              onClick={handleCompleteSale}
+              disabled={cart.length === 0 || processingSale}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {processingSale ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Finalizar Venda
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Histórico de Vendas Recentes */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-green-600" />
+            Vendas Recentes
+          </h3>
+
+          {sales.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Nenhuma venda realizada ainda</p>
+          ) : (
+            <div className="space-y-3">
+              {sales.slice(0, 5).map((sale) => (
+                <div key={sale.id} className="p-3 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {sale.customer || 'Cliente não informado'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {new Date(sale.created_at).toLocaleDateString('pt-BR')} às {' '}
+                        {new Date(sale.created_at).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {sale.payment_method.replace('_', ' ')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-600">
+                        {formatCurrency(sale.total)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {sale.items?.length || 0} itens
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const PetShopStockAlert = ({ products, loading, onRefresh }) => {
   // Filtrar produtos com estoque baixo
