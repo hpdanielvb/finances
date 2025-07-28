@@ -2800,6 +2800,16 @@ const Dashboard = () => {
         />
       )}
 
+      {/* 🏠 Contract Modal */}
+      {showContractModal && (
+        <ContractModal
+          contract={editingContract}
+          onClose={closeContractModal}
+          onCreate={handleCreateContract}
+          onUpdate={handleUpdateContract}
+        />
+      )}
+
       <Toaster position="top-right" />
     </div>
   );
