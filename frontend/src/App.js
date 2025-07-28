@@ -8840,7 +8840,29 @@ const PetShopSales = ({ sales, products, loading, onCreateSale, onRefresh }) => 
 
       const response = await axios.post(`${API}/petshop/sales`, saleData);
       
+      // Preparar dados do comprovante
+      const receiptData = {
+        id: response.data?.id || Date.now(),
+        receipt_number: `VD${String(response.data?.id || Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        customer: customer.trim() || 'Cliente não informado',
+        payment_method: paymentMethod,
+        subtotal: subtotal,
+        discount: discount,
+        total: total,
+        notes: notes.trim(),
+        items: cart.map(item => ({
+          product: item.product,
+          quantity: item.quantity,
+          unit_price: item.unitPrice
+        })),
+        created_at: new Date().toISOString()
+      };
+      
       toast.success('Venda realizada com sucesso! 🎉');
+      
+      // Mostrar comprovante
+      setCurrentReceipt(receiptData);
+      setShowReceiptModal(true);
       
       // Limpar carrinho e formulário
       setCart([]);
