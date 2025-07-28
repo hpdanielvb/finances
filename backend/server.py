@@ -3894,6 +3894,320 @@ async def get_consortium_summary(consortium_id: str, current_user: User = Depend
         raise HTTPException(status_code=500, detail=f"Erro ao buscar resumo: {str(e)}")
 
 # ============================================================================
+# 🏠 CONSORTIUM ENHANCEMENTS - PHASE 3 (New Enhanced Endpoints)
+# ============================================================================
+
+@api_router.get("/consortiums/dashboard", response_model=Dict[str, Any])
+async def get_consortium_dashboard(
+    current_user: User = Depends(get_current_user)
+):
+    """Painel de visualização completo dos consórcios ativos - PHASE 3 ENHANCEMENT"""
+    try:
+        dashboard = await generate_consortium_dashboard(current_user.id)
+        
+        return {
+            "message": "Painel de consórcios carregado com sucesso",
+            "dashboard": dashboard.dict(),
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao carregar painel: {str(e)}")
+
+@api_router.get("/consortiums/active", response_model=List[Dict[str, Any]])
+async def get_active_consortiums(
+    current_user: User = Depends(get_current_user),
+    status: Optional[str] = None,
+    type: Optional[str] = None,
+    contemplated: Optional[bool] = None
+):
+    """Listar consórcios com filtros avançados - PHASE 3 ENHANCEMENT"""
+    try:
+        # Construir query com filtros
+        query = {"user_id": current_user.id}
+        
+        # Filtro por status
+        if status:
+            if status not in ["Ativo", "Pago", "Contemplado", "Suspenso"]:
+                raise HTTPException(status_code=400, detail="Status inválido")
+            query["status"] = status
+        
+        # Filtro por tipo
+        if type:
+            if type not in ["Imóvel", "Veículo", "Moto"]:
+                raise HTTPException(status_code=400, detail="Tipo inválido")
+            query["type"] = type
+        
+        # Filtro por contemplação
+        if contemplated is not None:
+            query["contemplated"] = contemplated
+        
+        consortiums = await db.consortiums.find(query).sort("created_at", -1).to_list(100)
+        
+        # Enriquecer dados com informações adicionais
+        enriched_consortiums = []
+        for consortium in consortiums:
+            # Remove MongoDB ObjectId
+            if "_id" in consortium:
+                del consortium["_id"]
+            
+            # Adicionar informações calculadas
+            progress_percentage = (consortium["paid_installments"] / consortium["installment_count"]) * 100
+            remaining_installments = consortium["installment_count"] - consortium["paid_installments"]
+            total_paid = consortium["paid_installments"] * consortium["monthly_installment"]
+            
+            # Adicionar próxima data de vencimento
+            next_due_date = calculate_next_due_date(consortium)
+            
+            # Adicionar projeção de contemplação se ativo e não contemplado
+            contemplation_projection = None
+            if consortium["status"] == "Ativo" and not consortium["contemplated"]:
+                projection = await calculate_contemplation_projection(consortium)
+                contemplation_projection = {
+                    "estimated_date": projection.estimated_contemplation_date.isoformat(),
+                    "probability_score": projection.probability_score,
+                    "completion_percentage": projection.completion_percentage
+                }
+            
+            enriched_consortium = {
+                **consortium,
+                "progress_percentage": round(progress_percentage, 2),
+                "remaining_installments": remaining_installments,
+                "total_paid": total_paid,
+                "next_due_date": next_due_date,
+                "contemplation_projection": contemplation_projection
+            }
+            
+            enriched_consortiums.append(enriched_consortium)
+        
+        return enriched_consortiums
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar consórcios: {str(e)}")
+
+@api_router.get("/consortiums/contemplation-projections", response_model=List[Dict[str, Any]])
+async def get_contemplation_projections(
+    current_user: User = Depends(get_current_user),
+    min_probability: Optional[float] = None,
+    limit: Optional[int] = 10
+):
+    """Obter projeções de contemplação para consórcios ativos - PHASE 3 ENHANCEMENT"""
+    try:
+        # Buscar consórcios ativos não contemplados
+        active_consortiums = await db.consortiums.find({
+            "user_id": current_user.id,
+            "status": "Ativo",
+            "contemplated": False
+        }).to_list(100)
+        
+        if not active_consortiums:
+            return []
+        
+        # Gerar projeções
+        projections = []
+        for consortium in active_consortiums:
+            projection = await calculate_contemplation_projection(consortium)
+            projection_dict = projection.dict()
+            
+            # Aplicar filtro de probabilidade mínima
+            if min_probability is None or projection.probability_score >= min_probability:
+                # Enriquecer com dados do consórcio
+                projection_dict.update({
+                    "consortium_type": consortium["type"],
+                    "administrator": consortium["administrator"],
+                    "total_value": consortium["total_value"],
+                    "group_number": consortium.get("group_number"),
+                    "quota_number": consortium.get("quota_number")
+                })
+                
+                projections.append(projection_dict)
+        
+        # Ordenar por probabilidade (maior primeiro)
+        projections.sort(key=lambda x: x["probability_score"], reverse=True)
+        
+        # Aplicar limite
+        if limit:
+            projections = projections[:limit]
+        
+        return projections
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar projeções: {str(e)}")
+
+@api_router.get("/consortiums/statistics", response_model=Dict[str, Any])
+async def get_consortium_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """Estatísticas detalhadas dos consórcios - PHASE 3 ENHANCEMENT"""
+    try:
+        # Buscar todos os consórcios
+        consortiums = await db.consortiums.find({"user_id": current_user.id}).to_list(100)
+        
+        if not consortiums:
+            return {
+                "total_consortiums": 0,
+                "summary": "Nenhum consórcio encontrado",
+                "statistics": {}
+            }
+        
+        # Estatísticas gerais
+        total_consortiums = len(consortiums)
+        active_count = len([c for c in consortiums if c["status"] == "Ativo"])
+        contemplated_count = len([c for c in consortiums if c["contemplated"]])
+        paid_count = len([c for c in consortiums if c["status"] == "Pago"])
+        suspended_count = len([c for c in consortiums if c["status"] == "Suspenso"])
+        
+        # Estatísticas por tipo
+        type_distribution = {
+            "Imóvel": len([c for c in consortiums if c["type"] == "Imóvel"]),
+            "Veículo": len([c for c in consortiums if c["type"] == "Veículo"]),
+            "Moto": len([c for c in consortiums if c["type"] == "Moto"])
+        }
+        
+        # Estatísticas financeiras
+        total_invested = sum(c["paid_installments"] * c["monthly_installment"] for c in consortiums)
+        total_portfolio_value = sum(c["total_value"] for c in consortiums)
+        total_pending = sum(c["remaining_balance"] for c in consortiums)
+        avg_monthly_payment = sum(c["monthly_installment"] for c in consortiums) / len(consortiums)
+        
+        # Estatísticas de progresso
+        completion_percentages = [
+            (c["paid_installments"] / c["installment_count"]) * 100 
+            for c in consortiums
+        ]
+        avg_completion = sum(completion_percentages) / len(completion_percentages)
+        
+        # Top administradoras
+        administrators = [c["administrator"] for c in consortiums]
+        admin_counts = {}
+        for admin in administrators:
+            admin_counts[admin] = admin_counts.get(admin, 0) + 1
+        
+        top_administrators = sorted(admin_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Próximos vencimentos (próximos 30 dias)
+        upcoming_payments = []
+        for consortium in consortiums:
+            if consortium["status"] == "Ativo":
+                next_due = datetime.utcnow().replace(day=consortium["due_day"])
+                if next_due <= datetime.utcnow():
+                    if next_due.month == 12:
+                        next_due = next_due.replace(year=next_due.year + 1, month=1)
+                    else:
+                        next_due = next_due.replace(month=next_due.month + 1)
+                
+                days_until_due = (next_due - datetime.utcnow()).days
+                if days_until_due <= 30:
+                    upcoming_payments.append({
+                        "consortium_name": consortium["name"],
+                        "due_date": next_due.isoformat(),
+                        "amount": consortium["monthly_installment"],
+                        "days_until_due": days_until_due
+                    })
+        
+        upcoming_payments.sort(key=lambda x: x["days_until_due"])
+        
+        return {
+            "total_consortiums": total_consortiums,
+            "status_distribution": {
+                "active": active_count,
+                "contemplated": contemplated_count,
+                "paid": paid_count,
+                "suspended": suspended_count
+            },
+            "type_distribution": type_distribution,
+            "financial_summary": {
+                "total_invested": round(total_invested, 2),
+                "total_portfolio_value": round(total_portfolio_value, 2),
+                "total_pending": round(total_pending, 2),
+                "average_monthly_payment": round(avg_monthly_payment, 2)
+            },
+            "progress_summary": {
+                "average_completion": round(avg_completion, 2),
+                "contemplation_rate": round((contemplated_count / total_consortiums) * 100, 2),
+                "completion_percentages": [round(p, 2) for p in completion_percentages]
+            },
+            "top_administrators": [{"name": admin, "count": count} for admin, count in top_administrators],
+            "upcoming_payments": upcoming_payments[:10],
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar estatísticas: {str(e)}")
+
+@api_router.get("/consortiums/payments-calendar", response_model=Dict[str, Any])
+async def get_payments_calendar(
+    current_user: User = Depends(get_current_user),
+    months_ahead: Optional[int] = 12
+):
+    """Calendário de pagamentos dos consórcios - PHASE 3 ENHANCEMENT"""
+    try:
+        # Buscar consórcios ativos
+        active_consortiums = await db.consortiums.find({
+            "user_id": current_user.id,
+            "status": "Ativo"
+        }).to_list(100)
+        
+        if not active_consortiums:
+            return {
+                "calendar": {},
+                "total_months": 0,
+                "message": "Nenhum consórcio ativo encontrado"
+            }
+        
+        # Gerar calendário de pagamentos
+        calendar = {}
+        current_date = datetime.utcnow()
+        
+        for month_offset in range(months_ahead):
+            # Calcular mês/ano
+            target_date = current_date + timedelta(days=30 * month_offset)
+            month_key = target_date.strftime("%Y-%m")
+            
+            monthly_payments = []
+            monthly_total = 0
+            
+            for consortium in active_consortiums:
+                # Calcular data de vencimento para este mês
+                due_date = target_date.replace(day=consortium["due_day"])
+                
+                payment_info = {
+                    "consortium_id": consortium["id"],
+                    "consortium_name": consortium["name"],
+                    "consortium_type": consortium["type"],
+                    "administrator": consortium["administrator"],
+                    "due_date": due_date.isoformat(),
+                    "amount": consortium["monthly_installment"],
+                    "installment_number": consortium["paid_installments"] + month_offset + 1,
+                    "remaining_after_payment": consortium["installment_count"] - (consortium["paid_installments"] + month_offset + 1)
+                }
+                
+                monthly_payments.append(payment_info)
+                monthly_total += consortium["monthly_installment"]
+            
+            calendar[month_key] = {
+                "month": target_date.strftime("%B %Y"),
+                "payments": monthly_payments,
+                "total_amount": round(monthly_total, 2),
+                "payment_count": len(monthly_payments)
+            }
+        
+        return {
+            "calendar": calendar,
+            "total_months": months_ahead,
+            "summary": {
+                "total_monthly_commitment": sum(c["monthly_installment"] for c in active_consortiums),
+                "active_consortiums_count": len(active_consortiums)
+            },
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar calendário: {str(e)}")
+
+# ============================================================================
 # 🏠 CONSORTIUM ENHANCEMENTS - PHASE 3 (Additional Models and Functions)
 # ============================================================================
 
