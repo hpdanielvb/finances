@@ -584,6 +584,127 @@ const Dashboard = () => {
   const [aiInsights, setAIInsights] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   
+  // Dashboard customization
+  const toggleDashboardWidget = (widgetId) => {
+    setDashboardWidgets(prev => 
+      prev.includes(widgetId) 
+        ? prev.filter(id => id !== widgetId)
+        : [...prev, widgetId]
+    );
+    
+    // Save preferences to localStorage
+    const newWidgets = dashboardWidgets.includes(widgetId) 
+      ? dashboardWidgets.filter(id => id !== widgetId)
+      : [...dashboardWidgets, widgetId];
+    localStorage.setItem('dashboardWidgets', JSON.stringify(newWidgets));
+  };
+
+  // Global search functionality
+  const handleGlobalSearch = async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const results = [];
+      
+      // Search in transactions
+      const matchingTransactions = transactions.filter(t => 
+        t.description?.toLowerCase().includes(query.toLowerCase()) ||
+        t.category?.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 3);
+      
+      if (matchingTransactions.length > 0) {
+        results.push({
+          category: 'Transações',
+          items: matchingTransactions.map(t => ({
+            id: t.id,
+            title: t.description,
+            subtitle: `${t.category} - ${formatCurrency(t.amount)}`,
+            action: () => setActiveView('transactions')
+          }))
+        });
+      }
+
+      // Search in accounts
+      const matchingAccounts = accounts.filter(a => 
+        a.name?.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 2);
+      
+      if (matchingAccounts.length > 0) {
+        results.push({
+          category: 'Contas',
+          items: matchingAccounts.map(a => ({
+            id: a.id,
+            title: a.name,
+            subtitle: `Saldo: ${formatCurrency(a.balance)}`,
+            action: () => setActiveView('accounts')
+          }))
+        });
+      }
+
+      // Search modules
+      const modules = [
+        { id: 'dashboard', name: 'Dashboard', icon: '📊' },
+        { id: 'transactions', name: 'Transações', icon: '💳' },
+        { id: 'accounts', name: 'Contas', icon: '🏦' },
+        { id: 'goals', name: 'Metas', icon: '🎯' },
+        { id: 'budgets', name: 'Orçamentos', icon: '📈' },
+        { id: 'petshop', name: 'Pet Shop', icon: '🐾' },
+        { id: 'contracts', name: 'Contratos', icon: '🏠' },
+        { id: 'credit-cards', name: 'Cartões', icon: '💳' }
+      ];
+
+      const matchingModules = modules.filter(m => 
+        m.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (matchingModules.length > 0) {
+        results.push({
+          category: 'Módulos',
+          items: matchingModules.map(m => ({
+            id: m.id,
+            title: m.name,
+            subtitle: `Ir para ${m.name}`,
+            icon: m.icon,
+            action: () => {
+              setActiveView(m.id);
+              setShowSearchBar(false);
+              setSearchQuery('');
+            }
+          }))
+        });
+      }
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Erro na busca global:', error);
+    }
+  };
+
+  // Debounced search
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleGlobalSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, transactions, accounts]);
+
+  // Load dashboard preferences
+  React.useEffect(() => {
+    const savedWidgets = localStorage.getItem('dashboardWidgets');
+    if (savedWidgets) {
+      setDashboardWidgets(JSON.parse(savedWidgets));
+    }
+    
+    const sidebarState = localStorage.getItem('sidebarCollapsed');
+    if (sidebarState !== null) {
+      setSidebarCollapsed(JSON.parse(sidebarState));
+    }
+  }, []);
+
   // 🏠 Consortium States
   const [showConsortiumModal, setShowConsortiumModal] = useState(false);
   const [showConsortiumDetails, setShowConsortiumDetails] = useState(false);
