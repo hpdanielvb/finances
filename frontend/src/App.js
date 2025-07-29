@@ -3060,6 +3060,26 @@ const Dashboard = () => {
           />
         )}
 
+        {activeView === 'recurrence' && (
+          <RecurrenceView 
+            rules={recurrenceRules}
+            pendingRecurrences={pendingRecurrences}
+            stats={recurrenceStats}
+            accounts={accounts}
+            categories={categories}
+            onRefresh={loadRecurrenceData}
+            onCreateNew={openNewRecurrenceModal}
+            onEdit={(rule) => {
+              setEditingRecurrenceRule(rule);
+              setShowRecurrenceModal(true);
+            }}
+            onDelete={handleDeleteRecurrenceRule}
+            onPreview={handlePreviewRecurrence}
+            onConfirm={handleConfirmRecurrence}
+            onProcess={handleProcessRecurrences}
+          />
+        )}
+
         {activeView === 'goals' && (
           <GoalsView 
             goals={goals}
