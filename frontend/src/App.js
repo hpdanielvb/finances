@@ -941,6 +941,23 @@ const Dashboard = () => {
         setGoalsStats(null);
       }
       
+  // 🔄 Load Recurrence Rules and Pending
+  try {
+    const recurrenceRulesRes = await axios.get(`${API}/recurrence/rules`);
+    setRecurrenceRules(recurrenceRulesRes.data);
+    
+    const pendingRecurrencesRes = await axios.get(`${API}/recurrence/pending`);
+    setPendingRecurrences(pendingRecurrencesRes.data);
+    
+    const recurrenceStatsRes = await axios.get(`${API}/recurrence/statistics`);
+    setRecurrenceStats(recurrenceStatsRes.data);
+  } catch (recurrenceError) {
+    console.log('Recurrence loading failed, continuing without recurrence');
+    setRecurrenceRules([]);
+    setPendingRecurrences([]);
+    setRecurrenceStats(null);
+  }
+
   // 🧠 Load AI Insights
   try {
     const aiInsightsRes = await axios.get(`${API}/ai/insights`);
