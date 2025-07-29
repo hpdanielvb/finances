@@ -1503,6 +1503,97 @@ const Dashboard = () => {
     }
   };
 
+  // Recurrence Management Functions
+  const handleCreateRecurrenceRule = async (ruleData) => {
+    try {
+      if (editingRecurrenceRule && editingRecurrenceRule.id) {
+        await axios.put(`${API}/recurrence/rules/${editingRecurrenceRule.id}`, ruleData);
+        toast.success('Regra de recorrência atualizada com sucesso!');
+      } else {
+        await axios.post(`${API}/recurrence/rules`, ruleData);
+        toast.success('Regra de recorrência criada com sucesso!');
+      }
+      await loadRecurrenceData();
+      setShowRecurrenceModal(false);
+      setEditingRecurrenceRule(null);
+    } catch (error) {
+      toast.error('Erro ao salvar regra: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteRecurrenceRule = async (ruleId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta regra de recorrência?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/recurrence/rules/${ruleId}`);
+      await loadRecurrenceData();
+      toast.success('Regra de recorrência excluída com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao excluir regra: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handlePreviewRecurrence = async (ruleId) => {
+    try {
+      const response = await axios.get(`${API}/recurrence/rules/${ruleId}/preview`);
+      setRecurrencePreview(response.data);
+      setShowRecurrencePreviewModal(true);
+    } catch (error) {
+      toast.error('Erro ao gerar preview: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleConfirmRecurrence = async (recurrenceId, action) => {
+    try {
+      await axios.post(`${API}/recurrence/confirm`, {
+        recurrence_id: recurrenceId,
+        action: action, // 'confirm' or 'reject'
+        created_by: user.id
+      });
+      await loadRecurrenceData();
+      toast.success(action === 'confirm' ? 'Recorrência confirmada!' : 'Recorrência rejeitada!');
+    } catch (error) {
+      toast.error('Erro ao processar recorrência: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const handleProcessRecurrences = async () => {
+    try {
+      const response = await axios.post(`${API}/recurrence/process`);
+      await loadRecurrenceData();
+      toast.success(`${response.data.processed} recorrências processadas com sucesso!`);
+    } catch (error) {
+      toast.error('Erro ao processar recorrências: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
+  const loadRecurrenceData = async () => {
+    try {
+      const [rulesRes, pendingRes, statsRes] = await Promise.all([
+        axios.get(`${API}/recurrence/rules`),
+        axios.get(`${API}/recurrence/pending`),
+        axios.get(`${API}/recurrence/statistics`)
+      ]);
+      
+      setRecurrenceRules(rulesRes.data);
+      setPendingRecurrences(pendingRes.data);
+      setRecurrenceStats(statsRes.data);
+    } catch (error) {
+      console.error('Error loading recurrence data:', error);
+    }
+  };
+
+  const openNewRecurrenceModal = () => {
+    setEditingRecurrenceRule(null);
+    setShowRecurrenceModal(true);
+  };
+    } catch (error) {
+      toast.error('Erro ao excluir orçamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
+    }
+  };
+
   const handleCreateGoal = async (goalData) => {
     try {
       if (editingItem && editingItem.id) {
