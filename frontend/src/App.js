@@ -1589,10 +1589,6 @@ const Dashboard = () => {
     setEditingRecurrenceRule(null);
     setShowRecurrenceModal(true);
   };
-    } catch (error) {
-      toast.error('Erro ao excluir orçamento: ' + (error.response?.data?.detail || 'Erro desconhecido'));
-    }
-  };
 
   const handleCreateGoal = async (goalData) => {
     try {
