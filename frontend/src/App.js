@@ -705,7 +705,8 @@ const Dashboard = () => {
         { id: 'budgets', name: 'Orçamentos', icon: '📈' },
         { id: 'petshop', name: 'Pet Shop', icon: '🐾' },
         { id: 'contracts', name: 'Contratos', icon: '🏠' },
-        { id: 'credit-cards', name: 'Cartões', icon: '💳' }
+        { id: 'credit-cards', name: 'Cartões', icon: '💳' },
+        { id: 'recurrence', name: 'Recorrência Automática', icon: '🔄' }
       ];
 
       const matchingModules = modules.filter(m => 
