@@ -6749,10 +6749,19 @@ async def shutdown_db_client():
     client.close()
 
 @app.get("/api/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "message": "OrçaZenFinanceiro API is running",
-        "database": "connected",
-        "version": "1.0.0"
-    }
+async def health_check_root():
+    try:
+        # Tenta acessar o banco de dados para verificar a conexão
+        await db.users.count_documents({}) 
+        return {
+            "status": "healthy",
+            "message": "OrçaZenFinanceiro API is running",
+            "database": "connected",
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy", 
+            "message": f"Database connection failed: {str(e)}",
+            "timestamp": datetime.utcnow().isoformat()
+        }
