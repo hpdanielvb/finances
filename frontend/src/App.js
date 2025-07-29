@@ -3450,6 +3450,283 @@ const Dashboard = () => {
 };
 
 // Enhanced Views Components
+// 🔄 Recurrence System View
+const RecurrenceView = ({ 
+  rules, 
+  pendingRecurrences, 
+  stats, 
+  accounts, 
+  categories, 
+  onRefresh, 
+  onCreateNew, 
+  onEdit, 
+  onDelete, 
+  onPreview, 
+  onConfirm, 
+  onProcess 
+}) => {
+  const [activeTab, setActiveTab] = useState('rules');
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getPatternLabel = (pattern) => {
+    const patterns = {
+      'daily': 'Diário',
+      'weekly': 'Semanal', 
+      'monthly': 'Mensal',
+      'yearly': 'Anual'
+    };
+    return patterns[pattern] || pattern;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Sistema de Recorrência Automática</h1>
+          <p className="text-gray-600">Gerencie regras de transações recorrentes e processe automaticamente</p>
+        </div>
+        <button
+          onClick={onCreateNew}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Nova Regra
+        </button>
+      </div>
+
+      {/* Statistics Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Regras Ativas</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.total_rules || 0}</p>
+              </div>
+              <RotateCcw className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pendências</p>
+                <p className="text-2xl font-bold text-orange-600">{pendingRecurrences.length}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Processadas Hoje</p>
+                <p className="text-2xl font-bold text-green-600">{stats.processed_today || 0}</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Mensal</p>
+                <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.monthly_total || 0)}</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('rules')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'rules'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Regras de Recorrência ({rules.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'pending'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Pendências ({pendingRecurrences.length})
+          </button>
+        </nav>
+      </div>
+
+      {/* Rules Tab */}
+      {activeTab === 'rules' && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900">Regras de Recorrência</h2>
+            <button
+              onClick={onProcess}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Processar Todas
+            </button>
+          </div>
+          
+          {rules.length === 0 ? (
+            <div className="text-center py-12">
+              <RotateCcw className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhuma regra de recorrência criada</p>
+              <button
+                onClick={onCreateNew}
+                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeira Regra
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {rules.map((rule) => (
+                <div key={rule.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-2">
+                        <h3 className="text-lg font-medium text-gray-900">{rule.description}</h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          rule.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {rule.is_active ? 'Ativa' : 'Inativa'}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          rule.transaction_type === 'Receita'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {rule.transaction_type}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium">Valor:</span> {formatCurrency(rule.amount)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Padrão:</span> {getPatternLabel(rule.pattern)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Próxima:</span> {formatDate(rule.next_execution_date)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Categoria:</span> {rule.category_name || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => onPreview(rule.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Preview"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onEdit(rule)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(rule.id)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pending Tab */}
+      {activeTab === 'pending' && (
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Recorrências Pendentes</h2>
+            <p className="text-sm text-gray-600 mt-1">Confirme ou rejeite as recorrências sugeridas</p>
+          </div>
+          
+          {pendingRecurrences.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhuma recorrência pendente</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {pendingRecurrences.map((pending) => (
+                <div key={pending.id} className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-medium text-gray-900">{pending.description}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium">Valor:</span> {formatCurrency(pending.amount)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Data:</span> {formatDate(pending.suggested_date)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Categoria:</span> {pending.category_name || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => onConfirm(pending.id, 'confirm')}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2 inline" />
+                        Confirmar
+                      </button>
+                      <button
+                        onClick={() => onConfirm(pending.id, 'reject')}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2 inline" />
+                        Rejeitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TransactionsView = ({ transactions, accounts, categories, onRefresh, onEdit, onDelete }) => {
   const [filteredTransactions, setFilteredTransactions] = useState(transactions);
   const [filters, setFilters] = useState({
