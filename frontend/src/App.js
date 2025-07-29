@@ -4709,6 +4709,416 @@ const AccountModal = ({ account, onClose, onCreate }) => {
   );
 };
 
+// 🔄 Recurrence Rule Modal Component
+const RecurrenceModal = ({ rule, accounts, categories, onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    description: rule?.description || '',
+    amount: rule?.amount || '',
+    transaction_type: rule?.transaction_type || 'Despesa',
+    account_id: rule?.account_id || '',
+    category_id: rule?.category_id || '',
+    pattern: rule?.pattern || 'monthly',
+    interval_value: rule?.interval_value || 1,
+    auto_create: rule?.auto_create !== undefined ? rule.auto_create : false,
+    require_confirmation: rule?.require_confirmation !== undefined ? rule.require_confirmation : true,
+    is_active: rule?.is_active !== undefined ? rule.is_active : true,
+    observation: rule?.observation || ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const patternOptions = [
+    { value: 'daily', label: 'Diário' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensal' },
+    { value: 'yearly', label: 'Anual' }
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.description || !formData.amount || !formData.account_id || !formData.category_id) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onCreate(formData);
+    } catch (error) {
+      console.error('Error creating recurrence rule:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit}>
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {rule ? 'Editar Regra de Recorrência' : 'Nova Regra de Recorrência'}
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Form Content */}
+          <div className="px-6 py-4 space-y-4">
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descrição <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="Ex: Salário mensal, Aluguel, Internet..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Type Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="transaction_type"
+                    value="Receita"
+                    checked={formData.transaction_type === 'Receita'}
+                    onChange={(e) => setFormData({...formData, transaction_type: e.target.value})}
+                    className="mr-2"
+                  />
+                  <span className="text-green-600 font-medium">💰 Receita</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="transaction_type"
+                    value="Despesa"
+                    checked={formData.transaction_type === 'Despesa'}
+                    onChange={(e) => setFormData({...formData, transaction_type: e.target.value})}
+                    className="mr-2"
+                  />
+                  <span className="text-red-600 font-medium">💸 Despesa</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Account and Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Conta <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.account_id}
+                  onChange={(e) => setFormData({...formData, account_id: e.target.value})}
+                  required
+                >
+                  <option value="">Selecione uma conta</option>
+                  {accounts.map(account => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} - {formatCurrency(account.current_balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Categoria <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.category_id}
+                  onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+                  required
+                >
+                  <option value="">Selecione uma categoria</option>
+                  {categories
+                    .filter(cat => cat.type === formData.transaction_type)
+                    .map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Recurrence Pattern */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Padrão de Recorrência <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.pattern}
+                  onChange={(e) => setFormData({...formData, pattern: e.target.value})}
+                  required
+                >
+                  {patternOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Intervalo
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={formData.interval_value}
+                  onChange={(e) => setFormData({...formData, interval_value: parseInt(e.target.value)})}
+                  placeholder="1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Ex: 1 = todo mês, 2 = a cada 2 meses
+                </p>
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="auto_create"
+                  checked={formData.auto_create}
+                  onChange={(e) => setFormData({...formData, auto_create: e.target.checked})}
+                  className="mr-3"
+                />
+                <label htmlFor="auto_create" className="text-sm font-medium text-gray-700">
+                  Criar transações automaticamente (sem confirmação)
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="require_confirmation"
+                  checked={formData.require_confirmation}
+                  onChange={(e) => setFormData({...formData, require_confirmation: e.target.checked})}
+                  className="mr-3"
+                />
+                <label htmlFor="require_confirmation" className="text-sm font-medium text-gray-700">
+                  Exigir confirmação antes de criar transações
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                  className="mr-3"
+                />
+                <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                  Regra ativa
+                </label>
+              </div>
+            </div>
+
+            {/* Observation */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                rows="3"
+                value={formData.observation}
+                onChange={(e) => setFormData({...formData, observation: e.target.value})}
+                placeholder="Observações adicionais..."
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Salvando...' : (rule ? 'Atualizar Regra' : 'Criar Regra')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// 🔄 Recurrence Preview Modal Component
+const RecurrencePreviewModal = ({ preview, onClose }) => {
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Preview de Recorrência - Próximas 12 Transações
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-4">
+          {preview && preview.length > 0 ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Resumo do Preview</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Total de transações:</span> {preview.length}
+                  </div>
+                  <div>
+                    <span className="font-medium">Valor total:</span> {formatCurrency(
+                      preview.reduce((sum, t) => sum + t.amount, 0)
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-medium">Primeira data:</span> {formatDate(preview[0].transaction_date)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Última data:</span> {formatDate(preview[preview.length - 1].transaction_date)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 px-4 py-2 text-left">#</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left">Data</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left">Descrição</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left">Valor</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left">Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.map((transaction, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-4 py-2">{index + 1}</td>
+                        <td className="border border-gray-200 px-4 py-2">{formatDate(transaction.transaction_date)}</td>
+                        <td className="border border-gray-200 px-4 py-2">{transaction.description}</td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          <span className={`font-medium ${
+                            transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            transaction.type === 'Receita'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {transaction.type}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhuma transação para exibir no preview</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Fechar Preview
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Transaction Modal Component with Intelligence
 const TransactionModal = ({ transaction, type, accounts, categories, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
