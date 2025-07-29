@@ -621,6 +621,15 @@ const Dashboard = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [reportType, setReportType] = useState('overview'); // For enhanced reports
 
+  // Recurrence System States
+  const [recurrenceRules, setRecurrenceRules] = useState([]);
+  const [pendingRecurrences, setPendingRecurrences] = useState([]);
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
+  const [showRecurrencePreviewModal, setShowRecurrencePreviewModal] = useState(false);
+  const [editingRecurrenceRule, setEditingRecurrenceRule] = useState(null);
+  const [recurrencePreview, setRecurrencePreview] = useState([]);
+  const [recurrenceStats, setRecurrenceStats] = useState(null);
+
   // 🧠 IA States
   const [showAIChat, setShowAIChat] = useState(false);
   const [showAIInsights, setShowAIInsights] = useState(false);
