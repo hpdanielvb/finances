@@ -3290,6 +3290,26 @@ const Dashboard = () => {
         />
       )}
 
+      {showRecurrenceModal && (
+        <RecurrenceModal
+          rule={editingRecurrenceRule}
+          accounts={accounts}
+          categories={categories}
+          onClose={() => {
+            setShowRecurrenceModal(false);
+            setEditingRecurrenceRule(null);
+          }}
+          onCreate={handleCreateRecurrenceRule}
+        />
+      )}
+
+      {showRecurrencePreviewModal && (
+        <RecurrencePreviewModal
+          preview={recurrencePreview}
+          onClose={() => setShowRecurrencePreviewModal(false)}
+        />
+      )}
+
       {showTransferModal && (
         <TransferModal
           accounts={accounts}
