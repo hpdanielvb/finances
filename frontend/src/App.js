@@ -10558,6 +10558,7 @@ const SidebarComponent = ({ collapsed, onToggle, activeView, onViewChange, onCre
     { id: 'accounts', label: 'Contas', icon: PiggyBank, color: 'purple' },
     { id: 'goals', label: 'Metas', icon: Target, color: 'pink' },
     { id: 'budgets', label: 'Orçamentos', icon: TrendingUp, color: 'orange' },
+    { id: 'recurrence', label: 'Recorrência', icon: RotateCcw, color: 'cyan', emoji: '🔄' },
     { id: 'ai', label: 'IA Financeira', icon: Settings, color: 'indigo', emoji: '🧠' },
     { id: 'consortiums', label: 'Consórcios', icon: DollarSign, color: 'emerald', emoji: '🏠' },
     { id: 'credit-cards', label: 'Cartões', icon: CreditCard, color: 'amber', emoji: '💳', action: onCreditCardsClick },
