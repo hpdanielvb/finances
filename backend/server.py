@@ -6706,6 +6706,28 @@ async def cleanup_example_data(current_user: User = Depends(get_current_user)):
         print(f"[CLEANUP ERROR] {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro durante limpeza: {str(e)}")
 
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for Railway deployment"""
+    try:
+        # Test database connection
+        await db.users.count_documents({}, limit=1)
+        
+        return {
+            "status": "healthy",
+            "message": "OrçaZenFinanceiro API is running",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy", 
+            "message": "Database connection failed",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 # Include router
 app.include_router(api_router)
 
