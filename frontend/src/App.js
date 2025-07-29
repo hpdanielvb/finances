@@ -380,61 +380,50 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, register } = useAuth();
 
+  // Create a direct login handler using useCallback
+  const handleDirectLogin = useCallback(async () => {
+    console.log('🚨 handleDirectLogin CALLED!');
+    console.log('🚨 Form data:', formData);
+    
+    if (!formData.email || !formData.password) {
+      setError('Email e senha são obrigatórios');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      console.log('🚀 Chamando login...');
+      const result = await login(formData.email, formData.password);
+      console.log('📝 Resultado do login:', result);
+      
+      if (!result.success) {
+        console.log('❌ Login falhou:', result.message);
+        setError(result.message);
+        toast.error(result.message);
+        setLoading(false);
+      } else {
+        console.log('✅ Login bem-sucedido!');
+        // Don't set loading to false - let AuthContext handle it
+      }
+    } catch (error) {
+      console.error('❌ Erro no login direto:', error);
+      setError('Erro interno. Tente novamente.');
+      toast.error('Erro interno. Tente novamente.');
+      setLoading(false);
+    }
+  }, [formData, login]);
+
   const handleSubmit = async (e) => {
     console.log('🚨 handleSubmit CALLED! Event:', e);
     e.preventDefault();
-    console.log('🚨 preventDefault executed, setting loading...');
-    setLoading(true);
-    setError('');
-    console.log('🚨 Form data:', formData);
-
-    try {
-      if (showForgotPassword) {
-        // Handle forgot password
-        const response = await axios.post(`${API}/auth/forgot-password`, {
-          email: formData.email
-        });
-        toast.success('Instruções enviadas para seu email!');
-        setShowForgotPassword(false);
-        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-        setLoading(false);
-      } else if (!isLogin && formData.password !== formData.confirmPassword) {
-        setError('Senhas não coincidem');
-        setLoading(false);
-        return;
-      } else {
-        console.log('🚀 Iniciando processo de login/registro...');
-        const result = isLogin 
-          ? await login(formData.email, formData.password)
-          : await register(formData.name, formData.email, formData.password, formData.confirmPassword);
-
-        console.log('📝 Resultado do login/registro:', result);
-
-        if (!result.success) {
-          console.log('❌ Login/registro falhou:', result.message);
-          setError(result.message);
-          toast.error(result.message);
-          setLoading(false);
-        } else {
-          console.log('✅ Login/registro bem-sucedido! Aguardando redirecionamento...');
-          // Success - loading will be handled by auth context
-          // Don't set loading to false here for successful login
-          // The AuthContext update will trigger a re-render
-          if (isLogin) {
-            // For login, the AuthContext will handle the state
-            console.log('✅ Login concluído, aguardando atualização do contexto...');
-          } else {
-            // For registration, reset loading
-            setLoading(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Form submit error:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro interno. Tente novamente.';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      setLoading(false);
+    
+    if (isLogin) {
+      await handleDirectLogin();
+    } else {
+      // Handle registration logic here if needed
+      console.log('Registration flow...');
     }
   };
 
@@ -550,7 +539,6 @@ const LoginForm = () => {
           <button
             type="submit"
             disabled={loading}
-            onClick={handleSubmit}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg transition-all shadow-lg hover:shadow-xl"
           >
             {loading ? 'Carregando...' : 
@@ -558,6 +546,17 @@ const LoginForm = () => {
               isLogin ? 'Entrar' : 'Criar Conta'
             }
           </button>
+          
+          {/* BOTÃO DE TESTE DIRETO */}
+          {isLogin && (
+            <button
+              type="button"
+              onClick={handleDirectLogin}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all text-sm"
+            >
+              🔧 LOGIN DIRETO (TESTE)
+            </button>
+          )}
         </form>
 
         <div className="text-center mt-4 space-y-2">
