@@ -6,6 +6,10 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import os
+import logging # Adicione este import
+# Configure o logger logo no início
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 import uuid
 import bcrypt
 import jwt
@@ -32,8 +36,28 @@ from PIL import Image
 # load_dotenv(ROOT_DIR / '.env') # COMENTE ESTA LINHA para garantir que o Railway use suas próprias variáveis
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-print(f"[DEBUG_MONGO] MONGO_URL lida: '{mongo_url}'")
+# === BLOCO DE DEBUG CRÍTICO DE MONGO_URL ===
+try:
+    mongo_url = os.environ.get('MONGO_URL')
+    if not mongo_url:
+        logger.error("[DEBUG_MONGO] MONGO_URL não encontrada no ambiente!")
+        # Use uma URL de fallback REALISTA para ver se o erro muda
+        mongo_url = "mongodb+srv://USUARIO_FAKE:SENHA_FAKE@cluster0.abcde.mongodb.net/database_fake?retryWrites=true&w=majority&appName=app_fake"
+        # Se você tem certeza da sua string, pode colar aqui o valor correto direto para teste
+        # mongo_url = "mongodb+srv://hpdanielvb:H0ot22KM5TqnjLRd@orcazen-prod-db.zh3xqxq.mongodb.net/orcazenfinanceiro?retryWrites=true&w=majority&appName=orcazen-prod-db"
+
+    logger.info(f"[DEBUG_MONGO] MONGO_URL lida pelo app: '{mongo_url}'")
+    logger.info(f"[DEBUG_MONGO] Conteúdo completo de os.environ:")
+    for k, v in os.environ.items():
+        logger.info(f"[DEBUG_ENV_FULL] {k}='{v}'")
+
+except Exception as e:
+    logger.critical(f"[DEBUG_MONGO_FATAL] Erro ao carregar MONGO_URL: {e}")
+    mongo_url = "mongodb://localhost:27017/fallback_local" # Fallback local para não crashar aqui
+# === FIM BLOCO DE DEBUG ===
+
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ['DB_NAME']] # DB_NAME ainda é lido do ambiente
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
