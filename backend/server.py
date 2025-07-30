@@ -28,16 +28,17 @@ import pandas as pd
 from pdf2image import convert_from_bytes
 from PIL import Image
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# ROOT_DIR = Path(__file__).parent # Pode comentar ou remover se não for usado mais
+# load_dotenv(ROOT_DIR / '.env') # COMENTE ESTA LINHA para garantir que o Railway use suas próprias variáveis
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
+print(f"[DEBUG_MONGO] MONGO_URL lida: '{mongo_url}'")
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Configuration - More secure
-SECRET_KEY = "orçazen_financeiro_secret_key_2025_ultra_secure_brasil"
+SECRET_KEY = os.environ.get('SECRET_KEY', 'GzAucYBaoXVp-Ols_DnL8cnrRVpabz691hRwtoMhgeDHbyJXzqATzcBAJxXQjDV64FCTCHJiM1URwT9BGDnOJg')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30  # 30 days for better persistence
 
