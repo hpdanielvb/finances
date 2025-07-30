@@ -57,8 +57,6 @@ except Exception as e:
 # === FIM BLOCO DE DEBUG ===
 
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']] # DB_NAME ainda é lido do ambiente
-client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Configuration - More secure
