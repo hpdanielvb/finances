@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 import os
 import logging # Adicione este import
 # Configure o logger logo no início
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+#logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger(__name__)
 import uuid
 import bcrypt
 import jwt
@@ -37,23 +37,43 @@ from PIL import Image
 
 # MongoDB connection
 # === BLOCO DE DEBUG CRÍTICO DE MONGO_URL ===
+# MongoDB connection
+# === BLOCO DE CONEXÃO AO BANCO DE DADOS ===
 try:
     mongo_url = os.environ.get('MONGO_URL')
+    db_name = os.environ.get('DB_NAME') # Carrega DB_NAME aqui
+
     if not mongo_url:
-        logger.error("[DEBUG_MONGO] MONGO_URL não encontrada no ambiente!")
-        # Use uma URL de fallback REALISTA para ver se o erro muda
-        mongo_url = "mongodb+srv://USUARIO_FAKE:SENHA_FAKE@cluster0.abcde.mongodb.net/database_fake?retryWrites=true&w=majority&appName=app_fake"
-        # Se você tem certeza da sua string, pode colar aqui o valor correto direto para teste
-        # mongo_url = "mongodb+srv://hpdanielvb:H0ot22KM5TqnjLRd@orcazen-prod-db.zh3xqxq.mongodb.net/orcazenfinanceiro?retryWrites=true&w=majority&appName=orcazen-prod-db"
+        logger.error("[DB_INIT_ERROR] MONGO_URL não encontrada no ambiente!")
+        # Fallback para URL de desenvolvimento ou de depuração
+        mongo_url = "mongodb://localhost:27017/orcazen_dev" 
+        db_name = "orcazen_dev"
+
+    if not db_name:
+        logger.error("[DB_INIT_ERROR] DB_NAME não encontrada no ambiente!")
+        db_name = "orcazen_dev" # Fallback
 
     logger.info(f"[DEBUG_MONGO] MONGO_URL lida pelo app: '{mongo_url}'")
-    logger.info(f"[DEBUG_MONGO] Conteúdo completo de os.environ:")
+    logger.info(f"[DEBUG_MONGO] DB_NAME lida pelo app: '{db_name}'")
+    logger.info(f"[DEBUG_MONGO] Conteúdo parcial de os.environ:")
     for k, v in os.environ.items():
-        logger.info(f"[DEBUG_ENV_FULL] {k}='{v}'")
+        if "MONGO" in k.upper() or "SMTP" in k.upper() or "SECRET" in k.upper() or "PORT" in k.upper() or "DB_NAME" in k.upper():
+            logger.info(f"[DEBUG_ENV_FULL] {k}='{v}'")
+
+    # Inicialização ÚNICA e PROTEGIDA
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[db_name] # Usamos o db_name carregado ou fallback
+
+    # Testa a conexão com o banco de dados imediatamente
+    # await db.users.count_documents({}, limit=1) # Não pode ser aqui, pois está fora de uma função async
+    logger.info("[DB_INIT_SUCCESS] Conexão com MongoDB inicializada.")
 
 except Exception as e:
-    logger.critical(f"[DEBUG_MONGO_FATAL] Erro ao carregar MONGO_URL: {e}")
-    mongo_url = "mongodb://localhost:27017/fallback_local" # Fallback local para não crashar aqui
+    logger.critical(f"[DB_INIT_FATAL] Erro CRÍTICO ao inicializar conexão com MongoDB: {e}")
+    # Se a conexão falhar aqui, o app não vai conseguir funcionar.
+    # Você verá essa mensagem nos logs.
+    raise e # Levanta a exceção para que o container caia e o Railway mostre o erro.
+# === FIM BLOCO DE CONEXÃO AO BANCO DE DADOS ===
 # === FIM BLOCO DE DEBUG ===
 
 client = AsyncIOMotorClient(mongo_url)
@@ -6772,19 +6792,3 @@ async def shutdown_db_client():
     client.close()
 
 @app.get("/api/health")
-async def health_check_root():
-    try:
-        # Tenta acessar o banco de dados para verificar a conexão
-        await db.users.count_documents({}) 
-        return {
-            "status": "healthy",
-            "message": "OrçaZenFinanceiro API is running",
-            "database": "connected",
-            "version": "1.0.0"
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy", 
-            "message": f"Database connection failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat()
-        }
