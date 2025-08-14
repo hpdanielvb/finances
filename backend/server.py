@@ -6570,75 +6570,89 @@ async def confirm_pending_recurrences(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro no processamento: {str(e)}")
 
-@api_router.post("/recurrence/process", response_model=Dict[str, Any])
-async def process_user_recurrences(
+@api_router.post("/recurrence/confirm", response_model=Dict[str, Any])
+async def confirm_pending_recurrences(
+    confirmation: RecurrenceConfirmation,
     current_user: User = Depends(get_current_user)
 ):
-    """Processar todas as recorrências pendentes do usuário (manual trigger)"""
-    try:
-        results = await process_pending_recurrences(current_user.id)
-        
-        return {
-            "message": "Processamento de recorrências concluído!",
-            "results": results,
-            "processed_at": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no processamento: {str(e)}")
+    """Confirmar ou rejeitar recorrências pendentes."""
+    results = {
+        "processed": 0,
+        "approved": 0,
+        "rejected": 0,
+        "created_transactions": [],
+        "errors": []
+    }
 
-@api_router.get("/recurrence/statistics", response_model=Dict[str, Any])
-async def get_recurrence_statistics(
-    current_user: User = Depends(get_current_user)
-):
-    """Obter estatísticas do sistema de recorrência"""
     try:
-        # Estatísticas de regras
-        total_rules = await db.recurrence_rules.count_documents({"user_id": current_user.id})
-        active_rules = await db.recurrence_rules.count_documents({
-            "user_id": current_user.id,
-            "is_active": True
-        })
-        
-        # Estatísticas por padrão
-        pattern_stats = await db.recurrence_rules.aggregate([
-            {"$match": {"user_id": current_user.id, "is_active": True}},
-            {"$group": {"_id": "$recurrence_pattern", "count": {"$sum": 1}}},
-            {"$sort": {"count": -1}}
-        ]).to_list(10)
-        
-        # Estatísticas de pendências
-        pending_count = await db.pending_recurrences.count_documents({
-            "user_id": current_user.id,
-            "status": "pending"
-        })
-        
-        # Próximas execuções (próximos 7 dias)
-        next_week = datetime.utcnow() + timedelta(days=7)
-        upcoming_executions = await db.recurrence_rules.find({
-            "user_id": current_user.id,
-            "is_active": True,
-            "next_execution_date": {"$lte": next_week}
-        }).sort("next_execution_date", 1).to_list(10)
-        
-        # Remove MongoDB ObjectId fields
-        for execution in upcoming_executions:
-            if "_id" in execution:
-                del execution["_id"]
-        
-        return {
-            "total_rules": total_rules,
-            "active_rules": active_rules,
-            "inactive_rules": total_rules - active_rules,
-            "pattern_distribution": pattern_stats,
-            "pending_confirmations": pending_count,
-            "upcoming_executions": upcoming_executions,
-            "next_7_days_count": len(upcoming_executions)
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao obter estatísticas: {str(e)}")
+        pending_ids = []
+        if confirmation.action in ["approve_all", "reject_all"]:
+            pending_list = await db.pending_recurrences.find({
+                "user_id": current_user.id,
+                "status": "pending"
+            }).to_list(100)
+            pending_ids = [item["id"] for item in pending_list]
+        else:
+            pending_ids = confirmation.pending_recurrence_ids
 
+        for pending_id in pending_ids:
+            try:
+                pending = await db.pending_recurrences.find_one({
+                    "id": pending_id,
+                    "user_id": current_user.id,
+                    "status": "pending"
+                })
+
+                if not pending:
+                    results["errors"].append(f"Pendência {pending_id} não encontrada")
+                    continue
+
+                results["processed"] += 1
+
+                if confirmation.action in ["approve", "approve_all"]:
+                    # Aprova a pendência e cria a transação
+                    await db.pending_recurrences.update_one(
+                        {"id": pending_id}, {"$set": {"status": "approved"}}
+                    )
+                    results["approved"] += 1
+                    
+                    rule = await db.recurrence_rules.find_one({"id": pending["recurrence_rule_id"]})
+                    if rule:
+                        rule_obj = RecurrenceRule(**rule)
+                        transaction_id = await create_transaction_from_recurrence(
+                            rule_obj, pending["suggested_date"], current_user.id
+                        )
+                        results["created_transactions"].append({
+                            "transaction_id": transaction_id,
+                            "description": pending["transaction_data"]["description"],
+                            "value": pending["transaction_data"]["value"],
+                            "date": pending["suggested_date"],
+                        })
+                        # Atualiza a regra de recorrência
+                        await db.recurrence_rules.update_one(
+                            {"id": rule["id"]},
+                            {
+                                "$set": {"last_execution_date": pending["suggested_date"]},
+                                "$inc": {"total_executions": 1},
+                                "$addToSet": {"completed_at": datetime.utcnow()}
+                            }
+                        )
+                else:  # Rejeita a pendência
+                    await db.pending_recurrences.update_one(
+                        {"id": pending_id}, {"$set": {"status": "rejected"}}
+                    )
+                    results["rejected"] += 1
+
+            except Exception as e_inner:
+                results["errors"].append(f"Erro ao processar pendência {pending_id}: {str(e_inner)}")
+
+        return {
+            "message": f"Processamento concluído: {results['approved']} aprovadas, {results['rejected']} rejeitadas.",
+            "results": results
+        }
+
+    except Exception as e_outer:
+        raise HTTPException(status_code=500, detail=f"Erro geral no processamento de recorrências: {str(e_outer)}")
 # ============================================================================
 # 🧹 ADMINISTRATIVE DATA CLEANUP ENDPOINTS (TEMPORARY)
 # ============================================================================
