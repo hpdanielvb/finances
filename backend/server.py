@@ -31,6 +31,8 @@ import pytesseract
 import pandas as pd
 from pdf2image import convert_from_bytes
 from PIL import Image
+api_router = APIRouter()
+app = FastAPI()
 
 # ROOT_DIR = Path(__file__).parent # Pode comentar ou remover se não for usado mais
 # load_dotenv(ROOT_DIR / '.env') # COMENTE ESTA LINHA para garantir que o Railway use suas próprias variáveis
@@ -6760,46 +6762,31 @@ async def cleanup_example_data(current_user: User = Depends(get_current_user)):
         print(f"[CLEANUP ERROR] {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro durante limpeza: {str(e)}")
 
-@api_router.get("/health")
+@api_router.get("/health", tags=["Health Check"])
 async def health_check():
-    """Health check endpoint for Railway deployment"""
+    """Endpoint de verificação de saúde para o deploy na Railway"""
     try:
-        # Test database connection
-        await db.users.count_documents({}, limit=1)
-        
+        # Testa a conexão com o banco de dados
+        await db.client.server_info()
         return {
             "status": "healthy",
-            "message": "OrçaZenFinanceiro API is running",
+            "message": "OrcaZenFinanceiro API is running",
             "timestamp": datetime.utcnow().isoformat(),
             "version": "1.0.0",
             "database": "connected"
         }
     except Exception as e:
         return {
-            "status": "unhealthy", 
+            "status": "unhealthy",
             "message": "Database connection failed",
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
         }
 
-# Include router
-app.include_router(api_router)
-
-# Enhanced CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    db.client.close()
 
-@app.get("/api/health")
+# Inclui todas as rotas definidas no api_router ao app principal
+# ESTA DEVE SER A ÚLTIMA LINHA DE CÓDIGO EXECUTÁVEL
+app.include_router(api_router)
