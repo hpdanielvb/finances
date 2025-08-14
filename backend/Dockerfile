@@ -1,7 +1,8 @@
-# Multi-stage build para Backend FastAPI - Railway Production
-FROM python:3.11-slim as backend-base
+# Multi-stage build for Backend FastAPI - Railway Production
+FROM python:3.11-slim as base-image
 
-# Instalar dependências do sistema necessárias para Railway
+# Instalar dependências de sistema necessárias para Railway
+# Adicionado tesseract-ocr-por para suporte a português
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-por \
@@ -13,25 +14,25 @@ RUN apt-get update && apt-get install -y \
 
 # Configurar usuário não-root para segurança
 RUN useradd --create-home --shell /bin/bash app
-USER app
+
 WORKDIR /home/app
 
-# Copiar requirements e instalar dependências Python
+# Criar diretório para uploads ANTES de copiar o código e dar permissão
+RUN mkdir -p uploads && chown -R app:app uploads
+
+# Copiar requerimentos e instalar dependências Python
 COPY --chown=app:app requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código da aplicação
 COPY --chown=app:app . .
 
-# Criar diretório para uploads
-RUN mkdir -p uploads
+# Mudar para o usuário não-root
+USER app
 
-# Expor porta (Railway usa PORT environment variable)
-EXPOSE 8001
-
-# Health check
+# Health check usando a variável de ambiente PORT (padrão 8001 se não definida)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+  CMD curl -f http://localhost:${PORT:-8001}/health || exit 1
 
-# Comando para produção Railway
-CMD ["python", "-m", "gunicorn", "server:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8001"]
+# Comando para produção na Railway usando a variável de ambiente PORT
+CMD gunicorn server:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
