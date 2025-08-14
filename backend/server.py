@@ -6483,22 +6483,21 @@ async def confirm_pending_recurrences(
     current_user: User = Depends(get_current_user)
 ):
     """Confirmar ou rejeitar recorrências pendentes"""
+    results = {
+        "processed": 0,
+        "approved": 0,
+        "rejected": 0,
+        "created_transactions": [],
+        "errors": []
+    }
+    
     try:
-        results = {
-            "processed": 0,
-            "approved": 0,
-            "rejected": 0,
-            "created_transactions": [],
-            "errors": []
-        }
-        
+        pending_ids = []
         if confirmation.action in ["approve_all", "reject_all"]:
-            # Processar todas as pendências
             pending_list = await db.pending_recurrences.find({
                 "user_id": current_user.id,
                 "status": "pending"
             }).to_list(100)
-            
             pending_ids = [item["id"] for item in pending_list]
         else:
             pending_ids = confirmation.pending_recurrence_ids
@@ -6518,6 +6517,13 @@ async def confirm_pending_recurrences(
                 results["processed"] += 1
                 
                 if confirmation.action in ["approve", "approve_all"]:
+                    # Marcar como aprovada
+                    await db.pending_recurrences.update_one(
+                        {"id": pending_id},
+                        {"$set": {"status": "approved"}}
+                    )
+                    results["approved"] += 1
+
                     # Buscar regra para criar transação
                     rule = await db.recurrence_rules.find_one({
                         "id": pending["recurrence_rule_id"]
@@ -6528,31 +6534,22 @@ async def confirm_pending_recurrences(
                         transaction_id = await create_transaction_from_recurrence(
                             rule_obj, pending["suggested_date"], current_user.id
                         )
-                        
                         results["created_transactions"].append({
                             "transaction_id": transaction_id,
                             "description": pending["transaction_data"]["description"],
                             "value": pending["transaction_data"]["value"],
-                            "date": pending["suggested_date"]
+                            "date": pending["suggested_date"],
                         })
                         
                         # Atualizar regra
                         await db.recurrence_rules.update_one(
                             {"id": rule["id"]},
-                            {"$set": {
-                                "last_execution_date": pending["suggested_date"],
-                                "total_executions": rule["total_executions"] + 1,
-                                "updated_at": datetime.utcnow()
-                            }}
+                            {
+                                "$set": {"last_execution_date": pending["suggested_date"]},
+                                "$inc": {"total_executions": 1},
+                                "$addToSet": {"completed_at": datetime.utcnow()}
+                            }
                         )
-                    
-                    # Marcar como aprovada
-                    await db.pending_recurrences.update_one(
-                        {"id": pending_id},
-                        {"$set": {"status": "approved"}}
-                    )
-                    results["approved"] += 1
-                    
                 else:  # reject or reject_all
                     # Marcar como rejeitada
                     await db.pending_recurrences.update_one(
@@ -6560,11 +6557,11 @@ async def confirm_pending_recurrences(
                         {"$set": {"status": "rejected"}}
                     )
                     results["rejected"] += 1
-                
+            
             except Exception as e:
-                error_msg = f"Erro ao processar {pending_id}: {str(e)}"
+                error_msg = f"Erro ao processar pendência {pending_id}: {str(e)}"
                 results["errors"].append(error_msg)
-        
+
         return {
             "message": f"Processamento concluído: {results['approved']} aprovadas, {results['rejected']} rejeitadas",
             "results": results
