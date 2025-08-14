@@ -1,24 +1,26 @@
 # 🚂 Railway Deployment Configuration
-version: 2
+version = 2
 
-services:
-  backend:
-    name: orcazen-backend
-    source: 
-      dockerfile: backend/Dockerfile
-      workdir: backend
-    variables:
-      PORT: 8001
-      PYTHON_VERSION: 3.11
-    domains:
-      - orcazen-api.up.railway.app
-    
-  frontend:
-    name: orcazen-frontend  
-    source:
-      dockerfile: frontend/Dockerfile
-      workdir: frontend
-    variables:
-      NODE_VERSION: 18
-    domains:
-      - orcazen.up.railway.app
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[services.backend]
+name = "orcazen-backend"
+source = { dockerfile = "backend/Dockerfile", workdir = "backend" }
+domains = ["orcazen-api.up.railway.app"]
+
+[services.backend.variables]
+PORT = "8001"
+PYTHON_VERSION = "3.11"
+
+[services.frontend]
+name = "orcazen-frontend"
+source = { dockerfile = "frontend/Dockerfile", workdir = "frontend" }
+domains = ["orcazen.up.railway.app"]
+
+[services.frontend.variables]
+NODE_VERSION = "18"
