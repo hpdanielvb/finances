@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # 2. INICIALIZAÇÃO DO APP E ROUTER (CORRIGIDO)
 # ===============================================================
 app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
-api_router = APIRouter() # Sem prefixo, para corresponder ao frontend
+api_router = APIRouter() # SEM PREFIXO, para corresponder ao frontend
 security = HTTPBearer()
 
 # ===============================================================
