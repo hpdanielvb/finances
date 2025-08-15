@@ -7099,6 +7099,10 @@ async def health_check():
 # ===============================================
 # BLOCO FINAL - INCLUIR ROUTER PRINCIPAL
 # ===============================================
+@app.get("/teste-final")
+async def rota_de_teste_final():
+    return {"mensagem": "O backend está a responder corretamente!"}
+    
 app.include_router(api_router)
 
 # ===============================================
