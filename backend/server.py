@@ -39,6 +39,17 @@ logger = logging.getLogger(__name__)
 # Inicializa o app principal com título e versão
 app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
 
+# ===============================================================
+# 2.1. CONFIGURAÇÃO DE CORS (ADICIONADO)
+# ===============================================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção, especifique as origens permitidas
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Inicializa o router SEM PREFIXO, para corresponder às chamadas do frontend
 api_router = APIRouter() 
 security = HTTPBearer()
@@ -1544,7 +1555,292 @@ async def get_transaction_statistics(
     else:
         return {"statistics": []}
 
-@api_router.put("/transactions/{transaction_id}", response_model=Transaction)
+# ============================================================================
+# 📊 ESTATÍSTICAS GERAIS - ROTA UNIFICADA
+# ============================================================================
+
+@api_router.get("/statistics")
+async def get_general_statistics(current_user: User = Depends(get_current_user)):
+    """Get general statistics for the dashboard"""
+    try:
+        # Get current month data
+        now = datetime.now()
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_month = (start_of_month.replace(month=start_of_month.month + 1) - timedelta(days=1)) if start_of_month.month < 12 else start_of_month.replace(year=start_of_month.year + 1, month=1) - timedelta(days=1)
+        
+        # Get accounts
+        accounts = await db.accounts.find({"user_id": current_user.id, "is_active": True}).to_list(100)
+        total_balance = sum(account['current_balance'] for account in accounts)
+        
+        # Get monthly transactions
+        transactions = await db.transactions.find({
+            "user_id": current_user.id,
+            "transaction_date": {"$gte": start_of_month, "$lte": end_of_month}
+        }).to_list(1000)
+        
+        total_income = sum(t['value'] for t in transactions if t['type'] == "Receita")
+        total_expenses = sum(t['value'] for t in transactions if t['type'] == "Despesa")
+        
+        # Get categories for breakdown
+        categories = await db.categories.find({
+            "$or": [{"user_id": current_user.id}, {"user_id": None}]
+        }).to_list(1000)
+        
+        # Group expenses by category
+        expense_by_category = {}
+        for transaction in transactions:
+            if transaction.get('category_id') and transaction['type'] == "Despesa":
+                category = next((c for c in categories if c['id'] == transaction['category_id']), None)
+                if category:
+                    category_name = category['name']
+                    expense_by_category[category_name] = expense_by_category.get(category_name, 0) + transaction['value']
+        
+        # Get pending transactions
+        next_15_days = now + timedelta(days=15)
+        pending_transactions = await db.transactions.find({
+            "user_id": current_user.id,
+            "status": "Pendente",
+            "transaction_date": {"$gte": now, "$lte": next_15_days}
+        }).to_list(100)
+        
+        return {
+            "total_balance": total_balance,
+            "monthly_income": total_income,
+            "monthly_expenses": total_expenses,
+            "monthly_net": total_income - total_expenses,
+            "accounts_count": len(accounts),
+            "expense_by_category": expense_by_category,
+            "pending_transactions_count": len(pending_transactions),
+            "period": {
+                "start": start_of_month.isoformat(),
+                "end": end_of_month.isoformat()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas gerais: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
+
+# ============================================================================
+# ❓ SISTEMA DE AJUDA - ROTAS DE SUPORTE
+# ============================================================================
+
+@api_router.get("/help/faqs")
+async def get_faqs():
+    """Get frequently asked questions"""
+    faqs = [
+        {
+            "id": 1,
+            "question": "Como adicionar uma nova transação?",
+            "answer": "Acesse a seção 'Transações' e clique no botão '+'. Preencha os dados da transação e salve."
+        },
+        {
+            "id": 2,
+            "question": "Como criar uma nova conta?",
+            "answer": "Vá para 'Contas' e clique em 'Nova Conta'. Defina o nome, tipo e saldo inicial."
+        },
+        {
+            "id": 3,
+            "question": "Como definir um orçamento?",
+            "answer": "Na seção 'Orçamentos', selecione uma categoria e defina o valor mensal desejado."
+        },
+        {
+            "id": 4,
+            "question": "Como funciona o sistema de metas?",
+            "answer": "Crie uma meta definindo o valor objetivo e prazo. Contribua regularmente para acompanhar o progresso."
+        },
+        {
+            "id": 5,
+            "question": "Como importar extratos bancários?",
+            "answer": "Use a funcionalidade de importação na seção 'Transações'. Suporta arquivos CSV e PDF."
+        }
+    ]
+    return {"faqs": faqs}
+
+@api_router.get("/help/topics")
+async def get_help_topics():
+    """Get help topics and categories"""
+    topics = [
+        {
+            "id": "getting-started",
+            "title": "Primeiros Passos",
+            "description": "Aprenda a configurar sua conta e começar a usar o sistema",
+            "articles": [
+                {"id": "create-account", "title": "Criar Conta", "url": "/help/article/create-account"},
+                {"id": "add-first-transaction", "title": "Primeira Transação", "url": "/help/article/add-first-transaction"},
+                {"id": "setup-accounts", "title": "Configurar Contas", "url": "/help/article/setup-accounts"}
+            ]
+        },
+        {
+            "id": "transactions",
+            "title": "Transações",
+            "description": "Como gerenciar suas receitas e despesas",
+            "articles": [
+                {"id": "add-transaction", "title": "Adicionar Transação", "url": "/help/article/add-transaction"},
+                {"id": "edit-transaction", "title": "Editar Transação", "url": "/help/article/edit-transaction"},
+                {"id": "delete-transaction", "title": "Excluir Transação", "url": "/help/article/delete-transaction"},
+                {"id": "import-transactions", "title": "Importar Transações", "url": "/help/article/import-transactions"}
+            ]
+        },
+        {
+            "id": "budgets",
+            "title": "Orçamentos",
+            "description": "Como criar e gerenciar orçamentos",
+            "articles": [
+                {"id": "create-budget", "title": "Criar Orçamento", "url": "/help/article/create-budget"},
+                {"id": "track-budget", "title": "Acompanhar Orçamento", "url": "/help/article/track-budget"},
+                {"id": "budget-reports", "title": "Relatórios de Orçamento", "url": "/help/article/budget-reports"}
+            ]
+        },
+        {
+            "id": "goals",
+            "title": "Metas Financeiras",
+            "description": "Como definir e alcançar suas metas",
+            "articles": [
+                {"id": "create-goal", "title": "Criar Meta", "url": "/help/article/create-goal"},
+                {"id": "contribute-goal", "title": "Contribuir para Meta", "url": "/help/article/contribute-goal"},
+                {"id": "goal-progress", "title": "Acompanhar Progresso", "url": "/help/article/goal-progress"}
+            ]
+        },
+        {
+            "id": "reports",
+            "title": "Relatórios",
+            "description": "Como gerar e interpretar relatórios",
+            "articles": [
+                {"id": "cash-flow", "title": "Fluxo de Caixa", "url": "/help/article/cash-flow"},
+                {"id": "expense-analysis", "title": "Análise de Despesas", "url": "/help/article/expense-analysis"},
+                {"id": "export-data", "title": "Exportar Dados", "url": "/help/article/export-data"}
+            ]
+        }
+    ]
+    return {"topics": topics}
+
+@api_router.get("/help/article/{article_id}")
+async def get_help_article(article_id: str):
+    """Get specific help article content"""
+    articles = {
+        "create-account": {
+            "title": "Como Criar uma Conta",
+            "content": "Para criar uma conta no OrçaZenFinanceiro, siga estes passos...",
+            "category": "getting-started"
+        },
+        "add-transaction": {
+            "title": "Como Adicionar uma Transação",
+            "content": "Para adicionar uma nova transação, acesse a seção Transações...",
+            "category": "transactions"
+        },
+        "create-budget": {
+            "title": "Como Criar um Orçamento",
+            "content": "Para criar um orçamento, vá para a seção Orçamentos...",
+            "category": "budgets"
+        }
+    }
+    
+    article = articles.get(article_id, {
+        "title": "Artigo não encontrado",
+        "content": "O artigo solicitado não foi encontrado.",
+        "category": "general"
+    })
+    
+    return article
+
+@api_router.get("/help/search")
+async def search_help(query: str):
+    """Search help articles and FAQs"""
+    # Simulação de busca - em produção, implementar busca real
+    search_results = [
+        {
+            "id": "add-transaction",
+            "title": "Como Adicionar uma Transação",
+            "snippet": "Aprenda a adicionar novas transações ao seu controle financeiro...",
+            "url": "/help/article/add-transaction",
+            "relevance": 0.95
+        }
+    ]
+    return {"results": search_results, "query": query}
+
+@api_router.get("/help/contact")
+async def get_contact_info():
+    """Get contact information for support"""
+    return {
+        "email": "suporte@orcazen.com.br",
+        "phone": "+55 (11) 99999-9999",
+        "whatsapp": "+55 (11) 99999-9999",
+        "hours": "Segunda a Sexta, 9h às 18h",
+        "response_time": "Até 24 horas"
+    }
+
+@api_router.get("/help/feedback")
+async def submit_feedback(feedback_data: dict):
+    """Submit user feedback"""
+    # Em produção, salvar feedback no banco de dados
+    return {
+        "message": "Feedback enviado com sucesso!",
+        "feedback_id": str(uuid.uuid4()),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+# ============================================================================
+# 💳 CARTÕES ALELO - INTEGRAÇÃO FUTURA
+# ============================================================================
+
+@api_router.get("/alelo/cards")
+async def get_alelo_cards(current_user: User = Depends(get_current_user)):
+    """Get Alelo cards information (placeholder for future integration)"""
+    # Esta é uma implementação placeholder para futura integração com Alelo
+    try:
+        # Em produção, aqui seria feita a integração real com a API da Alelo
+        # Por enquanto, retorna dados simulados
+        alelo_cards = [
+            {
+                "id": "alelo-001",
+                "card_number": "**** **** **** 1234",
+                "card_type": "Refeição",
+                "balance": 0.0,
+                "status": "active",
+                "last_update": datetime.utcnow().isoformat(),
+                "note": "Integração com Alelo em desenvolvimento"
+            },
+            {
+                "id": "alelo-002", 
+                "card_number": "**** **** **** 5678",
+                "card_type": "Alimentação",
+                "balance": 0.0,
+                "status": "active",
+                "last_update": datetime.utcnow().isoformat(),
+                "note": "Integração com Alelo em desenvolvimento"
+            }
+        ]
+        
+        return {
+            "cards": alelo_cards,
+            "total_cards": len(alelo_cards),
+            "integration_status": "development",
+            "message": "Integração com cartões Alelo está em desenvolvimento"
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar cartões Alelo: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar cartões Alelo")
+
+@api_router.get("/alelo/cards/{card_id}/transactions")
+async def get_alelo_card_transactions(card_id: str, current_user: User = Depends(get_current_user)):
+    """Get transactions for a specific Alelo card"""
+    # Placeholder para futura implementação
+    return {
+        "card_id": card_id,
+        "transactions": [],
+        "message": "Funcionalidade em desenvolvimento"
+    }
+
+@api_router.post("/alelo/sync")
+async def sync_alelo_cards(current_user: User = Depends(get_current_user)):
+    """Sync Alelo cards data"""
+    # Placeholder para futura implementação
+    return {
+        "message": "Sincronização com Alelo em desenvolvimento",
+        "status": "not_implemented"
+    }
+
+@api_router.get("/transactions/{transaction_id}", response_model=Transaction)
 async def update_transaction(transaction_id: str, transaction_data: TransactionCreate, current_user: User = Depends(get_current_user)):
     # Check if transaction belongs to user
     old_transaction = await db.transactions.find_one({"id": transaction_id, "user_id": current_user.id})
@@ -3236,11 +3532,26 @@ async def upgrade_to_hierarchical_categories(current_user: User = Depends(get_cu
 async def get_hierarchical_categories(current_user: User = Depends(get_current_user)):
     """Busca as categorias organizadas de forma hierárquica"""
     try:
-        categories = await db.categories.find({"user_id": current_user.id}).to_list(1000)
+        # Busca categorias do usuário e categorias do sistema
+        categories = await db.categories.find({
+            "$or": [
+                {"user_id": current_user.id},
+                {"user_id": None}  # Categorias do sistema
+            ]
+        }).to_list(1000)
+        
+        if not categories:
+            # Se não há categorias, retorna lista vazia
+            return []
+        
         main_categories = []
         subcategories_map = defaultdict(list)
 
         for cat in categories:
+            # Garante que o documento tem um ID
+            if not cat.get("id"):
+                continue
+                
             parent_id = cat.get("parent_category_id")
             if not parent_id:
                 main_categories.append(cat)
@@ -3251,11 +3562,36 @@ async def get_hierarchical_categories(current_user: User = Depends(get_current_u
         for main_cat in main_categories:
             main_cat_id = main_cat.get("id")
             if main_cat_id:
-                cat_data = {**main_cat, "subcategories": subcategories_map.get(main_cat_id, [])}
+                # Remove campos que podem causar problemas de serialização
+                cat_data = {
+                    "id": main_cat.get("id"),
+                    "name": main_cat.get("name"),
+                    "type": main_cat.get("type"),
+                    "icon": main_cat.get("icon"),
+                    "color": main_cat.get("color"),
+                    "is_custom": main_cat.get("is_custom", False),
+                    "is_active": main_cat.get("is_active", True),
+                    "subcategories": []
+                }
+                
+                # Adiciona subcategorias
+                for subcat in subcategories_map.get(main_cat_id, []):
+                    subcat_data = {
+                        "id": subcat.get("id"),
+                        "name": subcat.get("name"),
+                        "type": subcat.get("type"),
+                        "icon": subcat.get("icon"),
+                        "color": subcat.get("color"),
+                        "is_custom": subcat.get("is_custom", False),
+                        "is_active": subcat.get("is_active", True)
+                    }
+                    cat_data["subcategories"].append(subcat_data)
+                
                 hierarchical_list.append(cat_data)
         
         return hierarchical_list
     except Exception as e:
+        logger.error(f"Erro ao buscar categorias hierárquicas: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar categorias hierárquicas: {str(e)}")
         
 @api_router.post("/categories/ai-classify")
@@ -6761,26 +7097,13 @@ async def health_check():
         }
 
 # ===============================================
-# BLOCO FINAL DEFINITIVO - INCLUIR TODOS OS ROUTERS
+# BLOCO FINAL - INCLUIR ROUTER PRINCIPAL
 # ===============================================
-@app.get("/teste-final")
-async def rota_de_teste_final():
-    return {"mensagem": "O backend está respondendo corretamente!"}
-# Inclui o roteador principal (esta linha já deve existir)
 app.include_router(api_router)
 
-# Inclui os roteadores dos outros módulos (os nomes abaixo são exemplos, use os nomes corretos do seu código)
-# app.include_router(alelo_router)
-# app.include_router(help_router)
-# app.include_router(statistics_router) # etc.
-
-# ... Mantenha o Health Check e o Shutdown como estão ...
-
-# Health Check e Shutdown (mantenha como está)
-@app.get("/health", tags=["Health Check"])
-def health_check():
-    return {"status": "healthy"}
-
+# ===============================================
+# EVENTOS DE SHUTDOWN
+# ===============================================
 @app.on_event("shutdown")
 async def shutdown_db_client():
     db.client.close()
