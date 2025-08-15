@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 import os
 import logging # Adicione este import
 # Configure o logger logo no início
-#logging.basicConfig(level=logging.INFO)
-#logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 import uuid
 import bcrypt
 import jwt
