@@ -11438,3 +11438,5 @@ function AppWrapper() {
 }
 
 export default AppWrapper;
+
+// Forçando o rebuild para atualizar as variáveis de ambiente
