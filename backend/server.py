@@ -6763,7 +6763,9 @@ async def health_check():
 # ===============================================
 # BLOCO FINAL DEFINITIVO - INCLUIR TODOS OS ROUTERS
 # ===============================================
-
+@app.get("/teste-final")
+async def rota_de_teste_final():
+    return {"mensagem": "O backend está respondendo corretamente!"}
 # Inclui o roteador principal (esta linha já deve existir)
 app.include_router(api_router)
 
