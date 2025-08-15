@@ -6,10 +6,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import os
-import logging # Adicione este import
-# Configure o logger logo no início
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import logging
 import uuid
 import bcrypt
 import jwt
@@ -17,11 +14,9 @@ import base64
 import io
 from pathlib import Path
 from dotenv import load_dotenv
-import logging
 import smtplib
-# Email imports for production use (currently simulated)
-# from email.mime.text import MimeText
-# from email.mime.multipart import MimeMultipart
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import secrets
 import re
 import statistics
@@ -31,74 +26,57 @@ import pytesseract
 import pandas as pd
 from pdf2image import convert_from_bytes
 from PIL import Image
-api_router = APIRouter()
-app = FastAPI()
 
-# ROOT_DIR = Path(__file__).parent # Pode comentar ou remover se não for usado mais
-# load_dotenv(ROOT_DIR / '.env') # COMENTE ESTA LINHA para garantir que o Railway use suas próprias variáveis
+# ===============================================================
+# 1. CONFIGURAÇÃO DE LOGS (CORRIGIDO)
+# ===============================================================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# MongoDB connection
-# === BLOCO DE DEBUG CRÍTICO DE MONGO_URL ===
-# MongoDB connection
-# === BLOCO DE CONEXÃO AO BANCO DE DADOS ===
+# ===============================================================
+# 2. INICIALIZAÇÃO DO APP E ROUTER (CORRIGIDO)
+# ===============================================================
+app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
+api_router = APIRouter() # Sem prefixo, para corresponder ao frontend
+security = HTTPBearer()
+
+# ===============================================================
+# 3. CONEXÃO COM O BANCO DE DADOS (CORRIGIDO E SEGURO)
+# ===============================================================
 try:
     mongo_url = os.environ.get('MONGO_URL')
-    db_name = os.environ.get('DB_NAME') # Carrega DB_NAME aqui
+    db_name = os.environ.get('DB_NAME')
 
-    if not mongo_url:
-        logger.error("[DB_INIT_ERROR] MONGO_URL não encontrada no ambiente!")
-        # Fallback para URL de desenvolvimento ou de depuração
-        mongo_url = "mongodb://localhost:27017/orcazen_dev" 
-        db_name = "orcazen_dev"
+    if not mongo_url or not db_name:
+        logger.critical("[DB_INIT_FATAL] MONGO_URL ou DB_NAME não encontrados nas variáveis de ambiente!")
+        raise ValueError("Variáveis de ambiente do banco de dados não configuradas.")
 
-    if not db_name:
-        logger.error("[DB_INIT_ERROR] DB_NAME não encontrada no ambiente!")
-        db_name = "orcazen_dev" # Fallback
-
-    logger.info(f"[DEBUG_MONGO] MONGO_URL lida pelo app: '{mongo_url}'")
-    logger.info(f"[DEBUG_MONGO] DB_NAME lida pelo app: '{db_name}'")
-    logger.info(f"[DEBUG_MONGO] Conteúdo parcial de os.environ:")
-    for k, v in os.environ.items():
-        if "MONGO" in k.upper() or "SMTP" in k.upper() or "SECRET" in k.upper() or "PORT" in k.upper() or "DB_NAME" in k.upper():
-            logger.info(f"[DEBUG_ENV_FULL] {k}='{v}'")
-
-    # Inicialização ÚNICA e PROTEGIDA
     client = AsyncIOMotorClient(mongo_url)
-    db = client[db_name] # Usamos o db_name carregado ou fallback
-
-    # Testa a conexão com o banco de dados imediatamente
-    # await db.users.count_documents({}, limit=1) # Não pode ser aqui, pois está fora de uma função async
-    logger.info("[DB_INIT_SUCCESS] Conexão com MongoDB inicializada.")
+    db = client[db_name]
+    logger.info(f"[DB_INIT_SUCCESS] Conexão com MongoDB '{db_name}' inicializada.")
 
 except Exception as e:
     logger.critical(f"[DB_INIT_FATAL] Erro CRÍTICO ao inicializar conexão com MongoDB: {e}")
-    # Se a conexão falhar aqui, o app não vai conseguir funcionar.
-    # Você verá essa mensagem nos logs.
-    raise e # Levanta a exceção para que o container caia e o Railway mostre o erro.
-# === FIM BLOCO DE CONEXÃO AO BANCO DE DADOS ===
-# === FIM BLOCO DE DEBUG ===
+    raise e
 
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# JWT Configuration - More secure
-SECRET_KEY = os.environ.get('SECRET_KEY', 'GzAucYBaoXVp-Ols_DnL8cnrRVpabz691hRwtoMhgeDHbyJXzqATzcBAJxXQjDV64FCTCHJiM1URwT9BGDnOJg')
+# ===============================================================
+# 4. CONFIGURAÇÕES DE JWT E EMAIL (USANDO .get() PARA SEGURANÇA)
+# ===============================================================
+SECRET_KEY = os.environ.get('SECRET_KEY', 'uma_chave_secreta_default_para_testes')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 30  # 30 days for better persistence
+ACCESS_TOKEN_EXPIRE_DAYS = 30
 
-# Email Configuration
-EMAIL_FROM = os.environ.get('EMAIL_FROM', "OrçaZenFinanceiro <noreply@orcazenfinanceiro.com>")
-SMTP_SERVER = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+EMAIL_FROM = os.environ.get('EMAIL_FROM')
+SMTP_SERVER = os.environ.get('SMTP_HOST')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-SMTP_USERNAME = os.environ.get('SMTP_USER', 'demo@orcazen.com')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'demo_password')
+SMTP_USERNAME = os.environ.get('SMTP_USER')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 EMAIL_ENABLED = os.environ.get('EMAIL_ENABLED', 'false').lower() == 'true'
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://orcazenfinanceiro.com.br')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
-app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
-api_router = APIRouter(prefix="/api")
-security = HTTPBearer()
-
+# ===============================================================
+# O RESTO DO SEU CÓDIGO (CLASSES, ROTAS, ETC.) COMEÇA AQUI
+# ===============================================================
 # Enhanced Models
 class UserRegister(BaseModel):
     name: str
