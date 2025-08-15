@@ -3256,11 +3256,9 @@ async def get_hierarchical_categories(current_user: User = Depends(get_current_u
     """Busca as categorias organizadas de forma hierárquica"""
     try:
         categories = await db.categories.find({"user_id": current_user.id}).to_list(1000)
-
         main_categories = []
         subcategories_map = defaultdict(list)
 
-        # Primeiro, separe as categorias principais das subcategorias
         for cat in categories:
             parent_id = cat.get("parent_category_id")
             if not parent_id:
@@ -3268,23 +3266,17 @@ async def get_hierarchical_categories(current_user: User = Depends(get_current_u
             else:
                 subcategories_map[parent_id].append(cat)
 
-        # Agora, construa a estrutura hierárquica final
         hierarchical_list = []
         for main_cat in main_categories:
             main_cat_id = main_cat.get("id")
-            # Adiciona a categoria principal apenas se ela tiver um ID
             if main_cat_id:
-                cat_data = {
-                    **main_cat,
-                    "subcategories": subcategories_map.get(main_cat_id, [])
-                }
+                cat_data = {**main_cat, "subcategories": subcategories_map.get(main_cat_id, [])}
                 hierarchical_list.append(cat_data)
         
         return hierarchical_list
-
     except Exception as e:
-        # Se qualquer outro erro inesperado acontecer, ele será capturado aqui
         raise HTTPException(status_code=500, detail=f"Erro ao buscar categorias hierárquicas: {str(e)}")
+        
 @api_router.post("/categories/ai-classify")
 async def ai_classify_transaction_category(
     transaction_data: Dict[str, str], 
