@@ -6764,16 +6764,15 @@ async def health_check():
 # BLOCO FINAL DEFINITIVO - INCLUIR TODOS OS ROUTERS
 # ===============================================
 
-# Inclui o roteador principal
+# Inclui o roteador principal (esta linha já deve existir)
 app.include_router(api_router)
 
 # Inclui os roteadores dos outros módulos (os nomes abaixo são exemplos, use os nomes corretos do seu código)
 # app.include_router(alelo_router)
 # app.include_router(help_router)
-# app.include_router(consortium_router)
-# app.include_router(petshop_router)
+# app.include_router(statistics_router) # etc.
 
-# ... adicione uma linha para cada módulo ...
+# ... Mantenha o Health Check e o Shutdown como estão ...
 
 # Health Check e Shutdown (mantenha como está)
 @app.get("/health", tags=["Health Check"])
