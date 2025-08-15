@@ -3253,34 +3253,38 @@ async def upgrade_to_hierarchical_categories(current_user: User = Depends(get_cu
 
 @api_router.get("/categories/hierarchical", response_model=List[Dict[str, Any]])
 async def get_hierarchical_categories(current_user: User = Depends(get_current_user)):
-    """Get categories organized hierarchically"""
+    """Busca as categorias organizadas de forma hierárquica"""
     try:
-        # Get all categories
         categories = await db.categories.find({"user_id": current_user.id}).to_list(1000)
-        
-        # Organize into hierarchy
+
         main_categories = []
         subcategories_map = defaultdict(list)
-        
+
+        # Primeiro, separe as categorias principais das subcategorias
         for cat in categories:
-            if not cat.get("parent_category_id"):
+            parent_id = cat.get("parent_category_id")
+            if not parent_id:
                 main_categories.append(cat)
             else:
-                subcategories_map[cat["parent_category_id"]].append(cat)
-        
-        # Build hierarchical structure
-        hierarchical = []
-        for main_cat in main_categories:
-            cat_data = {
-                **main_cat,
-                "subcategories": subcategories_map.get(main_cat["id"], [])
-            }
-            hierarchical.append(cat_data)
-        
-        return hierarchical
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao buscar categorias: {str(e)}")
+                subcategories_map[parent_id].append(cat)
 
+        # Agora, construa a estrutura hierárquica final
+        hierarchical_list = []
+        for main_cat in main_categories:
+            main_cat_id = main_cat.get("id")
+            # Adiciona a categoria principal apenas se ela tiver um ID
+            if main_cat_id:
+                cat_data = {
+                    **main_cat,
+                    "subcategories": subcategories_map.get(main_cat_id, [])
+                }
+                hierarchical_list.append(cat_data)
+        
+        return hierarchical_list
+
+    except Exception as e:
+        # Se qualquer outro erro inesperado acontecer, ele será capturado aqui
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar categorias hierárquicas: {str(e)}")
 @api_router.post("/categories/ai-classify")
 async def ai_classify_transaction_category(
     transaction_data: Dict[str, str], 
@@ -6783,10 +6787,27 @@ async def health_check():
             "timestamp": datetime.utcnow().isoformat()
         }
 
+# ===============================================================
+# BLOCO FINAL E DEFINITIVO - SUBSTITUA O FINAL DO ARQUIVO POR ISTO
+# ===============================================================
+
+# INCLUIR TODOS OS ROTEADORES NO APP PRINCIPAL
+# A linha abaixo já deve existir, garanta que ela está lá
+app.include_router(api_router) 
+
+# PROCURE NO SEU CÓDIGO PELOS NOMES DOS SEUS OUTROS ROUTERS E INCLUA-OS
+# Exemplo (os nomes das variáveis podem ser diferentes):
+# app.include_router(alelo_router, prefix="/api")
+# app.include_router(consortium_router, prefix="/api")
+# app.include_router(petshop_router, prefix="/api")
+
+
+# ADICIONAR UM HEALTH CHECK SIMPLES E ROBUSTO
+@app.get("/health", tags=["Health Check"])
+def health_check():
+    """Endpoint de verificação de saúde simples."""
+    return {"status": "healthy"}
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     db.client.close()
-
-# Inclui todas as rotas definidas no api_router ao app principal
-# ESTA DEVE SER A ÚLTIMA LINHA DE CÓDIGO EXECUTÁVEL
-app.include_router(api_router)
