@@ -36,8 +36,11 @@ logger = logging.getLogger(__name__)
 # ===============================================================
 # 2. INICIALIZAÇÃO DO APP E ROUTER (CORRIGIDO)
 # ===============================================================
+# Inicializa o app principal com título e versão
 app = FastAPI(title="OrçaZenFinanceiro API", version="2.0.0")
-api_router = APIRouter() # SEM PREFIXO, para corresponder ao frontend
+
+# Inicializa o router SEM PREFIXO, para corresponder às chamadas do frontend
+api_router = APIRouter() 
 security = HTTPBearer()
 
 # ===============================================================
@@ -62,7 +65,7 @@ except Exception as e:
 # ===============================================================
 # 4. CONFIGURAÇÕES DE JWT E EMAIL (USANDO .get() PARA SEGURANÇA)
 # ===============================================================
-SECRET_KEY = os.environ.get('SECRET_KEY', 'uma_chave_secreta_default_para_testes')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'uma_chave_secreta_default_para_testes_locais')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
