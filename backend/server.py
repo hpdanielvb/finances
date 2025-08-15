@@ -6757,25 +6757,24 @@ async def health_check():
             "timestamp": datetime.utcnow().isoformat()
         }
 
-# ===============================================================
-# BLOCO FINAL E DEFINITIVO - SUBSTITUA O FINAL DO ARQUIVO POR ISTO
-# ===============================================================
+# ===============================================
+# BLOCO FINAL DEFINITIVO - INCLUIR TODOS OS ROUTERS
+# ===============================================
 
-# INCLUIR TODOS OS ROTEADORES NO APP PRINCIPAL
-# A linha abaixo já deve existir, garanta que ela está lá
-app.include_router(api_router) 
+# Inclui o roteador principal
+app.include_router(api_router)
 
-# PROCURE NO SEU CÓDIGO PELOS NOMES DOS SEUS OUTROS ROUTERS E INCLUA-OS
-# Exemplo (os nomes das variáveis podem ser diferentes):
-# app.include_router(alelo_router, prefix="/api")
-# app.include_router(consortium_router, prefix="/api")
-# app.include_router(petshop_router, prefix="/api")
+# Inclui os roteadores dos outros módulos (os nomes abaixo são exemplos, use os nomes corretos do seu código)
+# app.include_router(alelo_router)
+# app.include_router(help_router)
+# app.include_router(consortium_router)
+# app.include_router(petshop_router)
 
+# ... adicione uma linha para cada módulo ...
 
-# ADICIONAR UM HEALTH CHECK SIMPLES E ROBUSTO
+# Health Check e Shutdown (mantenha como está)
 @app.get("/health", tags=["Health Check"])
 def health_check():
-    """Endpoint de verificação de saúde simples."""
     return {"status": "healthy"}
 
 @app.on_event("shutdown")
