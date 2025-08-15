@@ -35,4 +35,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:${PORT:-8001}/health || exit 1
 
 # Comando para produção na Railway usando a variável de ambiente PORT
-CMD gunicorn server:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+CMD uvicorn server:app --host 0.0.0.0 --port $PORT --workers 4
