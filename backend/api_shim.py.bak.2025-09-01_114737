@@ -1,0 +1,14 @@
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from server import app as core_app
+
+app = FastAPI(title="API Shim (/api -> core_app)")
+ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/api", core_app)
